@@ -167,7 +167,7 @@ export default function DashboardHome() {
             </div>
             <Button
               className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-white font-body px-6 shadow-lg shadow-accent/20"
-              onClick={() => navigate("/AttendancePage")}
+              onClick={() => navigate("/dashboard/presenca")}
             >
               Registrar Agora <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
