@@ -3,9 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, MessageSquare, CalendarDays, ClipboardList, UserCheck, TrendingUp } from "lucide-react";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-// 1. Alteração nos imports do recharts (adicionado Pie, Cell)
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis } from "recharts";
+import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 
 const COLORS = {
   present: "hsl(142, 60%, 45%)",
@@ -14,35 +13,60 @@ const COLORS = {
   answered: "hsl(38, 55%, 55%)",
 };
 
-// 2. Novo componente para a legenda personalizada do gráfico de rosca
-const DonutChartLegend = ({
-  data,
-  colors,
-}: {
-  data: { name: string; value: number }[];
-  colors: Record<string, string>;
-}) => (
-  <div className="flex flex-col gap-2 mt-4 ml-4">
-    {data.map((entry) => (
-      <div key={entry.name} className="flex items-center gap-2 text-sm">
-        <div
-          className="w-3 h-3 rounded-sm"
-          style={{ backgroundColor: colors[entry.name.toLowerCase() as keyof typeof COLORS] }}
-        />
-        <span className="text-muted-foreground font-body">
-          {entry.name}: <strong className="text-foreground">{entry.value}%</strong>
-        </span>
+// Componente de Tooltip Customizado para mostrar Quantidade e Percentual
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="bg-background border border-border p-3 rounded-lg shadow-lg text-sm">
+        <p className="font-bold mb-1 font-heading">{data.name}</p>
+        <p className="text-muted-foreground font-body">
+          Quantidade: <span className="text-foreground font-medium">{data.qty}</span>
+        </p>
+        <p className="text-muted-foreground font-body">
+          Proporção: <span className="text-foreground font-medium">{data.value}%</span>
+        </p>
       </div>
-    ))}
-  </div>
-);
+    );
+  }
+  return null;
+};
+
+// Função para renderizar o rótulo central customizado (SVG)
+const renderCustomizedLabel = ({ cx, cy, label, value }: any) => {
+  return (
+    <g>
+      <text
+        x={cx}
+        y={cy - 10}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        className="fill-muted-foreground text-xs font-medium font-body"
+      >
+        {label}
+      </text>
+      <text
+        x={cx}
+        y={cy + 15}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        className="fill-foreground text-4xl font-bold font-heading"
+      >
+        {value}%
+      </text>
+    </g>
+  );
+};
 
 export default function DashboardHome() {
   const { profile, user } = useAuth();
   const [stats, setStats] = useState({ modules: 0, announcements: 0, events: 0, quizzes: 0 });
-  // 3. Alterado a tipagem de attendanceData
-  const [attendanceData, setAttendanceData] = useState<{ name: string; value: number }[]>([]);
-  const [quizData, setQuizData] = useState<{ name: string; value: number }[]>([]);
+  const [attendanceData, setAttendanceData] = useState<{ name: string; value: number; qty: number }[]>([]);
+  const [quizData, setQuizData] = useState<{ name: string; value: number; qty: number }[]>([]);
+
+  // Estados para armazenar os percentuais principais (para o centro do gráfico)
+  const [mainAttendancePerc, setMainAttendancePerc] = useState(0);
+  const [mainQuizPerc, setMainQuizPerc] = useState(0);
 
   useEffect(() => {
     async function load() {
@@ -65,42 +89,31 @@ export default function DashboardHome() {
   useEffect(() => {
     if (!user) return;
     async function loadCharts() {
-      // Attendance: get all lessons with their calendar event types
-      const { data: calEvents } = await supabase.from("calendar_events").select("title, event_type, event_date");
-
+      // --- Lógica de Presença ---
       const { data: records } = await supabase.from("attendance_records").select("lesson_id").eq("user_id", user!.id);
+      const { data: lessons } = await supabase.from("lessons").select("id, scheduled_date");
 
-      const { data: lessons } = await supabase.from("lessons").select("id, title, scheduled_date");
-
-      if (lessons && calEvents && records) {
+      if (lessons && records) {
         const attendedLessonIds = new Set(records.map((r) => r.lesson_id));
-
         const pastLessons = lessons.filter((l) => l.scheduled_date && new Date(l.scheduled_date) < new Date());
 
-        // 4. Nova Lógica de Processamento (Soma de tudo)
-        let totalPresent = 0;
-        let totalLessons = pastLessons.length;
-
-        pastLessons.forEach((lesson) => {
-          if (attendedLessonIds.has(lesson.id)) {
-            totalPresent++;
-          }
-        });
-
+        const totalLessons = pastLessons.length;
+        const totalPresent = pastLessons.filter((l) => attendedLessonIds.has(l.id)).length;
         const totalAbsent = totalLessons - totalPresent;
 
-        // 5. Cálculo dos Percentuais (evitando divisão por zero)
-        const presentPercentage = totalLessons > 0 ? Math.round((totalPresent / totalLessons) * 100) : 0;
-        const absentPercentage = totalLessons > 0 ? 100 - presentPercentage : 0;
+        const pPerc = totalLessons > 0 ? Math.round((totalPresent / totalLessons) * 100) : 0;
+        const aPerc = totalLessons > 0 ? 100 - pPerc : 0;
 
-        // 6. Atualização do estado com o formato para o gráfico de rosca
+        // Define o percentual principal para o centro
+        setMainAttendancePerc(pPerc);
+
         setAttendanceData([
-          { name: "Presente", value: presentPercentage },
-          { name: "Faltas", value: absentPercentage },
+          { name: "Presenças", value: pPerc, qty: totalPresent },
+          { name: "Faltas", value: aPerc, qty: totalAbsent },
         ]);
       }
 
-      // Quiz status
+      // --- Lógica de Quizzes ---
       const { data: allQuizzes } = await supabase.from("quizzes").select("id");
       const { data: responses } = await supabase.from("quiz_responses").select("quiz_id").eq("user_id", user!.id);
 
@@ -108,9 +121,17 @@ export default function DashboardHome() {
         const answeredIds = new Set((responses || []).map((r) => r.quiz_id));
         const answered = allQuizzes.filter((q) => answeredIds.has(q.id)).length;
         const available = allQuizzes.length - answered;
+        const totalQ = allQuizzes.length;
+
+        const ansPerc = totalQ > 0 ? Math.round((answered / totalQ) * 100) : 0;
+        const availPerc = totalQ > 0 ? 100 - ansPerc : 0;
+
+        // Define o percentual principal para o centro
+        setMainQuizPerc(ansPerc);
+
         setQuizData([
-          { name: "Respondidos", value: answered },
-          { name: "Disponíveis", value: available },
+          { name: "Respondidos", value: ansPerc, qty: answered },
+          { name: "Disponíveis", value: availPerc, qty: available },
         ]);
       }
     }
@@ -124,30 +145,19 @@ export default function DashboardHome() {
     { label: "Questionários", value: stats.quizzes, icon: ClipboardList },
   ];
 
-  // 7. Alteração nas configurações do gráfico (configurações para PieChart)
-  const attendancePieConfig = {
-    Presente: { label: "Presente", color: COLORS.present },
-    Faltas: { label: "Faltas", color: COLORS.absent },
-  };
-
-  const pieConfig = {
-    Respondidos: { label: "Respondidos", color: COLORS.answered },
-    Disponíveis: { label: "Disponíveis", color: COLORS.available },
-  };
-
   return (
     <div className="page-container">
       <div className="mb-8">
-        <h1 className="section-title text-3xl">Bem-vindo, {profile?.full_name || "estudante"}</h1>
+        <h1 className="section-title text-3xl font-heading">Bem-vindo, {profile?.full_name || "estudante"}</h1>
         <p className="text-muted-foreground mt-1 font-body">Seu painel de estudos teológicos</p>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      {/* Cards de Resumo */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 font-body">
         {summaryCards.map((c) => (
           <Card key={c.label} className="card-academic">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-body font-medium text-muted-foreground">{c.label}</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">{c.label}</CardTitle>
               <c.icon className="w-4 h-4 text-accent" />
             </CardHeader>
             <CardContent>
@@ -157,100 +167,118 @@ export default function DashboardHome() {
         ))}
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Attendance chart */}
+      {/* Seção de Gráficos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 font-body">
+        {/* Gráfico de Presença (Rosca com Número Central) */}
         <Card className="card-academic">
           <CardHeader className="flex flex-row items-center gap-2">
             <UserCheck className="w-5 h-5 text-accent" />
             <CardTitle className="font-heading text-lg">Aproveitamento de Presença</CardTitle>
           </CardHeader>
           <CardContent>
-            {/* 8. Nova renderização para Gráfico de Rosca */}
-            {attendanceData.length === 0 || attendanceData.every((d) => d.value === 0) ? (
-              <p className="text-muted-foreground text-sm py-8 text-center">Nenhum dado de presença disponível.</p>
+            {attendanceData.length === 0 ? (
+              <p className="text-center py-10 text-muted-foreground">Sem dados disponíveis.</p>
             ) : (
               <div className="flex flex-col items-center">
-                <ChartContainer config={attendancePieConfig} className="h-[250px] w-full">
+                <div className="h-[250px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <ChartTooltip content={<CustomTooltip />} />
+                      {/* Rótulo Central Customizado */}
+                      {renderCustomizedLabel({
+                        cx: "50%",
+                        cy: "50%",
+                        label: "PRESENÇA GERAL",
+                        value: mainAttendancePerc,
+                      })}
                       <Pie
                         data={attendanceData}
                         cx="50%"
                         cy="50%"
-                        innerRadius={60} // Controla o tamanho do buraco (Donut)
+                        innerRadius={65} // Aumentado ligeiramente para dar espaço ao texto
                         outerRadius={90}
                         paddingAngle={5}
                         dataKey="value"
-                        nameKey="name"
                       >
-                        {attendanceData.map((entry, index) => (
+                        {attendanceData.map((entry, idx) => (
                           <Cell
-                            key={`cell-${index}`}
-                            fill={entry.name === "Presente" ? COLORS.present : COLORS.absent}
+                            key={idx}
+                            fill={entry.name === "Presenças" ? COLORS.present : COLORS.absent}
                             stroke="none"
                           />
                         ))}
                       </Pie>
                     </PieChart>
                   </ResponsiveContainer>
-                </ChartContainer>
-                {/* Legenda Personalizada */}
-                <DonutChartLegend data={attendanceData} colors={{ presente: COLORS.present, faltas: COLORS.absent }} />
+                </div>
+                <div className="flex gap-6 mt-2">
+                  {attendanceData.map((d) => (
+                    <div key={d.name} className="flex items-center gap-2 text-sm">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: d.name === "Presenças" ? COLORS.present : COLORS.absent }}
+                      />
+                      <span className="text-muted-foreground">
+                        {d.name}: <strong>{d.value}%</strong>
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Quiz chart */}
+        {/* Gráfico de Quizzes (Rosca com Número Central) */}
         <Card className="card-academic">
           <CardHeader className="flex flex-row items-center gap-2">
             <TrendingUp className="w-5 h-5 text-accent" />
             <CardTitle className="font-heading text-lg">Status dos Questionários</CardTitle>
           </CardHeader>
           <CardContent>
-            {quizData.length === 0 || quizData.every((d) => d.value === 0) ? (
-              <p className="text-muted-foreground text-sm py-8 text-center">Nenhum questionário disponível.</p>
+            {quizData.length === 0 ? (
+              <p className="text-center py-10 text-muted-foreground">Sem dados disponíveis.</p>
             ) : (
-              <div className="h-[250px] flex items-center justify-center">
-                <ChartContainer config={pieConfig} className="h-[250px] w-full">
-                  <PieChart>
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Pie
-                      data={quizData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={90}
-                      paddingAngle={4}
-                      dataKey="value"
-                      nameKey="name"
-                    >
-                      {quizData.map((entry) => (
-                        <Cell
-                          key={entry.name}
-                          fill={entry.name === "Respondidos" ? COLORS.answered : COLORS.available}
-                        />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ChartContainer>
-              </div>
-            )}
-            {quizData.length > 0 && !quizData.every((d) => d.value === 0) && (
-              <div className="flex justify-center gap-6 mt-2">
-                {quizData.map((d) => (
-                  <div key={d.name} className="flex items-center gap-2 text-sm">
-                    <div
-                      className="w-3 h-3 rounded-sm"
-                      style={{ backgroundColor: d.name === "Respondidos" ? COLORS.answered : COLORS.available }}
-                    />
-                    <span className="text-muted-foreground">
-                      {d.name}: <strong className="text-foreground">{d.value}</strong>
-                    </span>
-                  </div>
-                ))}
+              <div className="flex flex-col items-center">
+                <div className="h-[250px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <ChartTooltip content={<CustomTooltip />} />
+                      {/* Rótulo Central Customizado */}
+                      {renderCustomizedLabel({ cx: "50%", cy: "50%", label: "RESPONDIDOS", value: mainQuizPerc })}
+                      <Pie
+                        data={quizData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={65} // Aumentado ligeiramente para dar espaço ao texto
+                        outerRadius={90}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {quizData.map((entry, idx) => (
+                          <Cell
+                            key={idx}
+                            fill={entry.name === "Respondidos" ? COLORS.answered : COLORS.available}
+                            stroke="none"
+                          />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex gap-6 mt-2">
+                  {quizData.map((d) => (
+                    <div key={d.name} className="flex items-center gap-2 text-sm">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: d.name === "Respondidos" ? COLORS.answered : COLORS.available }}
+                      />
+                      <span className="text-muted-foreground">
+                        {d.name}: <strong>{d.value}%</strong>
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </CardContent>
