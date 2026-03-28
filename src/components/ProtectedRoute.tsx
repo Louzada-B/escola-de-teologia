@@ -1,6 +1,6 @@
-import { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { ReactNode } from "react";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { session, loading } = useAuth();
@@ -28,21 +28,6 @@ export function ProfessorRoute({ children }: { children: ReactNode }) {
     );
   }
 
-  if (profile?.role !== 'professor') return <Navigate to="/dashboard" replace />;
-  return <>{children}</>;
-}
-
-export function AdminRoute({ children }: { children: ReactNode }) {
-  const { profile, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground font-body">Carregando...</div>
-      </div>
-    );
-  }
-
-  if ((profile?.role as string) !== 'admin') return <Navigate to="/dashboard" replace />;
+  if (profile?.role !== "professor" || "admin") return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 }
