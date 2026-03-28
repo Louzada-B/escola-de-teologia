@@ -49,11 +49,8 @@ export default function DashboardHome() {
 
   // Estados de Dados
   const [stats, setStats] = useState({ modules: 0, announcements: 0, events: 0, quizzes: 0 });
-  const [attendanceData, setAttendanceData] = useState<{ name: string; value: number; qty: number }[]>([]);
+  const [attendanceByType, setAttendanceByType] = useState<{ type: string; present: number; absent: number; total: number }[]>([]);
   const [quizData, setQuizData] = useState<{ name: string; value: number; qty: number }[]>([]);
-
-  // Estados de Gráfico (Centro)
-  const [mainAttendancePerc, setMainAttendancePerc] = useState(0);
   const [mainQuizPerc, setMainQuizPerc] = useState(0);
 
   // Estado do Alerta de Presença Pendente
@@ -97,24 +94,31 @@ export default function DashboardHome() {
         if (pending) setPendingLesson(pending);
       }
 
-      // 3. Lógica do Gráfico de Presença Histórica
-      const { data: allLessons } = await supabase.from("lessons").select("id, scheduled_date");
+      // 3. Lógica de Presença por Tipo (apenas aulas com presença obrigatória)
+      const { data: allLessons } = await supabase.from("lessons").select("id, scheduled_date, event_type, mandatory_attendance");
       if (allLessons && userRecords) {
         const checkedInIds = new Set(userRecords.map((r) => r.lesson_id));
-        const pastLessons = allLessons.filter((l) => l.scheduled_date && new Date(l.scheduled_date) < new Date());
+        const pastMandatory = allLessons.filter(
+          (l) => l.mandatory_attendance && l.scheduled_date && new Date(l.scheduled_date) < new Date()
+        );
 
-        const totalLessons = pastLessons.length;
-        const totalPresent = pastLessons.filter((l) => checkedInIds.has(l.id)).length;
-        const totalAbsent = totalLessons - totalPresent;
+        const typeLabels: Record<string, string> = { aula: "Aula", aula_especial: "Aula Especial", aula_sincrona: "Aula Síncrona", evento: "Evento" };
+        const grouped: Record<string, { present: number; absent: number }> = {};
 
-        const pPerc = totalLessons > 0 ? Math.round((totalPresent / totalLessons) * 100) : 0;
-        const aPerc = totalLessons > 0 ? 100 - pPerc : 0;
+        for (const l of pastMandatory) {
+          const t = l.event_type || "aula";
+          if (!grouped[t]) grouped[t] = { present: 0, absent: 0 };
+          if (checkedInIds.has(l.id)) grouped[t].present++;
+          else grouped[t].absent++;
+        }
 
-        setMainAttendancePerc(pPerc);
-        setAttendanceData([
-          { name: "Presenças", value: pPerc, qty: totalPresent },
-          { name: "Faltas", value: aPerc, qty: totalAbsent },
-        ]);
+        const result = Object.entries(grouped).map(([type, counts]) => ({
+          type: typeLabels[type] || type,
+          present: counts.present,
+          absent: counts.absent,
+          total: counts.present + counts.absent,
+        }));
+        setAttendanceByType(result);
       }
 
       // 4. Lógica do Gráfico de Quizzes
