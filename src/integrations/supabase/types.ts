@@ -133,6 +133,7 @@ export type Database = {
           event_date: string
           event_type: string
           id: string
+          lesson_id: string | null
           title: string
         }
         Insert: {
@@ -142,6 +143,7 @@ export type Database = {
           event_date: string
           event_type?: string
           id?: string
+          lesson_id?: string | null
           title: string
         }
         Update: {
@@ -151,6 +153,7 @@ export type Database = {
           event_date?: string
           event_type?: string
           id?: string
+          lesson_id?: string | null
           title?: string
         }
         Relationships: []
