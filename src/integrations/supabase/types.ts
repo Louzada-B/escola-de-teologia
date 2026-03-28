@@ -240,26 +240,32 @@ export type Database = {
       quiz_questions: {
         Row: {
           correct_option: number | null
+          expected_text: string | null
           id: string
           options: Json
           order_index: number
           question: string
+          question_type: string
           quiz_id: string
         }
         Insert: {
           correct_option?: number | null
+          expected_text?: string | null
           id?: string
           options?: Json
           order_index?: number
           question: string
+          question_type?: string
           quiz_id: string
         }
         Update: {
           correct_option?: number | null
+          expected_text?: string | null
           id?: string
           options?: Json
           order_index?: number
           question?: string
+          question_type?: string
           quiz_id?: string
         }
         Relationships: [
