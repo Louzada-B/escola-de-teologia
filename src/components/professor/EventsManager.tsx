@@ -63,7 +63,7 @@ export default function EventsManager({ userId }: { userId: string }) {
     setEditing(item);
   };
 
-  const typeLabel: Record<string, string> = { aula: 'Aula Síncrona', prova: 'Prova', evento: 'Evento' };
+  const typeLabel: Record<string, string> = { aula: 'Aula', aula_especial: 'Aula Especial', aula_sincrona: 'Aula Síncrona', prova: 'Prova', evento: 'Evento' };
 
   return (
     <div className="space-y-6">
@@ -77,7 +77,9 @@ export default function EventsManager({ userId }: { userId: string }) {
             <div>
               <Label>Tipo</Label>
               <select value={eventType} onChange={e => setEventType(e.target.value)} className="w-full border rounded-md p-2 bg-background text-foreground">
-                <option value="aula">Aula Síncrona</option>
+                <option value="aula">Aula</option>
+                <option value="aula_especial">Aula Especial</option>
+                <option value="aula_sincrona">Aula Síncrona</option>
                 <option value="prova">Prova</option>
                 <option value="evento">Evento</option>
               </select>
@@ -118,7 +120,9 @@ export default function EventsManager({ userId }: { userId: string }) {
               <div>
                 <Label>Tipo</Label>
                 <select value={editType} onChange={e => setEditType(e.target.value)} className="w-full border rounded-md p-2 bg-background text-foreground">
-                  <option value="aula">Aula Síncrona</option>
+                  <option value="aula">Aula</option>
+                  <option value="aula_especial">Aula Especial</option>
+                  <option value="aula_sincrona">Aula Síncrona</option>
                   <option value="prova">Prova</option>
                   <option value="evento">Evento</option>
                 </select>
