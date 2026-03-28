@@ -254,28 +254,33 @@ export default function DashboardHome() {
       )}
 
       {/* ALERTA DE QUESTIONÁRIOS PENDENTES */}
-      {pendingQuizCount > 0 && (
-        <Card className="mb-8 border-primary/40 bg-primary/5 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-700">
-          <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-5">
-            <div className="flex items-center gap-4 text-center sm:text-left">
-              <div className="bg-primary/20 p-3 rounded-full hidden sm:block">
-                <ClipboardList className="w-6 h-6 text-primary animate-pulse" />
-              </div>
-              <div>
-                <h3 className="font-heading font-bold text-lg text-foreground">
-                  {pendingQuizCount === 1
-                    ? "Você tem 1 questionário pendente!"
-                    : `Você tem ${pendingQuizCount} questionários pendentes!`}
-                </h3>
-                <p className="text-sm text-muted-foreground font-body">Responda antes que o prazo encerre.</p>
-              </div>
-            </div>
-            <Button className="w-full sm:w-auto font-body px-6" onClick={() => navigate("/dashboard/questionarios")}>
-              Responder Agora <ArrowRight className="ml-2 w-4 h-4" />
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+      {pendingQuizCount > 0 &&
+        profile?.role ===
+          "aluno"(
+            <Card className="mb-8 border-primary/40 bg-primary/5 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-700">
+              <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-5">
+                <div className="flex items-center gap-4 text-center sm:text-left">
+                  <div className="bg-primary/20 p-3 rounded-full hidden sm:block">
+                    <ClipboardList className="w-6 h-6 text-primary animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="font-heading font-bold text-lg text-foreground">
+                      {pendingQuizCount === 1
+                        ? "Você tem 1 questionário pendente!"
+                        : `Você tem ${pendingQuizCount} questionários pendentes!`}
+                    </h3>
+                    <p className="text-sm text-muted-foreground font-body">Responda antes que o prazo encerre.</p>
+                  </div>
+                </div>
+                <Button
+                  className="w-full sm:w-auto font-body px-6"
+                  onClick={() => navigate("/dashboard/questionarios")}
+                >
+                  Responder Agora <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+              </CardContent>
+            </Card>,
+          )}
 
       {/* BOAS-VINDAS */}
       <div className="mb-8">
