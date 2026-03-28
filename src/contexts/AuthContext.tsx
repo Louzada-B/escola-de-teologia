@@ -11,6 +11,7 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   loading: true,
   signOut: async () => {},
+  refreshProfile: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -28,27 +30,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const loadProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Erro ao carregar perfil:', error.message);
+      return null;
+    }
+    return data;
+  };
+
   useEffect(() => {
     let isMounted = true;
 
-    const loadProfile = async (userId: string) => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Erro ao carregar perfil:', error.message);
-        return null;
-      }
-
-      return data;
-    };
-
     const syncAuthState = async (nextSession: Session | null) => {
       if (!isMounted) return;
-
       setSession(nextSession);
 
       if (!nextSession?.user) {
@@ -58,9 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const nextProfile = await loadProfile(nextSession.user.id);
-
       if (!isMounted) return;
-
       setProfile(nextProfile);
       setLoading(false);
     };
@@ -87,8 +85,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
   };
 
+  const refreshProfile = async () => {
+    if (session?.user) {
+      const p = await loadProfile(session.user.id);
+      setProfile(p);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ session, user: session?.user ?? null, profile, loading, signOut }}>
+    <AuthContext.Provider value={{ session, user: session?.user ?? null, profile, loading, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
