@@ -304,6 +304,7 @@ export default function DashboardHome() {
       </div>
 
       {/* GRÁFICOS */}
+      {profile?.role === 'aluno' && (
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Presença — Aula */}
         <Card className="card-academic">
@@ -354,7 +355,7 @@ export default function DashboardHome() {
             )}
           </CardContent>
         </Card>
-      </div>
+      </div>)}
     </div>
   );
 }
