@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Upload, Trash2, Pencil } from 'lucide-react';
+import { Plus, Upload, Trash2, Pencil, X } from 'lucide-react';
 
 export default function ModulesManager({ userId }: { userId: string }) {
   const [modules, setModules] = useState<any[]>([]);
@@ -16,9 +16,11 @@ export default function ModulesManager({ userId }: { userId: string }) {
   const [lessonTitle, setLessonTitle] = useState('');
   const [lessonDesc, setLessonDesc] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
+  const [scheduledDate, setScheduledDate] = useState('');
   const [selectedModule, setSelectedModule] = useState('');
-  const [files, setFiles] = useState<FileList | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [lessons, setLessons] = useState<any[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Edit state
   const [editingModule, setEditingModule] = useState<any | null>(null);
@@ -28,6 +30,11 @@ export default function ModulesManager({ userId }: { userId: string }) {
   const [editLessonTitle, setEditLessonTitle] = useState('');
   const [editLessonDesc, setEditLessonDesc] = useState('');
   const [editLessonVideo, setEditLessonVideo] = useState('');
+  const [editLessonDate, setEditLessonDate] = useState('');
+  const [editExistingFiles, setEditExistingFiles] = useState<any[]>([]);
+  const [editPendingFiles, setEditPendingFiles] = useState<File[]>([]);
+  const [filesToDelete, setFilesToDelete] = useState<any[]>([]);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const loadData = async () => {
     const { data: mods } = await supabase.from('modules').select('*').order('order_index');
@@ -63,39 +70,100 @@ export default function ModulesManager({ userId }: { userId: string }) {
     loadData();
   };
 
+  const uploadFilesForLesson = async (lessonId: string, fileList: File[]) => {
+    for (const file of fileList) {
+      const path = `lessons/${lessonId}/${file.name}`;
+      const { error: uploadErr } = await supabase.storage.from('course-files').upload(path, file);
+      if (!uploadErr) {
+        await supabase.from('lesson_files').insert({
+          lesson_id: lessonId, file_name: file.name, file_path: path,
+          file_type: file.type, file_size: file.size,
+        });
+      }
+    }
+  };
+
   const addLesson = async () => {
     if (!lessonTitle.trim() || !selectedModule) return;
     const moduleLessons = lessons.filter(l => l.module_id === selectedModule);
     const { data: lessonData, error } = await supabase.from('lessons').insert({
       title: lessonTitle, description: lessonDesc, video_url: videoUrl || null,
       module_id: selectedModule, order_index: moduleLessons.length,
+      scheduled_date: scheduledDate || null,
     }).select().single();
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
-    if (files && lessonData) {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const path = `lessons/${lessonData.id}/${file.name}`;
-        const { error: uploadErr } = await supabase.storage.from('course-files').upload(path, file);
-        if (!uploadErr) {
-          await supabase.from('lesson_files').insert({
-            lesson_id: lessonData.id, file_name: file.name, file_path: path,
-            file_type: file.type, file_size: file.size,
-          });
-        }
-      }
+
+    if (pendingFiles.length > 0 && lessonData) {
+      await uploadFilesForLesson(lessonData.id, pendingFiles);
     }
-    setLessonTitle(''); setLessonDesc(''); setVideoUrl(''); setFiles(null);
+
+    // Auto-create calendar event if date is set
+    if (scheduledDate && lessonData) {
+      await supabase.from('calendar_events').insert({
+        title: lessonTitle,
+        description: lessonDesc || null,
+        event_date: scheduledDate,
+        event_type: 'aula',
+        created_by: userId,
+      });
+    }
+
+    setLessonTitle(''); setLessonDesc(''); setVideoUrl(''); setScheduledDate('');
+    setPendingFiles([]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
     loadData();
     toast({ title: 'Aula criada!' });
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setPendingFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+      e.target.value = '';
+    }
+  };
+
+  const removePendingFile = (index: number) => {
+    setPendingFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleEditFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setEditPendingFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+      e.target.value = '';
+    }
+  };
+
+  const removeEditPendingFile = (index: number) => {
+    setEditPendingFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const markExistingFileForDeletion = (file: any) => {
+    setFilesToDelete(prev => [...prev, file]);
+    setEditExistingFiles(prev => prev.filter(f => f.id !== file.id));
   };
 
   const updateLesson = async () => {
     if (!editingLesson || !editLessonTitle.trim()) return;
     const { error } = await supabase.from('lessons').update({
       title: editLessonTitle, description: editLessonDesc, video_url: editLessonVideo || null,
+      scheduled_date: editLessonDate || null,
     }).eq('id', editingLesson.id);
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
+
+    // Delete removed files
+    for (const file of filesToDelete) {
+      await supabase.storage.from('course-files').remove([file.file_path]);
+      await supabase.from('lesson_files').delete().eq('id', file.id);
+    }
+
+    // Upload new files
+    if (editPendingFiles.length > 0) {
+      await uploadFilesForLesson(editingLesson.id, editPendingFiles);
+    }
+
     setEditingLesson(null);
+    setFilesToDelete([]);
+    setEditPendingFiles([]);
     loadData();
     toast({ title: 'Aula atualizada!' });
   };
@@ -115,6 +183,10 @@ export default function ModulesManager({ userId }: { userId: string }) {
     setEditLessonTitle(l.title);
     setEditLessonDesc(l.description || '');
     setEditLessonVideo(l.video_url || '');
+    setEditLessonDate(l.scheduled_date || '');
+    setEditExistingFiles(l.lesson_files || []);
+    setEditPendingFiles([]);
+    setFilesToDelete([]);
     setEditingLesson(l);
   };
 
@@ -141,10 +213,25 @@ export default function ModulesManager({ userId }: { userId: string }) {
           </div>
           <div><Label>Título da Aula</Label><Input value={lessonTitle} onChange={e => setLessonTitle(e.target.value)} /></div>
           <div><Label>Descrição</Label><Textarea value={lessonDesc} onChange={e => setLessonDesc(e.target.value)} /></div>
+          <div><Label>Data da Aula</Label><Input type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)} /></div>
           <div><Label>Link do Vídeo (YouTube)</Label><Input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..." /></div>
           <div>
             <Label>Arquivos (PDF, Word, PPT)</Label>
-            <Input type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx" onChange={e => setFiles(e.target.files)} />
+            <Input ref={fileInputRef} type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx" onChange={handleFileSelect} />
+            {pendingFiles.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {pendingFiles
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map((file, i) => (
+                    <div key={i} className="flex items-center justify-between bg-muted/50 px-2 py-1 rounded text-sm">
+                      <span>{file.name}</span>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removePendingFile(i)}>
+                        <X className="w-3.5 h-3.5 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
           <Button onClick={addLesson}><Upload className="w-4 h-4 mr-1" /> Criar Aula</Button>
         </CardContent>
@@ -172,7 +259,12 @@ export default function ModulesManager({ userId }: { userId: string }) {
                   <div className="pl-4 space-y-2">
                     {moduleLessons.map(l => (
                       <div key={l.id} className="flex items-center justify-between bg-muted/50 p-2 rounded-md text-sm">
-                        <span>{l.title}</span>
+                        <div>
+                          <span>{l.title}</span>
+                          {l.scheduled_date && (
+                            <span className="ml-2 text-xs text-muted-foreground">({l.scheduled_date})</span>
+                          )}
+                        </div>
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditLesson(l)}>
                             <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
@@ -204,13 +296,51 @@ export default function ModulesManager({ userId }: { userId: string }) {
       </Dialog>
 
       {/* Edit Lesson Dialog */}
-      <Dialog open={!!editingLesson} onOpenChange={open => !open && setEditingLesson(null)}>
-        <DialogContent>
+      <Dialog open={!!editingLesson} onOpenChange={open => { if (!open) { setEditingLesson(null); setFilesToDelete([]); setEditPendingFiles([]); } }}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Editar Aula</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label>Título</Label><Input value={editLessonTitle} onChange={e => setEditLessonTitle(e.target.value)} /></div>
             <div><Label>Descrição</Label><Textarea value={editLessonDesc} onChange={e => setEditLessonDesc(e.target.value)} /></div>
+            <div><Label>Data da Aula</Label><Input type="date" value={editLessonDate} onChange={e => setEditLessonDate(e.target.value)} /></div>
             <div><Label>Link do Vídeo</Label><Input value={editLessonVideo} onChange={e => setEditLessonVideo(e.target.value)} /></div>
+
+            <div>
+              <Label>Arquivos existentes</Label>
+              {editExistingFiles.length === 0 && <p className="text-sm text-muted-foreground">Nenhum arquivo.</p>}
+              <div className="space-y-1 mt-1">
+                {editExistingFiles
+                  .sort((a: any, b: any) => a.file_name.localeCompare(b.file_name))
+                  .map((file: any) => (
+                    <div key={file.id} className="flex items-center justify-between bg-muted/50 px-2 py-1 rounded text-sm">
+                      <span>{file.file_name}</span>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => markExistingFileForDeletion(file)}>
+                        <X className="w-3.5 h-3.5 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            <div>
+              <Label>Adicionar novos arquivos</Label>
+              <Input ref={editFileInputRef} type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx" onChange={handleEditFileSelect} />
+              {editPendingFiles.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {editPendingFiles
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((file, i) => (
+                      <div key={i} className="flex items-center justify-between bg-muted/50 px-2 py-1 rounded text-sm">
+                        <span>{file.name}</span>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeEditPendingFile(i)}>
+                          <X className="w-3.5 h-3.5 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+
             <Button onClick={updateLesson}>Salvar</Button>
           </div>
         </DialogContent>

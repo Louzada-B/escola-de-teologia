@@ -25,7 +25,7 @@ export default function LessonsPage() {
       const { data: lessons } = await supabase
         .from('lessons')
         .select('*, lesson_files(*)')
-        .order('order_index');
+        .order('scheduled_date', { ascending: true, nullsFirst: false });
 
       if (mods && lessons) {
         const mapped = mods.map((m) => ({

@@ -6,6 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+const typeConfig: Record<string, { label: string; className: string }> = {
+  aula: { label: 'Aula', className: 'bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30' },
+  prova: { label: 'Prova', className: 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30' },
+  evento: { label: 'Evento', className: 'bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30' },
+};
+
 export default function CalendarPage() {
   const [events, setEvents] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -19,6 +25,13 @@ export default function CalendarPage() {
   }, []);
 
   const eventDates = events.map((e) => new Date(e.event_date + 'T00:00:00'));
+
+  const eventDateTypes = events.reduce((acc: Record<string, Set<string>>, e) => {
+    if (!acc[e.event_date]) acc[e.event_date] = new Set();
+    acc[e.event_date].add(e.event_type);
+    return acc;
+  }, {});
+
   const selectedEvents = events.filter(
     (e) => selectedDate && e.event_date === format(selectedDate, 'yyyy-MM-dd')
   );
@@ -26,6 +39,14 @@ export default function CalendarPage() {
   return (
     <div className="page-container">
       <h1 className="section-title mb-6">Calendário</h1>
+
+      <div className="flex flex-wrap gap-3 mb-4">
+        {Object.entries(typeConfig).map(([key, cfg]) => (
+          <Badge key={key} variant="outline" className={cfg.className}>
+            {cfg.label}
+          </Badge>
+        ))}
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="card-academic">
@@ -51,21 +72,24 @@ export default function CalendarPage() {
             <p className="text-sm text-muted-foreground">Nenhum evento nesta data.</p>
           ) : (
             <div className="space-y-3">
-              {selectedEvents.map((ev) => (
-                <Card key={ev.id} className="card-academic">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center gap-2">
-                      <CardTitle className="text-base font-body">{ev.title}</CardTitle>
-                      <Badge variant="secondary" className="text-xs capitalize">{ev.event_type}</Badge>
-                    </div>
-                  </CardHeader>
-                  {ev.description && (
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">{ev.description}</p>
-                    </CardContent>
-                  )}
-                </Card>
-              ))}
+              {selectedEvents.map((ev) => {
+                const cfg = typeConfig[ev.event_type] || { label: ev.event_type, className: 'bg-muted text-muted-foreground' };
+                return (
+                  <Card key={ev.id} className="card-academic">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-base font-body">{ev.title}</CardTitle>
+                        <Badge variant="outline" className={`text-xs ${cfg.className}`}>{cfg.label}</Badge>
+                      </div>
+                    </CardHeader>
+                    {ev.description && (
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">{ev.description}</p>
+                      </CardContent>
+                    )}
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>
