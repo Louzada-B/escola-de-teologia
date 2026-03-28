@@ -74,8 +74,6 @@ export default function DashboardHome() {
 
   // Estados de Gráfico (Centro)
 
-  const [mainAttendancePerc, setMainAttendancePerc] = useState(0);
-
   const [mainQuizPerc, setMainQuizPerc] = useState(0);
 
   // Estado do Alerta de Presença Pendente
