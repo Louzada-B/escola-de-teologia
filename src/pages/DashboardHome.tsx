@@ -64,7 +64,7 @@ export default function DashboardHome() {
     // Verifica horário (Baseado na sua regra da AttendancePage: 19h às 23:59)
     const now = new Date();
     const hour = now.getHours();
-    setIsWithinTime(hour >= 19 && hour <= 23);
+    setIsWithinTime(hour >= 7 && hour <= 23);
 
     async function loadDashboardData() {
       if (!user) return;
