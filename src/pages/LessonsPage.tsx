@@ -83,7 +83,12 @@ export default function LessonsPage() {
                 {mod.lessons.map((lesson) => (
                   <Card key={lesson.id} className="card-academic">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-base font-body font-semibold">{lesson.title}</CardTitle>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-base font-body font-semibold">{lesson.title}</CardTitle>
+                        {lesson.scheduled_date && (
+                          <span className="text-xs text-muted-foreground">({lesson.scheduled_date})</span>
+                        )}
+                      </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {lesson.description && (
@@ -106,7 +111,7 @@ export default function LessonsPage() {
                           <p className="text-sm font-medium flex items-center gap-1">
                             <FileText className="w-4 h-4" /> Materiais
                           </p>
-                          {lesson.lesson_files.map((file) => (
+                          {[...lesson.lesson_files].sort((a, b) => a.file_name.localeCompare(b.file_name)).map((file) => (
                             <a
                               key={file.id}
                               href={getFileUrl(file.file_path)}
