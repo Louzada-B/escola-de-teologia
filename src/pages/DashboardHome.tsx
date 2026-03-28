@@ -311,7 +311,7 @@ export default function DashboardHome() {
 
                   <div
                     className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
-                    style={{ zIndex: -1 }}
+                    style={{ zIndex: 1 }}
                   >
                     <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">
                       Geral
