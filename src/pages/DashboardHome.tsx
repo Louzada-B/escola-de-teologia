@@ -138,32 +138,34 @@ export default function DashboardHome() {
         if (pending) setPendingLesson(pending);
       }
 
-      // 3. Lógica do Gráfico de Presença Histórica
-
-      const { data: allLessons } = await supabase.from("lessons").select("id, scheduled_date");
+      // 3. Lógica do Gráfico de Presença por Categoria
+      const { data: allLessons } = await supabase.from("lessons").select("id, scheduled_date, event_type, mandatory_attendance");
 
       if (allLessons && userRecords) {
         const checkedInIds = new Set(userRecords.map((r) => r.lesson_id));
+        const pastMandatory = allLessons.filter(
+          (l) => l.scheduled_date && new Date(l.scheduled_date) < new Date() && l.mandatory_attendance
+        );
 
-        const pastLessons = allLessons.filter((l) => l.scheduled_date && new Date(l.scheduled_date) < new Date());
+        const categories = ["aula", "aula_especial"];
+        const result: Record<string, { data: { name: string; value: number; qty: number }[]; perc: number }> = {};
 
-        const totalLessons = pastLessons.length;
-
-        const totalPresent = pastLessons.filter((l) => checkedInIds.has(l.id)).length;
-
-        const totalAbsent = totalLessons - totalPresent;
-
-        const pPerc = totalLessons > 0 ? Math.round((totalPresent / totalLessons) * 100) : 0;
-
-        const aPerc = totalLessons > 0 ? 100 - pPerc : 0;
-
-        setMainAttendancePerc(pPerc);
-
-        setAttendanceData([
-          { name: "Presenças", value: pPerc, qty: totalPresent },
-
-          { name: "Faltas", value: aPerc, qty: totalAbsent },
-        ]);
+        for (const cat of categories) {
+          const lessons = pastMandatory.filter((l) => l.event_type === cat);
+          const total = lessons.length;
+          const present = lessons.filter((l) => checkedInIds.has(l.id)).length;
+          const absent = total - present;
+          const pPerc = total > 0 ? Math.round((present / total) * 100) : 0;
+          const aPerc = total > 0 ? 100 - pPerc : 0;
+          result[cat] = {
+            perc: pPerc,
+            data: [
+              { name: "Presenças", value: pPerc, qty: present },
+              { name: "Faltas", value: aPerc, qty: absent },
+            ],
+          };
+        }
+        setAttendanceByType(result);
       }
 
       // 4. Lógica do Gráfico de Quizzes
