@@ -122,24 +122,42 @@ export default function QuizzesPage() {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {(questions[quiz.id] || []).map((q, idx) => (
-                      <div key={q.id} className="space-y-2">
-                        <p className="font-body font-medium">
-                          {idx + 1}. {q.question}
-                        </p>
-                        <RadioGroup
-                          value={answers[quiz.id]?.[q.id] || ''}
-                          onValueChange={(v) => handleAnswer(quiz.id, q.id, v)}
-                        >
-                          {(q.options as string[]).map((opt: string, i: number) => (
-                            <div key={i} className="flex items-center gap-2">
-                              <RadioGroupItem value={String(i)} id={`${q.id}-${i}`} />
-                              <Label htmlFor={`${q.id}-${i}`} className="font-body">{opt}</Label>
-                            </div>
-                          ))}
-                        </RadioGroup>
-                      </div>
-                    ))}
+                    {(questions[quiz.id] || []).map((q, idx) => {
+                      const qType = q.question_type || 'objetiva';
+                      return (
+                        <div key={q.id} className="space-y-2">
+                          <p className="font-body font-medium">
+                            {idx + 1}. {q.question}
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              ({qType === 'objetiva' ? 'Objetiva' : qType === 'verdadeiro_falso' ? 'V ou F' : 'Dissertativa'})
+                            </span>
+                          </p>
+
+                          {(qType === 'objetiva' || qType === 'verdadeiro_falso') && (
+                            <RadioGroup
+                              value={answers[quiz.id]?.[q.id] || ''}
+                              onValueChange={(v) => handleAnswer(quiz.id, q.id, v)}
+                            >
+                              {(q.options as string[]).map((opt: string, i: number) => (
+                                <div key={i} className="flex items-center gap-2">
+                                  <RadioGroupItem value={String(i)} id={`${q.id}-${i}`} />
+                                  <Label htmlFor={`${q.id}-${i}`} className="font-body">{opt}</Label>
+                                </div>
+                              ))}
+                            </RadioGroup>
+                          )}
+
+                          {qType === 'dissertativa' && (
+                            <Textarea
+                              value={textAnswers[quiz.id]?.[q.id] || ''}
+                              onChange={(e) => handleTextAnswer(quiz.id, q.id, e.target.value)}
+                              placeholder="Digite sua resposta..."
+                              rows={4}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
                     <Button onClick={() => handleSubmit(quiz.id)}>Enviar Respostas</Button>
                   </div>
                 )}
