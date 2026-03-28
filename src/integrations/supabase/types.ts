@@ -315,6 +315,8 @@ export type Database = {
       }
       quizzes: {
         Row: {
+          available_from: string | null
+          available_until: string | null
           created_at: string
           created_by: string
           id: string
@@ -322,6 +324,8 @@ export type Database = {
           title: string
         }
         Insert: {
+          available_from?: string | null
+          available_until?: string | null
           created_at?: string
           created_by: string
           id?: string
@@ -329,6 +333,8 @@ export type Database = {
           title: string
         }
         Update: {
+          available_from?: string | null
+          available_until?: string | null
           created_at?: string
           created_by?: string
           id?: string

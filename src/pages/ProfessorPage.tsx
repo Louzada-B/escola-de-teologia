@@ -218,6 +218,8 @@ function EventsManager({ userId }: { userId: string }) {
 
 function QuizzesManager({ userId }: { userId: string }) {
   const [title, setTitle] = useState('');
+  const [availableFrom, setAvailableFrom] = useState('');
+  const [availableUntil, setAvailableUntil] = useState('');
   const [questionText, setQuestionText] = useState('');
   const [questionType, setQuestionType] = useState<'objetiva' | 'dissertativa' | 'verdadeiro_falso'>('objetiva');
   const [options, setOptions] = useState(['', '', '', '']);
@@ -232,10 +234,17 @@ function QuizzesManager({ userId }: { userId: string }) {
 
   const createQuiz = async () => {
     if (!title.trim()) return;
-    const { data, error } = await supabase.from('quizzes').insert({ title, created_by: userId }).select().single();
+    const { data, error } = await supabase.from('quizzes').insert({
+      title,
+      created_by: userId,
+      available_from: availableFrom || null,
+      available_until: availableUntil || null,
+    }).select().single();
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
     setQuizzes([...quizzes, data]);
     setTitle('');
+    setAvailableFrom('');
+    setAvailableUntil('');
     toast({ title: 'Questionário criado!' });
   };
 
@@ -281,6 +290,16 @@ function QuizzesManager({ userId }: { userId: string }) {
         <CardHeader><CardTitle className="font-heading text-lg">Novo Questionário</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div><Label>Título</Label><Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Quiz Aula 1" /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Disponível a partir de</Label>
+              <Input type="datetime-local" value={availableFrom} onChange={e => setAvailableFrom(e.target.value)} />
+            </div>
+            <div>
+              <Label>Encerra em</Label>
+              <Input type="datetime-local" value={availableUntil} onChange={e => setAvailableUntil(e.target.value)} />
+            </div>
+          </div>
           <Button onClick={createQuiz}><Plus className="w-4 h-4 mr-1" /> Criar</Button>
         </CardContent>
       </Card>
