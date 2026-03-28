@@ -1,17 +1,15 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Calendar } from '@/components/ui/calendar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Calendar } from "@/components/ui/calendar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const typeConfig: Record<string, { label: string; className: string }> = {
-  aula: { label: 'Aula', className: 'bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30' },
-  aula_especial: { label: 'Aula Especial', className: 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30' },
-  aula_sincrona: { label: 'Aula Síncrona', className: 'bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/30' },
-  prova: { label: 'Prova', className: 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30' },
-  evento: { label: 'Evento', className: 'bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30' },
+  aula: { label: "Aula", className: "bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30" },
+  //prova: { label: 'Prova', className: 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30' },
+  evento: { label: "Evento", className: "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30" },
 };
 
 export default function CalendarPage() {
@@ -20,13 +18,13 @@ export default function CalendarPage() {
 
   useEffect(() => {
     supabase
-      .from('calendar_events')
-      .select('*')
-      .order('event_date')
+      .from("calendar_events")
+      .select("*")
+      .order("event_date")
       .then(({ data }) => setEvents(data || []));
   }, []);
 
-  const eventDates = events.map((e) => new Date(e.event_date + 'T00:00:00'));
+  const eventDates = events.map((e) => new Date(e.event_date + "T00:00:00"));
 
   const eventDateTypes = events.reduce((acc: Record<string, Set<string>>, e) => {
     if (!acc[e.event_date]) acc[e.event_date] = new Set();
@@ -34,9 +32,7 @@ export default function CalendarPage() {
     return acc;
   }, {});
 
-  const selectedEvents = events.filter(
-    (e) => selectedDate && e.event_date === format(selectedDate, 'yyyy-MM-dd')
-  );
+  const selectedEvents = events.filter((e) => selectedDate && e.event_date === format(selectedDate, "yyyy-MM-dd"));
 
   return (
     <div className="page-container">
@@ -58,7 +54,7 @@ export default function CalendarPage() {
               selected={selectedDate}
               onSelect={setSelectedDate}
               modifiers={{ event: eventDates }}
-              modifiersClassNames={{ event: 'bg-accent text-accent-foreground rounded-full' }}
+              modifiersClassNames={{ event: "bg-accent text-accent-foreground rounded-full" }}
               className="pointer-events-auto"
             />
           </CardContent>
@@ -66,22 +62,25 @@ export default function CalendarPage() {
 
         <div>
           <h2 className="font-heading text-lg font-semibold mb-3">
-            {selectedDate
-              ? format(selectedDate, "dd 'de' MMMM, yyyy", { locale: ptBR })
-              : 'Selecione uma data'}
+            {selectedDate ? format(selectedDate, "dd 'de' MMMM, yyyy", { locale: ptBR }) : "Selecione uma data"}
           </h2>
           {selectedEvents.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhum evento nesta data.</p>
           ) : (
             <div className="space-y-3">
               {selectedEvents.map((ev) => {
-                const cfg = typeConfig[ev.event_type] || { label: ev.event_type, className: 'bg-muted text-muted-foreground' };
+                const cfg = typeConfig[ev.event_type] || {
+                  label: ev.event_type,
+                  className: "bg-muted text-muted-foreground",
+                };
                 return (
                   <Card key={ev.id} className="card-academic">
                     <CardHeader className="pb-2">
                       <div className="flex items-center gap-2">
                         <CardTitle className="text-base font-body">{ev.title}</CardTitle>
-                        <Badge variant="outline" className={`text-xs ${cfg.className}`}>{cfg.label}</Badge>
+                        <Badge variant="outline" className={`text-xs ${cfg.className}`}>
+                          {cfg.label}
+                        </Badge>
                       </div>
                     </CardHeader>
                     {ev.description && (
