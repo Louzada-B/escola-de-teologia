@@ -1,14 +1,27 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { MapPin, Save } from 'lucide-react';
+import { MapPin, Save, Eye } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 
 interface Props {
   userId: string;
+}
+
+interface StudentStats {
+  id: string;
+  name: string;
+  aulaTotal: number;
+  aulaPresent: number;
+  especialTotal: number;
+  especialPresent: number;
 }
 
 export default function AttendanceSettingsManager({ userId }: Props) {
@@ -17,36 +30,42 @@ export default function AttendanceSettingsManager({ userId }: Props) {
   const [radius, setRadius] = useState('200');
   const [existingId, setExistingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [records, setRecords] = useState<any[]>([]);
+
+  const [students, setStudents] = useState<{ id: string; name: string }[]>([]);
   const [lessons, setLessons] = useState<any[]>([]);
-  const [profiles, setProfiles] = useState<Record<string, string>>({});
+  const [records, setRecords] = useState<{ user_id: string; lesson_id: string; id: string }[]>([]);
+
+  // Modal state
+  const [selectedStudent, setSelectedStudent] = useState<{ id: string; name: string } | null>(null);
+  const [savingAttendance, setSavingAttendance] = useState<string | null>(null);
 
   useEffect(() => {
-    async function load() {
-      const [settingsRes, recordsRes, lessonsRes, profilesRes] = await Promise.all([
-        supabase.from('attendance_settings').select('*').limit(1).maybeSingle(),
-        supabase.from('attendance_records').select('*').order('checked_in_at', { ascending: false }).limit(100),
-        supabase.from('lessons').select('id, title, scheduled_date'),
-        supabase.from('profiles').select('id, full_name, email'),
-      ]);
-
-      if (settingsRes.data) {
-        setLatitude(String(settingsRes.data.latitude));
-        setLongitude(String(settingsRes.data.longitude));
-        setRadius(String(settingsRes.data.radius_meters));
-        setExistingId(settingsRes.data.id);
-      }
-      if (recordsRes.data) setRecords(recordsRes.data);
-      if (lessonsRes.data) setLessons(lessonsRes.data);
-      if (profilesRes.data) {
-        const map: Record<string, string> = {};
-        profilesRes.data.forEach((p: any) => { map[p.id] = p.full_name || p.email; });
-        setProfiles(map);
-      }
-      setLoading(false);
-    }
     load();
   }, []);
+
+  async function load() {
+    const today = new Date().toISOString().split('T')[0];
+
+    const [settingsRes, lessonsRes, recordsRes, profilesRes] = await Promise.all([
+      supabase.from('attendance_settings').select('*').limit(1).maybeSingle(),
+      supabase.from('lessons').select('id, title, scheduled_date, event_type, mandatory_attendance').lte('scheduled_date', today).order('scheduled_date', { ascending: false }),
+      supabase.from('attendance_records').select('id, user_id, lesson_id'),
+      supabase.from('profiles').select('id, full_name, email').eq('role', 'aluno'),
+    ]);
+
+    if (settingsRes.data) {
+      setLatitude(String(settingsRes.data.latitude));
+      setLongitude(String(settingsRes.data.longitude));
+      setRadius(String(settingsRes.data.radius_meters));
+      setExistingId(settingsRes.data.id);
+    }
+    if (lessonsRes.data) setLessons(lessonsRes.data);
+    if (recordsRes.data) setRecords(recordsRes.data);
+    if (profilesRes.data) {
+      setStudents(profilesRes.data.map((p: any) => ({ id: p.id, name: p.full_name || p.email })));
+    }
+    setLoading(false);
+  }
 
   const handleSave = async () => {
     const lat = parseFloat(latitude);
@@ -93,12 +112,81 @@ export default function AttendanceSettingsManager({ userId }: Props) {
     );
   };
 
-  const getLessonTitle = (id: string) => lessons.find((l) => l.id === id)?.title || 'Aula desconhecida';
+  // Compute stats
+  const aulaLessons = useMemo(() => lessons.filter(l => l.event_type === 'Aula'), [lessons]);
+  const especialLessons = useMemo(() => lessons.filter(l => l.event_type === 'Aula Especial'), [lessons]);
+
+  const recordSet = useMemo(() => {
+    const set = new Set<string>();
+    records.forEach(r => set.add(`${r.user_id}::${r.lesson_id}`));
+    return set;
+  }, [records]);
+
+  const studentStats: StudentStats[] = useMemo(() => {
+    return students.map(s => {
+      const aulaPresent = aulaLessons.filter(l => recordSet.has(`${s.id}::${l.id}`)).length;
+      const especialPresent = especialLessons.filter(l => recordSet.has(`${s.id}::${l.id}`)).length;
+      return {
+        id: s.id,
+        name: s.name,
+        aulaTotal: aulaLessons.length,
+        aulaPresent,
+        especialTotal: especialLessons.length,
+        especialPresent,
+      };
+    });
+  }, [students, aulaLessons, especialLessons, recordSet]);
+
+  // Modal lessons for selected student
+  const modalLessons = useMemo(() => {
+    if (!selectedStudent) return [];
+    return lessons.map(l => ({
+      ...l,
+      present: recordSet.has(`${selectedStudent.id}::${l.id}`),
+    }));
+  }, [selectedStudent, lessons, recordSet]);
+
+  const toggleAttendance = async (lessonId: string, currentlyPresent: boolean) => {
+    if (!selectedStudent) return;
+    setSavingAttendance(lessonId);
+
+    if (currentlyPresent) {
+      // Delete the record
+      const record = records.find(r => r.user_id === selectedStudent.id && r.lesson_id === lessonId);
+      if (record) {
+        const { error } = await supabase.from('attendance_records').delete().eq('id', record.id);
+        if (error) {
+          toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+          setSavingAttendance(null);
+          return;
+        }
+        setRecords(prev => prev.filter(r => r.id !== record.id));
+      }
+    } else {
+      // Insert a record (professor manual — use 0,0 coords)
+      const { data, error } = await supabase.from('attendance_records').insert({
+        user_id: selectedStudent.id,
+        lesson_id: lessonId,
+        latitude: 0,
+        longitude: 0,
+      }).select('id, user_id, lesson_id').single();
+      if (error) {
+        toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+        setSavingAttendance(null);
+        return;
+      }
+      if (data) setRecords(prev => [...prev, data]);
+    }
+    setSavingAttendance(null);
+  };
+
+  const pct = (n: number, total: number) => total === 0 ? '—' : `${Math.round((n / total) * 100)}%`;
 
   if (loading) return <p className="text-muted-foreground">Carregando...</p>;
 
   return (
     <div className="space-y-6">
+      {/* Settings Card */}
       <Card className="card-academic">
         <CardHeader>
           <CardTitle className="font-heading text-lg">Local da Aula</CardTitle>
@@ -129,37 +217,101 @@ export default function AttendanceSettingsManager({ userId }: Props) {
         </CardContent>
       </Card>
 
+      {/* Summary Table */}
       <Card className="card-academic">
         <CardHeader>
-          <CardTitle className="font-heading text-lg">Registros de Presença</CardTitle>
+          <CardTitle className="font-heading text-lg">Resumo de Presença por Aluno</CardTitle>
         </CardHeader>
         <CardContent>
-          {records.length === 0 ? (
-            <p className="text-muted-foreground font-body">Nenhum registro de presença encontrado.</p>
+          {students.length === 0 ? (
+            <p className="text-muted-foreground font-body">Nenhum aluno cadastrado.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-2 font-medium">Aluno</th>
-                    <th className="text-left py-2 font-medium">Aula</th>
-                    <th className="text-left py-2 font-medium">Data/Hora</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {records.map((r) => (
-                    <tr key={r.id} className="border-b border-border/50">
-                      <td className="py-2">{profiles[r.user_id] || r.user_id}</td>
-                      <td className="py-2">{getLessonTitle(r.lesson_id)}</td>
-                      <td className="py-2">{new Date(r.checked_in_at).toLocaleString('pt-BR')}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome do Aluno</TableHead>
+                  <TableHead className="text-center">% Aulas</TableHead>
+                  <TableHead className="text-center">% Especiais</TableHead>
+                  <TableHead className="text-center">Presenças (Aulas)</TableHead>
+                  <TableHead className="text-center">Presenças (Especiais)</TableHead>
+                  <TableHead className="text-center">Faltas (Aulas)</TableHead>
+                  <TableHead className="text-center">Faltas (Especiais)</TableHead>
+                  <TableHead className="text-center">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {studentStats.map(s => (
+                  <TableRow key={s.id}>
+                    <TableCell className="font-medium">{s.name}</TableCell>
+                    <TableCell className="text-center">{pct(s.aulaPresent, s.aulaTotal)}</TableCell>
+                    <TableCell className="text-center">{pct(s.especialPresent, s.especialTotal)}</TableCell>
+                    <TableCell className="text-center">{s.aulaPresent}/{s.aulaTotal}</TableCell>
+                    <TableCell className="text-center">{s.especialPresent}/{s.especialTotal}</TableCell>
+                    <TableCell className="text-center">{s.aulaTotal - s.aulaPresent}</TableCell>
+                    <TableCell className="text-center">{s.especialTotal - s.especialPresent}</TableCell>
+                    <TableCell className="text-center">
+                      <Button size="sm" variant="outline" onClick={() => setSelectedStudent({ id: s.id, name: s.name })}>
+                        <Eye className="w-4 h-4 mr-1" /> Ver Aulas
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
+
+      {/* Student Detail Modal */}
+      <Dialog open={!!selectedStudent} onOpenChange={(open) => { if (!open) setSelectedStudent(null); }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-heading">Aulas — {selectedStudent?.name}</DialogTitle>
+          </DialogHeader>
+          {modalLessons.length === 0 ? (
+            <p className="text-muted-foreground font-body">Nenhuma aula disponível.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Aula</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
+                  <TableHead className="text-center">Presença</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {modalLessons.map(l => (
+                  <TableRow key={l.id}>
+                    <TableCell className="font-medium">{l.title}</TableCell>
+                    <TableCell>
+                      <Badge variant={l.event_type === 'Aula' ? 'default' : 'secondary'}>
+                        {l.event_type}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{new Date(l.scheduled_date + 'T12:00:00').toLocaleDateString('pt-BR')}</TableCell>
+                    <TableCell className="text-center">
+                      {l.present ? (
+                        <Badge className="bg-green-600 text-white">Presente</Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-destructive/50 text-destructive">Ausente</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Checkbox
+                        checked={l.present}
+                        disabled={savingAttendance === l.id}
+                        onCheckedChange={() => toggleAttendance(l.id, l.present)}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
