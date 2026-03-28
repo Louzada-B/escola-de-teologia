@@ -78,16 +78,9 @@ function DonutChart({
             </Pie>
           </PieChart>
         </ResponsiveContainer>
-        <div
-          className="flex flex-col items-center justify-center pointer-events-none"
-          style={{ gridArea: "1 / 1" }}
-        >
-          <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">
-            {centerLabel}
-          </span>
-          <span className="text-3xl font-bold font-heading text-foreground leading-none">
-            {centerValue}
-          </span>
+        <div className="flex flex-col items-center justify-center pointer-events-none" style={{ gridArea: "1 / 1" }}>
+          <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">{centerLabel}</span>
+          <span className="text-3xl font-bold font-heading text-foreground leading-none">{centerValue}</span>
         </div>
       </div>
       <div className="flex gap-6 mt-3">
@@ -167,7 +160,7 @@ export default function DashboardHome() {
               l.event_type === type &&
               l.mandatory_attendance &&
               l.scheduled_date &&
-              new Date(l.scheduled_date) < new Date()
+              new Date(l.scheduled_date) < new Date(),
           );
           const total = past.length;
           const present = past.filter((l) => checkedInIds.has(l.id)).length;
@@ -235,7 +228,7 @@ export default function DashboardHome() {
   return (
     <div className="page-container pb-10">
       {/* ALERTA DE PRESENÇA PENDENTE */}
-      {isWithinTime && pendingLesson && (
+      {isWithinTime && pendingLesson && profiles.role === "aluno" && (
         <Card className="mb-8 border-accent/40 bg-accent/5 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-700">
           <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-5">
             <div className="flex items-center gap-4 text-center sm:text-left">
@@ -274,15 +267,10 @@ export default function DashboardHome() {
                     ? "Você tem 1 questionário pendente!"
                     : `Você tem ${pendingQuizCount} questionários pendentes!`}
                 </h3>
-                <p className="text-sm text-muted-foreground font-body">
-                  Responda antes que o prazo encerre.
-                </p>
+                <p className="text-sm text-muted-foreground font-body">Responda antes que o prazo encerre.</p>
               </div>
             </div>
-            <Button
-              className="w-full sm:w-auto font-body px-6"
-              onClick={() => navigate("/dashboard/questionarios")}
-            >
+            <Button className="w-full sm:w-auto font-body px-6" onClick={() => navigate("/dashboard/questionarios")}>
               Responder Agora <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
           </CardContent>
@@ -337,7 +325,12 @@ export default function DashboardHome() {
             {aulaEspecialData.length === 0 || (aulaEspecialData[0].qty === 0 && aulaEspecialData[1].qty === 0) ? (
               <p className="text-center py-10 text-muted-foreground font-body">Sem dados de aulas especiais.</p>
             ) : (
-              <DonutChart data={aulaEspecialData} centerLabel="Especial" centerValue={`${aulaEspecialPerc}%`} colorFn={attendanceColorFn} />
+              <DonutChart
+                data={aulaEspecialData}
+                centerLabel="Especial"
+                centerValue={`${aulaEspecialPerc}%`}
+                colorFn={attendanceColorFn}
+              />
             )}
           </CardContent>
         </Card>
