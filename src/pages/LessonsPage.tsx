@@ -80,13 +80,16 @@ export default function LessonsPage() {
                 {mod.lessons.map((lesson) => (
                   <Card key={lesson.id} className="card-academic">
                     <CardHeader className="pb-2">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
                         <CardTitle className="text-base font-body font-semibold">{lesson.title}</CardTitle>
-                        {lesson.professor_name && (
-                          <span className="text-xs text-muted-foreground"> - Professor(a) {lesson.professor_name}</span>
-                        )}
+
                         {lesson.scheduled_date && (
                           <span className="text-xs text-muted-foreground">({lesson.scheduled_date})</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {lesson.professor_name && (
+                          <span className="text-xs text-muted-foreground"> - Professor(a) {lesson.professor_name}</span>
                         )}
                       </div>
                     </CardHeader>
