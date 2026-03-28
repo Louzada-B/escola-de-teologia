@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
 import { CheckCircle, Lock, Clock } from 'lucide-react';
+import QuizGabarito from '@/components/quiz/QuizGabarito';
 
 interface MatchPair { left: string; right: string }
 
