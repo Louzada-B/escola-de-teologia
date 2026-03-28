@@ -28,6 +28,6 @@ export function ProfessorRoute({ children }: { children: ReactNode }) {
     );
   }
 
-  if (profile?.role !== "professor" || "admin") return <Navigate to="/dashboard" replace />;
+  if (profile?.role !== "professor" || !== "admin") return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 }
