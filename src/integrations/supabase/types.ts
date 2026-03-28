@@ -146,6 +146,7 @@ export type Database = {
           id: string
           module_id: string
           order_index: number
+          scheduled_date: string | null
           title: string
           updated_at: string
           video_url: string | null
@@ -156,6 +157,7 @@ export type Database = {
           id?: string
           module_id: string
           order_index?: number
+          scheduled_date?: string | null
           title: string
           updated_at?: string
           video_url?: string | null
@@ -166,6 +168,7 @@ export type Database = {
           id?: string
           module_id?: string
           order_index?: number
+          scheduled_date?: string | null
           title?: string
           updated_at?: string
           video_url?: string | null
