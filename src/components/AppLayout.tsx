@@ -14,7 +14,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const isProfessor = profile?.role === 'professor';
-  const isAdmin = profile? === 'admin'
+  const isAdmin = profile? === 'admin';
 
   const navItems = [
     { to: '/dashboard', label: 'Painel', icon: LayoutDashboard },
