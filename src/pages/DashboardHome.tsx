@@ -13,8 +13,9 @@ import {
   TrendingUp,
   MapPin,
   ArrowRight,
+  Star,
 } from "lucide-react";
-import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
+import { ChartTooltip } from "@/components/ui/chart";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 
 const COLORS = {
@@ -23,6 +24,8 @@ const COLORS = {
   available: "hsl(220, 45%, 50%)",
   answered: "hsl(38, 55%, 55%)",
 };
+
+type ChartEntry = { name: string; value: number; qty: number };
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
@@ -42,14 +45,75 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
+function DonutChart({
+  data,
+  centerLabel,
+  centerValue,
+  colorFn,
+}: {
+  data: ChartEntry[];
+  centerLabel: string;
+  centerValue: string;
+  colorFn: (name: string) => string;
+}) {
+  return (
+    <div className="flex flex-col items-center">
+      <div className="h-[220px] w-full" style={{ display: "grid" }}>
+        <ResponsiveContainer width="100%" height="100%" style={{ gridArea: "1 / 1" }}>
+          <PieChart>
+            <ChartTooltip content={<CustomTooltip />} />
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={80}
+              paddingAngle={5}
+              dataKey="value"
+              stroke="none"
+            >
+              {data.map((entry, idx) => (
+                <Cell key={idx} fill={colorFn(entry.name)} />
+              ))}
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+        <div
+          className="flex flex-col items-center justify-center pointer-events-none"
+          style={{ gridArea: "1 / 1" }}
+        >
+          <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">
+            {centerLabel}
+          </span>
+          <span className="text-3xl font-bold font-heading text-foreground leading-none">
+            {centerValue}
+          </span>
+        </div>
+      </div>
+      <div className="flex gap-6 mt-3">
+        {data.map((d) => (
+          <div key={d.name} className="flex items-center gap-2 text-sm font-body">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: colorFn(d.name) }} />
+            <span className="text-muted-foreground">
+              {d.name}: <strong className="text-foreground">{d.value}%</strong>
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardHome() {
   const { profile, user } = useAuth();
   const navigate = useNavigate();
 
   const [stats, setStats] = useState({ modules: 0, announcements: 0, events: 0, quizzes: 0 });
-  const [attendanceData, setAttendanceData] = useState<{ name: string; value: number; qty: number }[]>([]);
-  const [quizData, setQuizData] = useState<{ name: string; value: number; qty: number }[]>([]);
-  const [mainAttendancePerc, setMainAttendancePerc] = useState(0);
+  const [aulaData, setAulaData] = useState<ChartEntry[]>([]);
+  const [aulaEspecialData, setAulaEspecialData] = useState<ChartEntry[]>([]);
+  const [aulaPerc, setAulaPerc] = useState(0);
+  const [aulaEspecialPerc, setAulaEspecialPerc] = useState(0);
+  const [quizData, setQuizData] = useState<ChartEntry[]>([]);
   const [mainQuizPerc, setMainQuizPerc] = useState(0);
   const [pendingLesson, setPendingLesson] = useState<any>(null);
   const [isWithinTime, setIsWithinTime] = useState(false);
@@ -88,22 +152,46 @@ export default function DashboardHome() {
         if (pending) setPendingLesson(pending);
       }
 
-      const { data: allLessons } = await supabase.from("lessons").select("id, scheduled_date");
+      // Attendance by type
+      const { data: allLessons } = await supabase
+        .from("lessons")
+        .select("id, scheduled_date, event_type, mandatory_attendance");
+
       if (allLessons && userRecords) {
         const checkedInIds = new Set(userRecords.map((r) => r.lesson_id));
-        const pastLessons = allLessons.filter((l) => l.scheduled_date && new Date(l.scheduled_date) < new Date());
-        const totalLessons = pastLessons.length;
-        const totalPresent = pastLessons.filter((l) => checkedInIds.has(l.id)).length;
-        const totalAbsent = totalLessons - totalPresent;
-        const pPerc = totalLessons > 0 ? Math.round((totalPresent / totalLessons) * 100) : 0;
-        const aPerc = totalLessons > 0 ? 100 - pPerc : 0;
-        setMainAttendancePerc(pPerc);
-        setAttendanceData([
-          { name: "Presenças", value: pPerc, qty: totalPresent },
-          { name: "Faltas", value: aPerc, qty: totalAbsent },
-        ]);
+
+        const calcForType = (type: string) => {
+          const past = allLessons.filter(
+            (l) =>
+              l.event_type === type &&
+              l.mandatory_attendance &&
+              l.scheduled_date &&
+              new Date(l.scheduled_date) < new Date()
+          );
+          const total = past.length;
+          const present = past.filter((l) => checkedInIds.has(l.id)).length;
+          const absent = total - present;
+          const pPerc = total > 0 ? Math.round((present / total) * 100) : 0;
+          const aPerc = total > 0 ? 100 - pPerc : 0;
+          return {
+            perc: pPerc,
+            data: [
+              { name: "Presenças", value: pPerc, qty: present },
+              { name: "Faltas", value: aPerc, qty: absent },
+            ] as ChartEntry[],
+          };
+        };
+
+        const aula = calcForType("aula");
+        setAulaPerc(aula.perc);
+        setAulaData(aula.data);
+
+        const especial = calcForType("aula_especial");
+        setAulaEspecialPerc(especial.perc);
+        setAulaEspecialData(especial.data);
       }
 
+      // Quizzes
       const { data: allQuizzes } = await supabase.from("quizzes").select("id");
       const { data: quizResponses } = await supabase.from("quiz_responses").select("quiz_id").eq("user_id", user.id);
       if (allQuizzes) {
@@ -129,6 +217,9 @@ export default function DashboardHome() {
     { label: "Eventos", value: stats.events, icon: CalendarDays },
     { label: "Questionários", value: stats.quizzes, icon: ClipboardList },
   ];
+
+  const attendanceColorFn = (name: string) => (name === "Presenças" ? COLORS.present : COLORS.absent);
+  const quizColorFn = (name: string) => (name === "Respondidos" ? COLORS.answered : COLORS.available);
 
   return (
     <div className="page-container pb-10">
@@ -180,69 +271,33 @@ export default function DashboardHome() {
       </div>
 
       {/* GRÁFICOS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Gráfico de Presença */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Presença — Aula */}
         <Card className="card-academic">
           <CardHeader className="flex flex-row items-center gap-2">
             <UserCheck className="w-5 h-5 text-accent" />
-            <CardTitle className="font-heading text-lg">Aproveitamento de Presença</CardTitle>
+            <CardTitle className="font-heading text-lg">Presença — Aula</CardTitle>
           </CardHeader>
           <CardContent>
-            {attendanceData.length === 0 ? (
-              <p className="text-center py-10 text-muted-foreground font-body">
-                Sem dados suficientes para gerar o gráfico.
-              </p>
+            {aulaData.length === 0 || (aulaData[0].qty === 0 && aulaData[1].qty === 0) ? (
+              <p className="text-center py-10 text-muted-foreground font-body">Sem dados de aulas regulares.</p>
             ) : (
-              <div className="flex flex-col items-center">
-                {/* Grid overlay — evita conflito de stacking context com o tooltip */}
-                <div className="h-[250px] w-full" style={{ display: "grid" }}>
-                  <ResponsiveContainer width="100%" height="100%" style={{ gridArea: "1 / 1" }}>
-                    <PieChart>
-                      <ChartTooltip content={<CustomTooltip />} />
-                      <Pie
-                        data={attendanceData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={68}
-                        outerRadius={88}
-                        paddingAngle={5}
-                        dataKey="value"
-                        stroke="none"
-                      >
-                        {attendanceData.map((entry, idx) => (
-                          <Cell key={idx} fill={entry.name === "Presenças" ? COLORS.present : COLORS.absent} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
+              <DonutChart data={aulaData} centerLabel="Aula" centerValue={`${aulaPerc}%`} colorFn={attendanceColorFn} />
+            )}
+          </CardContent>
+        </Card>
 
-                  <div
-                    className="flex flex-col items-center justify-center pointer-events-none"
-                    style={{ gridArea: "1 / 1" }}
-                  >
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">
-                      Geral
-                    </span>
-                    <span className="text-4xl font-bold font-heading text-foreground leading-none">
-                      {mainAttendancePerc}%
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex gap-8 mt-4">
-                  {attendanceData.map((d) => (
-                    <div key={d.name} className="flex items-center gap-2 text-sm font-body">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: d.name === "Presenças" ? COLORS.present : COLORS.absent }}
-                      />
-                      <span className="text-muted-foreground">
-                        {d.name}: <strong className="text-foreground">{d.value}%</strong>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+        {/* Presença — Aula Especial */}
+        <Card className="card-academic">
+          <CardHeader className="flex flex-row items-center gap-2">
+            <Star className="w-5 h-5 text-accent" />
+            <CardTitle className="font-heading text-lg">Presença — Aula Especial</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {aulaEspecialData.length === 0 || (aulaEspecialData[0].qty === 0 && aulaEspecialData[1].qty === 0) ? (
+              <p className="text-center py-10 text-muted-foreground font-body">Sem dados de aulas especiais.</p>
+            ) : (
+              <DonutChart data={aulaEspecialData} centerLabel="Especial" centerValue={`${aulaEspecialPerc}%`} colorFn={attendanceColorFn} />
             )}
           </CardContent>
         </Card>
@@ -257,56 +312,7 @@ export default function DashboardHome() {
             {quizData.length === 0 ? (
               <p className="text-center py-10 text-muted-foreground font-body">Nenhum questionário encontrado.</p>
             ) : (
-              <div className="flex flex-col items-center">
-                {/* Grid overlay — evita conflito de stacking context com o tooltip */}
-                <div className="h-[250px] w-full" style={{ display: "grid" }}>
-                  <ResponsiveContainer width="100%" height="100%" style={{ gridArea: "1 / 1" }}>
-                    <PieChart>
-                      <ChartTooltip content={<CustomTooltip />} />
-                      <Pie
-                        data={quizData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={68}
-                        outerRadius={88}
-                        paddingAngle={5}
-                        dataKey="value"
-                        stroke="none"
-                      >
-                        {quizData.map((entry, idx) => (
-                          <Cell key={idx} fill={entry.name === "Respondidos" ? COLORS.answered : COLORS.available} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-
-                  <div
-                    className="flex flex-col items-center justify-center pointer-events-none"
-                    style={{ gridArea: "1 / 1" }}
-                  >
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">
-                      Total
-                    </span>
-                    <span className="text-4xl font-bold font-heading text-foreground leading-none">
-                      {mainQuizPerc}%
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex gap-8 mt-4">
-                  {quizData.map((d) => (
-                    <div key={d.name} className="flex items-center gap-2 text-sm font-body">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: d.name === "Respondidos" ? COLORS.answered : COLORS.available }}
-                      />
-                      <span className="text-muted-foreground">
-                        {d.name}: <strong className="text-foreground">{d.value}%</strong>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <DonutChart data={quizData} centerLabel="Total" centerValue={`${mainQuizPerc}%`} colorFn={quizColorFn} />
             )}
           </CardContent>
         </Card>
