@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,8 +6,11 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
 import { CheckCircle, Lock, Clock } from 'lucide-react';
+
+interface MatchPair { left: string; right: string }
 
 export default function QuizzesPage() {
   const { user } = useAuth();
@@ -15,12 +18,17 @@ export default function QuizzesPage() {
   const [questions, setQuestions] = useState<Record<string, any[]>>({});
   const [answers, setAnswers] = useState<Record<string, Record<string, string>>>({});
   const [textAnswers, setTextAnswers] = useState<Record<string, Record<string, string>>>({});
+  const [vfAnswers, setVfAnswers] = useState<Record<string, Record<string, Record<string, string>>>>({});
+  const [matchAnswers, setMatchAnswers] = useState<Record<string, Record<string, Record<string, string>>>>({});
   const [submitted, setSubmitted] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
+  // Shuffled right-column options per question (so the student doesn't see them in order)
+  const [shuffledRights, setShuffledRights] = useState<Record<string, string[]>>({});
+
   useEffect(() => {
     async function load() {
-    const { data: quizData } = await supabase.from('quizzes').select('*, available_from, available_until').order('created_at');
+      const { data: quizData } = await supabase.from('quizzes').select('*').order('created_at');
       const { data: qData } = await supabase.from('quiz_questions').select('*').order('order_index');
       const { data: responses } = await supabase
         .from('quiz_responses')
@@ -30,11 +38,18 @@ export default function QuizzesPage() {
       if (quizData) setQuizzes(quizData);
       if (qData) {
         const grouped: Record<string, any[]> = {};
+        const shuffled: Record<string, string[]> = {};
         qData.forEach((q) => {
           if (!grouped[q.quiz_id]) grouped[q.quiz_id] = [];
           grouped[q.quiz_id].push(q);
+          // Shuffle right column for ligar_colunas
+          if (q.question_type === 'ligar_colunas' && Array.isArray(q.options)) {
+            const rights = (q.options as unknown as MatchPair[]).map(p => p.right);
+            shuffled[q.id] = [...rights].sort(() => Math.random() - 0.5);
+          }
         });
         setQuestions(grouped);
+        setShuffledRights(shuffled);
       }
       if (responses) {
         setSubmitted(new Set(responses.map((r) => r.quiz_id)));
@@ -45,35 +60,72 @@ export default function QuizzesPage() {
   }, [user]);
 
   const handleAnswer = (quizId: string, questionId: string, value: string) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [quizId]: { ...prev[quizId], [questionId]: value },
-    }));
+    setAnswers((prev) => ({ ...prev, [quizId]: { ...prev[quizId], [questionId]: value } }));
   };
 
   const handleTextAnswer = (quizId: string, questionId: string, value: string) => {
-    setTextAnswers((prev) => ({
+    setTextAnswers((prev) => ({ ...prev, [quizId]: { ...prev[quizId], [questionId]: value } }));
+  };
+
+  const handleVfAnswer = (quizId: string, questionId: string, phraseIdx: string, value: string) => {
+    setVfAnswers((prev) => ({
       ...prev,
-      [quizId]: { ...prev[quizId], [questionId]: value },
+      [quizId]: {
+        ...prev[quizId],
+        [questionId]: { ...prev[quizId]?.[questionId], [phraseIdx]: value },
+      },
+    }));
+  };
+
+  const handleMatchAnswer = (quizId: string, questionId: string, leftIdx: string, rightValue: string) => {
+    setMatchAnswers((prev) => ({
+      ...prev,
+      [quizId]: {
+        ...prev[quizId],
+        [questionId]: { ...prev[quizId]?.[questionId], [leftIdx]: rightValue },
+      },
     }));
   };
 
   const handleSubmit = async (quizId: string) => {
-    const quizAnswers = answers[quizId] || {};
-    const quizTextAnswers = textAnswers[quizId] || {};
     const quizQuestions = questions[quizId] || [];
-
-    const mergedAnswers: Record<string, string> = {};
+    const mergedAnswers: Record<string, any> = {};
     let score = 0;
 
     quizQuestions.forEach((q) => {
       const qType = q.question_type || 'objetiva';
+
       if (qType === 'dissertativa') {
-        mergedAnswers[q.id] = quizTextAnswers[q.id] || '';
-      } else {
-        mergedAnswers[q.id] = quizAnswers[q.id] || '';
-        if (q.correct_option !== null && quizAnswers[q.id] === String(q.correct_option)) {
+        mergedAnswers[q.id] = textAnswers[quizId]?.[q.id] || '';
+      } else if (qType === 'objetiva') {
+        mergedAnswers[q.id] = answers[quizId]?.[q.id] || '';
+        if (q.correct_option !== null && answers[quizId]?.[q.id] === String(q.correct_option)) {
           score++;
+        }
+      } else if (qType === 'verdadeiro_falso') {
+        const studentVf = vfAnswers[quizId]?.[q.id] || {};
+        mergedAnswers[q.id] = studentVf;
+        // Score: compare each phrase
+        try {
+          const correctVf: Record<string, string> = q.expected_text ? JSON.parse(q.expected_text) : {};
+          const phrases = Array.isArray(q.options) ? q.options : [];
+          let allCorrect = true;
+          phrases.forEach((_: any, i: number) => {
+            if ((studentVf[String(i)] || '') !== (correctVf[String(i)] || '')) allCorrect = false;
+          });
+          if (allCorrect && phrases.length > 0) score++;
+        } catch {}
+      } else if (qType === 'ligar_colunas') {
+        const studentMatch = matchAnswers[quizId]?.[q.id] || {};
+        mergedAnswers[q.id] = studentMatch;
+        // Score: all pairs must match
+        if (Array.isArray(q.options)) {
+          const pairs = q.options as MatchPair[];
+          let allCorrect = true;
+          pairs.forEach((pair, i) => {
+            if (studentMatch[String(i)] !== pair.right) allCorrect = false;
+          });
+          if (allCorrect && pairs.length > 0) score++;
         }
       }
     });
@@ -93,8 +145,8 @@ export default function QuizzesPage() {
       toast({
         title: 'Respostas enviadas!',
         description: totalGraded > 0
-          ? `Você acertou ${score} de ${totalGraded} questões objetivas.`
-          : 'Suas respostas dissertativas foram registradas.',
+          ? `Você acertou ${score} de ${totalGraded} questões.`
+          : 'Suas respostas foram registradas.',
       });
     }
   };
@@ -148,11 +200,12 @@ export default function QuizzesPage() {
                           <p className="font-body font-medium">
                             {idx + 1}. {q.question}
                             <span className="ml-2 text-xs text-muted-foreground">
-                              ({qType === 'objetiva' ? 'Objetiva' : qType === 'verdadeiro_falso' ? 'V ou F' : 'Dissertativa'})
+                              ({qType === 'objetiva' ? 'Objetiva' : qType === 'verdadeiro_falso' ? 'V ou F' : qType === 'ligar_colunas' ? 'Ligar Colunas' : 'Dissertativa'})
                             </span>
                           </p>
 
-                          {(qType === 'objetiva' || qType === 'verdadeiro_falso') && (
+                          {/* Objetiva */}
+                          {qType === 'objetiva' && (
                             <RadioGroup
                               value={answers[quiz.id]?.[q.id] || ''}
                               onValueChange={(v) => handleAnswer(quiz.id, q.id, v)}
@@ -166,6 +219,59 @@ export default function QuizzesPage() {
                             </RadioGroup>
                           )}
 
+                          {/* Verdadeiro ou Falso — múltiplas frases */}
+                          {qType === 'verdadeiro_falso' && Array.isArray(q.options) && (
+                            <div className="space-y-3 pl-2">
+                              {(q.options as string[]).map((phrase: string, i: number) => (
+                                <div key={i} className="flex items-center justify-between gap-4 bg-muted/30 p-3 rounded-md">
+                                  <span className="font-body text-sm flex-1">{phrase}</span>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                      {vfAnswers[quiz.id]?.[q.id]?.[String(i)] === 'verdadeiro' ? 'V' : vfAnswers[quiz.id]?.[q.id]?.[String(i)] === 'falso' ? 'F' : '—'}
+                                    </span>
+                                    <div className="flex gap-1">
+                                      <Button
+                                        size="sm"
+                                        variant={vfAnswers[quiz.id]?.[q.id]?.[String(i)] === 'verdadeiro' ? 'default' : 'outline'}
+                                        className="h-7 px-2 text-xs"
+                                        onClick={() => handleVfAnswer(quiz.id, q.id, String(i), 'verdadeiro')}
+                                      >V</Button>
+                                      <Button
+                                        size="sm"
+                                        variant={vfAnswers[quiz.id]?.[q.id]?.[String(i)] === 'falso' ? 'default' : 'outline'}
+                                        className="h-7 px-2 text-xs"
+                                        onClick={() => handleVfAnswer(quiz.id, q.id, String(i), 'falso')}
+                                      >F</Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Ligar Colunas */}
+                          {qType === 'ligar_colunas' && Array.isArray(q.options) && (
+                            <div className="space-y-3 pl-2">
+                              {(q.options as MatchPair[]).map((pair, i) => (
+                                <div key={i} className="flex items-center gap-3">
+                                  <span className="font-body text-sm flex-1 bg-muted/30 p-2 rounded">{pair.left}</span>
+                                  <span className="text-muted-foreground">→</span>
+                                  <select
+                                    value={matchAnswers[quiz.id]?.[q.id]?.[String(i)] || ''}
+                                    onChange={e => handleMatchAnswer(quiz.id, q.id, String(i), e.target.value)}
+                                    className="flex-1 border rounded-md p-2 bg-background text-foreground text-sm"
+                                  >
+                                    <option value="">Selecione</option>
+                                    {(shuffledRights[q.id] || []).map((right, ri) => (
+                                      <option key={ri} value={right}>{right}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Dissertativa */}
                           {qType === 'dissertativa' && (
                             <Textarea
                               value={textAnswers[quiz.id]?.[q.id] || ''}
