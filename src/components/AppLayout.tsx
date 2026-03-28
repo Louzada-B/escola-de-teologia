@@ -36,6 +36,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { to: "/dashboard/presenca", label: "Presença", icon: UserCheck },
     { to: "/dashboard/perfil", label: "Meu Perfil", icon: User },
     ...(isProfessor || isAdmin ? [{ to: "/dashboard/professor", label: "Gestão", icon: Upload }] : []),
+    ...(isAdmin ? [{ to: "/dashboard/analises", label: "Análises", icon: Chart }] : []),
   ];
 
   return (
