@@ -254,9 +254,7 @@ export default function DashboardHome() {
       )}
 
       {/* ALERTA DE QUESTIONÁRIOS PENDENTES */}
-      {pendingQuizCount > 0 &&
-        profile?.role ===
-          "aluno"(
+      {pendingQuizCount > 0 && profile?.role === "aluno" && (
             <Card className="mb-8 border-primary/40 bg-primary/5 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-700">
               <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-5">
                 <div className="flex items-center gap-4 text-center sm:text-left">
@@ -279,7 +277,7 @@ export default function DashboardHome() {
                   Responder Agora <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
               </CardContent>
-            </Card>,
+            </Card>
           )}
 
       {/* BOAS-VINDAS */}
