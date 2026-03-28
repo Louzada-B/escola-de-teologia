@@ -1,9 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   BookOpen, LayoutDashboard, Upload, MessageSquare, CalendarDays,
-  ClipboardList, BookMarked, LogOut, Menu, X, UserCheck
+  ClipboardList, BookMarked, LogOut, Menu, X, UserCheck, User
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -22,6 +23,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { to: '/dashboard/questionarios', label: 'Questionários', icon: ClipboardList },
     { to: '/dashboard/livros', label: 'Livros', icon: BookMarked },
     { to: '/dashboard/presenca', label: 'Presença', icon: UserCheck },
+    { to: '/dashboard/perfil', label: 'Meu Perfil', icon: User },
     ...(isProfessor ? [{ to: '/dashboard/professor', label: 'Gestão', icon: Upload }] : []),
   ];
 
@@ -79,9 +81,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="p-4 border-t border-sidebar-border">
-          <div className="text-xs text-sidebar-foreground/60 mb-2 truncate">
-            {profile?.full_name || profile?.email}
-          </div>
+          <Link to="/dashboard/perfil" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 mb-3 hover:opacity-80 transition-opacity">
+            <Avatar className="w-8 h-8 text-xs">
+              <AvatarImage src={(profile as any)?.avatar_url || undefined} />
+              <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground">
+                {(profile?.full_name || profile?.email || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-sm text-sidebar-foreground truncate">{profile?.full_name || profile?.email}</span>
+          </Link>
           <Button
             variant="ghost"
             size="sm"
