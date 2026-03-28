@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { ProtectedRoute, ProfessorRoute } from "@/components/ProtectedRoute";
+import { ProtectedRoute, ProfessorRoute, AdminRoute } from "@/components/ProtectedRoute";
 import AppLayout from "@/components/AppLayout";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
@@ -17,6 +17,7 @@ import BooksPage from "./pages/BooksPage";
 import ProfessorPage from "./pages/ProfessorPage";
 import AttendancePage from "./pages/AttendancePage";
 import ProfilePage from "./pages/ProfilePage";
+import AnalyticsPage from "./pages/AnalyticsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +51,13 @@ const App = () => (
                 <ProfessorRoute>
                   <AppLayout><ProfessorPage /></AppLayout>
                 </ProfessorRoute>
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/analises" element={
+              <ProtectedRoute>
+                <AdminRoute>
+                  <AppLayout><AnalyticsPage /></AppLayout>
+                </AdminRoute>
               </ProtectedRoute>
             } />
             <Route path="*" element={<NotFound />} />

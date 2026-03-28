@@ -14,6 +14,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const isProfessor = profile?.role === 'professor';
+  const isAdmin = profile?.role === 'admin' as string;
 
   const navItems = [
     { to: '/dashboard', label: 'Painel', icon: LayoutDashboard },
@@ -25,6 +26,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { to: '/dashboard/presenca', label: 'Presença', icon: UserCheck },
     { to: '/dashboard/perfil', label: 'Meu Perfil', icon: User },
     ...(isProfessor ? [{ to: '/dashboard/professor', label: 'Gestão', icon: Upload }] : []),
+    ...(isAdmin ? [{ to: '/dashboard/analises', label: 'Análises', icon: LayoutDashboard }] : []),
   ];
 
   return (

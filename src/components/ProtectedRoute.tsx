@@ -31,3 +31,18 @@ export function ProfessorRoute({ children }: { children: ReactNode }) {
   if (profile?.role !== 'professor') return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 }
+
+export function AdminRoute({ children }: { children: ReactNode }) {
+  const { profile, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground font-body">Carregando...</div>
+      </div>
+    );
+  }
+
+  if ((profile?.role as string) !== 'admin') return <Navigate to="/dashboard" replace />;
+  return <>{children}</>;
+}
