@@ -85,17 +85,46 @@ export default function ModulesManager({ userId }: { userId: string }) {
     loadData();
   };
 
+  const sanitizeStorageFileName = (fileName: string) => {
+    const extensionIndex = fileName.lastIndexOf('.');
+    const extension = extensionIndex >= 0 ? fileName.slice(extensionIndex).toLowerCase() : '';
+    const baseName = extensionIndex >= 0 ? fileName.slice(0, extensionIndex) : fileName;
+
+    const sanitizedBaseName = baseName
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9_-]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .toLowerCase();
+
+    return `${sanitizedBaseName || 'arquivo'}-${crypto.randomUUID()}${extension}`;
+  };
+
   const uploadFilesForLesson = async (lessonId: string, fileList: File[]) => {
     for (const file of fileList) {
-      const path = `lessons/${lessonId}/${file.name}`;
+      const path = `lessons/${lessonId}/${sanitizeStorageFileName(file.name)}`;
       const { error: uploadErr } = await supabase.storage.from('course-files').upload(path, file);
-      if (!uploadErr) {
-        await supabase.from('lesson_files').insert({
-          lesson_id: lessonId, file_name: file.name, file_path: path,
-          file_type: file.type, file_size: file.size,
-        });
+
+      if (uploadErr) {
+        return `Não foi possível enviar "${file.name}": ${uploadErr.message}`;
+      }
+
+      const { error: insertErr } = await supabase.from('lesson_files').insert({
+        lesson_id: lessonId,
+        file_name: file.name,
+        file_path: path,
+        file_type: file.type,
+        file_size: file.size,
+      });
+
+      if (insertErr) {
+        await supabase.storage.from('course-files').remove([path]);
+        return `O arquivo "${file.name}" foi enviado, mas não pôde ser registrado: ${insertErr.message}`;
       }
     }
+
+    return null;
   };
 
   const addLesson = async () => {
@@ -111,8 +140,9 @@ export default function ModulesManager({ userId }: { userId: string }) {
     }).select().single();
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
 
+    let fileError: string | null = null;
     if (pendingFiles.length > 0 && lessonData) {
-      await uploadFilesForLesson(lessonData.id, pendingFiles);
+      fileError = await uploadFilesForLesson(lessonData.id, pendingFiles);
     }
 
     // Auto-create calendar event if date is set
@@ -132,6 +162,12 @@ export default function ModulesManager({ userId }: { userId: string }) {
     setPendingFiles([]);
     if (fileInputRef.current) fileInputRef.current.value = '';
     loadData();
+
+    if (fileError) {
+      toast({ title: 'Aula criada, mas o anexo falhou', description: fileError, variant: 'destructive' });
+      return;
+    }
+
     toast({ title: 'Aula criada!' });
   };
 
@@ -179,9 +215,9 @@ export default function ModulesManager({ userId }: { userId: string }) {
       await supabase.from('lesson_files').delete().eq('id', file.id);
     }
 
-    // Upload new files
+    let fileError: string | null = null;
     if (editPendingFiles.length > 0) {
-      await uploadFilesForLesson(editingLesson.id, editPendingFiles);
+      fileError = await uploadFilesForLesson(editingLesson.id, editPendingFiles);
     }
 
     // Sync calendar event
@@ -213,6 +249,12 @@ export default function ModulesManager({ userId }: { userId: string }) {
     setFilesToDelete([]);
     setEditPendingFiles([]);
     loadData();
+
+    if (fileError) {
+      toast({ title: 'Aula atualizada, mas o anexo falhou', description: fileError, variant: 'destructive' });
+      return;
+    }
+
     toast({ title: 'Aula atualizada!' });
   };
 
