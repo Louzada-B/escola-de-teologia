@@ -51,21 +51,37 @@ export default function QuizzesPage() {
     }));
   };
 
+  const handleTextAnswer = (quizId: string, questionId: string, value: string) => {
+    setTextAnswers((prev) => ({
+      ...prev,
+      [quizId]: { ...prev[quizId], [questionId]: value },
+    }));
+  };
+
   const handleSubmit = async (quizId: string) => {
     const quizAnswers = answers[quizId] || {};
+    const quizTextAnswers = textAnswers[quizId] || {};
     const quizQuestions = questions[quizId] || [];
 
+    const mergedAnswers: Record<string, string> = {};
     let score = 0;
+
     quizQuestions.forEach((q) => {
-      if (q.correct_option !== null && quizAnswers[q.id] === String(q.correct_option)) {
-        score++;
+      const qType = q.question_type || 'objetiva';
+      if (qType === 'dissertativa') {
+        mergedAnswers[q.id] = quizTextAnswers[q.id] || '';
+      } else {
+        mergedAnswers[q.id] = quizAnswers[q.id] || '';
+        if (q.correct_option !== null && quizAnswers[q.id] === String(q.correct_option)) {
+          score++;
+        }
       }
     });
 
     const { error } = await supabase.from('quiz_responses').insert({
       quiz_id: quizId,
       user_id: user!.id,
-      answers: quizAnswers,
+      answers: mergedAnswers,
       score,
     });
 
@@ -73,9 +89,12 @@ export default function QuizzesPage() {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } else {
       setSubmitted((prev) => new Set(prev).add(quizId));
+      const totalGraded = quizQuestions.filter((q) => (q.question_type || 'objetiva') !== 'dissertativa').length;
       toast({
         title: 'Respostas enviadas!',
-        description: `Você acertou ${score} de ${quizQuestions.length} questões.`,
+        description: totalGraded > 0
+          ? `Você acertou ${score} de ${totalGraded} questões objetivas.`
+          : 'Suas respostas dissertativas foram registradas.',
       });
     }
   };
