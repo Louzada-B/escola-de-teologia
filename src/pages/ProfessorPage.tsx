@@ -219,8 +219,10 @@ function EventsManager({ userId }: { userId: string }) {
 function QuizzesManager({ userId }: { userId: string }) {
   const [title, setTitle] = useState('');
   const [questionText, setQuestionText] = useState('');
+  const [questionType, setQuestionType] = useState<'objetiva' | 'dissertativa' | 'verdadeiro_falso'>('objetiva');
   const [options, setOptions] = useState(['', '', '', '']);
   const [correctOption, setCorrectOption] = useState(0);
+  const [expectedText, setExpectedText] = useState('');
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [selectedQuiz, setSelectedQuiz] = useState('');
 
@@ -237,14 +239,39 @@ function QuizzesManager({ userId }: { userId: string }) {
     toast({ title: 'Questionário criado!' });
   };
 
+  const resetQuestionForm = () => {
+    setQuestionText('');
+    setQuestionType('objetiva');
+    setOptions(['', '', '', '']);
+    setCorrectOption(0);
+    setExpectedText('');
+  };
+
   const addQuestion = async () => {
     if (!selectedQuiz || !questionText.trim()) return;
-    const { error } = await supabase.from('quiz_questions').insert({
-      quiz_id: selectedQuiz, question: questionText, options: options.filter(o => o.trim()),
-      correct_option: correctOption, order_index: 0,
-    });
+
+    const insertData: any = {
+      quiz_id: selectedQuiz,
+      question: questionText,
+      question_type: questionType,
+      order_index: 0,
+    };
+
+    if (questionType === 'objetiva') {
+      insertData.options = options.filter(o => o.trim());
+      insertData.correct_option = correctOption;
+    } else if (questionType === 'verdadeiro_falso') {
+      insertData.options = ['Verdadeiro', 'Falso'];
+      insertData.correct_option = correctOption;
+    } else {
+      insertData.options = [];
+      insertData.correct_option = null;
+      insertData.expected_text = expectedText || null;
+    }
+
+    const { error } = await supabase.from('quiz_questions').insert(insertData);
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
-    setQuestionText(''); setOptions(['', '', '', '']); setCorrectOption(0);
+    resetQuestionForm();
     toast({ title: 'Pergunta adicionada!' });
   };
 
@@ -269,18 +296,49 @@ function QuizzesManager({ userId }: { userId: string }) {
             </select>
           </div>
           <div><Label>Pergunta</Label><Textarea value={questionText} onChange={e => setQuestionText(e.target.value)} /></div>
-          {options.map((opt, i) => (
-            <div key={i}>
-              <Label>Opção {i + 1} {i === correctOption ? '(correta)' : ''}</Label>
-              <Input value={opt} onChange={e => { const n = [...options]; n[i] = e.target.value; setOptions(n); }} />
-            </div>
-          ))}
           <div>
-            <Label>Opção correta</Label>
-            <select value={correctOption} onChange={e => setCorrectOption(Number(e.target.value))} className="w-full border rounded-md p-2 bg-background text-foreground">
-              {options.map((_, i) => <option key={i} value={i}>Opção {i + 1}</option>)}
+            <Label>Tipo de Pergunta</Label>
+            <select value={questionType} onChange={e => setQuestionType(e.target.value as any)} className="w-full border rounded-md p-2 bg-background text-foreground">
+              <option value="objetiva">Objetiva</option>
+              <option value="dissertativa">Dissertativa</option>
+              <option value="verdadeiro_falso">Verdadeiro ou Falso</option>
             </select>
           </div>
+
+          {questionType === 'objetiva' && (
+            <>
+              {options.map((opt, i) => (
+                <div key={i}>
+                  <Label>Opção {i + 1} {i === correctOption ? '(correta)' : ''}</Label>
+                  <Input value={opt} onChange={e => { const n = [...options]; n[i] = e.target.value; setOptions(n); }} />
+                </div>
+              ))}
+              <div>
+                <Label>Opção correta</Label>
+                <select value={correctOption} onChange={e => setCorrectOption(Number(e.target.value))} className="w-full border rounded-md p-2 bg-background text-foreground">
+                  {options.map((_, i) => <option key={i} value={i}>Opção {i + 1}</option>)}
+                </select>
+              </div>
+            </>
+          )}
+
+          {questionType === 'verdadeiro_falso' && (
+            <div>
+              <Label>Resposta correta</Label>
+              <select value={correctOption} onChange={e => setCorrectOption(Number(e.target.value))} className="w-full border rounded-md p-2 bg-background text-foreground">
+                <option value={0}>Verdadeiro</option>
+                <option value={1}>Falso</option>
+              </select>
+            </div>
+          )}
+
+          {questionType === 'dissertativa' && (
+            <div>
+              <Label>Texto esperado (referência para correção)</Label>
+              <Textarea value={expectedText} onChange={e => setExpectedText(e.target.value)} placeholder="Resposta esperada do aluno..." />
+            </div>
+          )}
+
           <Button onClick={addQuestion}><Plus className="w-4 h-4 mr-1" /> Adicionar Pergunta</Button>
         </CardContent>
       </Card>
