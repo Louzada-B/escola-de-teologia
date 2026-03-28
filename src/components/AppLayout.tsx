@@ -1,31 +1,41 @@
-import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  BookOpen, LayoutDashboard, Upload, MessageSquare, CalendarDays,
-  ClipboardList, BookMarked, LogOut, Menu, X, UserCheck, User
-} from 'lucide-react';
-import { useState } from 'react';
-import { cn } from '@/lib/utils';
+  BookOpen,
+  LayoutDashboard,
+  Upload,
+  MessageSquare,
+  CalendarDays,
+  ClipboardList,
+  BookMarked,
+  LogOut,
+  Menu,
+  X,
+  UserCheck,
+  User,
+} from "lucide-react";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { profile, signOut } = useAuth();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const isProfessor = profile?.role === 'professor';
-  const isAdmin = profile? === 'admin';
+  const isProfessor = profile?.role === "professor";
+  const isAdmin = profile?.role === "admin";
 
   const navItems = [
-    { to: '/dashboard', label: 'Painel', icon: LayoutDashboard },
-    { to: '/dashboard/aulas', label: 'Aulas', icon: BookOpen },
-    { to: '/dashboard/avisos', label: 'Avisos', icon: MessageSquare },
-    { to: '/dashboard/calendario', label: 'Calendário', icon: CalendarDays },
-    { to: '/dashboard/questionarios', label: 'Questionários', icon: ClipboardList },
-    { to: '/dashboard/livros', label: 'Livros', icon: BookMarked },
-    { to: '/dashboard/presenca', label: 'Presença', icon: UserCheck },
-    { to: '/dashboard/perfil', label: 'Meu Perfil', icon: User },
-    ...(isProfessor || isAdmin ? [{ to: '/dashboard/professor', label: 'Gestão', icon: Upload }] : []),
+    { to: "/dashboard", label: "Painel", icon: LayoutDashboard },
+    { to: "/dashboard/aulas", label: "Aulas", icon: BookOpen },
+    { to: "/dashboard/avisos", label: "Avisos", icon: MessageSquare },
+    { to: "/dashboard/calendario", label: "Calendário", icon: CalendarDays },
+    { to: "/dashboard/questionarios", label: "Questionários", icon: ClipboardList },
+    { to: "/dashboard/livros", label: "Livros", icon: BookMarked },
+    { to: "/dashboard/presenca", label: "Presença", icon: UserCheck },
+    { to: "/dashboard/perfil", label: "Meu Perfil", icon: User },
+    ...(isProfessor || isAdmin ? [{ to: "/dashboard/professor", label: "Gestão", icon: Upload }] : []),
   ];
 
   return (
@@ -42,11 +52,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Sidebar */}
-      <aside className={cn(
-        "w-64 bg-sidebar text-sidebar-foreground flex-shrink-0 flex flex-col border-r border-sidebar-border",
-        "lg:flex",
-        mobileOpen ? "flex absolute z-50 inset-0 lg:relative" : "hidden"
-      )}>
+      <aside
+        className={cn(
+          "w-64 bg-sidebar text-sidebar-foreground flex-shrink-0 flex flex-col border-r border-sidebar-border",
+          "lg:flex",
+          mobileOpen ? "flex absolute z-50 inset-0 lg:relative" : "hidden",
+        )}
+      >
         <div className="p-6 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-sidebar-primary rounded-lg flex items-center justify-center">
@@ -54,7 +66,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
             <div>
               <h1 className="font-heading font-semibold text-sm">Escola de Teologia</h1>
-              <p className="text-xs text-sidebar-foreground/60 capitalize">{profile?.role || 'aluno'}</p>
+              <p className="text-xs text-sidebar-foreground/60 capitalize">{profile?.role || "aluno"}</p>
             </div>
           </div>
         </div>
@@ -71,7 +83,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors",
                   active
                     ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
                 )}
               >
                 <item.icon className="w-4 h-4" />
@@ -82,11 +94,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="p-4 border-t border-sidebar-border">
-          <Link to="/dashboard/perfil" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 mb-3 hover:opacity-80 transition-opacity">
+          <Link
+            to="/dashboard/perfil"
+            onClick={() => setMobileOpen(false)}
+            className="flex items-center gap-3 mb-3 hover:opacity-80 transition-opacity"
+          >
             <Avatar className="w-8 h-8 text-xs">
               <AvatarImage src={(profile as any)?.avatar_url || undefined} />
               <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground">
-                {(profile?.full_name || profile?.email || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)}
+                {(profile?.full_name || profile?.email || "?")
+                  .split(" ")
+                  .map((w) => w[0])
+                  .join("")
+                  .toUpperCase()
+                  .slice(0, 2)}
               </AvatarFallback>
             </Avatar>
             <span className="text-sm text-sidebar-foreground truncate">{profile?.full_name || profile?.email}</span>
@@ -104,9 +125,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto">
-        {children}
-      </main>
+      <main className="flex-1 overflow-auto">{children}</main>
     </div>
   );
 }
