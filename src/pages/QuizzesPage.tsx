@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { CheckCircle } from 'lucide-react';
 
@@ -13,6 +14,7 @@ export default function QuizzesPage() {
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [questions, setQuestions] = useState<Record<string, any[]>>({});
   const [answers, setAnswers] = useState<Record<string, Record<string, string>>>({});
+  const [textAnswers, setTextAnswers] = useState<Record<string, Record<string, string>>>({});
   const [submitted, setSubmitted] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
