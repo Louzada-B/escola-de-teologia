@@ -116,6 +116,7 @@ export default function DashboardHome() {
   const [quizData, setQuizData] = useState<ChartEntry[]>([]);
   const [mainQuizPerc, setMainQuizPerc] = useState(0);
   const [pendingLesson, setPendingLesson] = useState<any>(null);
+  const [pendingQuizCount, setPendingQuizCount] = useState(0);
   const [isWithinTime, setIsWithinTime] = useState(false);
 
   useEffect(() => {
@@ -192,12 +193,22 @@ export default function DashboardHome() {
       }
 
       // Quizzes
-      const { data: allQuizzes } = await supabase.from("quizzes").select("id");
+      const now = new Date().toISOString();
+      const { data: allQuizzes } = await supabase.from("quizzes").select("id, available_from, available_until");
       const { data: quizResponses } = await supabase.from("quiz_responses").select("quiz_id").eq("user_id", user.id);
       if (allQuizzes) {
         const answeredIds = new Set((quizResponses || []).map((r) => r.quiz_id));
         const answered = allQuizzes.filter((q) => answeredIds.has(q.id)).length;
         const available = allQuizzes.length - answered;
+
+        // Pending open quizzes (within availability window and not answered)
+        const openUnanswered = allQuizzes.filter((q) => {
+          if (answeredIds.has(q.id)) return false;
+          if (q.available_from && q.available_from > now) return false;
+          if (q.available_until && q.available_until < now) return false;
+          return true;
+        });
+        setPendingQuizCount(openUnanswered.length);
         const ansPerc = allQuizzes.length > 0 ? Math.round((answered / allQuizzes.length) * 100) : 0;
         const availPerc = allQuizzes.length > 0 ? 100 - ansPerc : 0;
         setMainQuizPerc(ansPerc);
@@ -244,6 +255,35 @@ export default function DashboardHome() {
               onClick={() => navigate("/dashboard/presenca")}
             >
               Registrar Agora <ArrowRight className="ml-2 w-4 h-4" />
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ALERTA DE QUESTIONÁRIOS PENDENTES */}
+      {pendingQuizCount > 0 && (
+        <Card className="mb-8 border-primary/40 bg-primary/5 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-700">
+          <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-5">
+            <div className="flex items-center gap-4 text-center sm:text-left">
+              <div className="bg-primary/20 p-3 rounded-full hidden sm:block">
+                <ClipboardList className="w-6 h-6 text-primary animate-pulse" />
+              </div>
+              <div>
+                <h3 className="font-heading font-bold text-lg text-foreground">
+                  {pendingQuizCount === 1
+                    ? "Você tem 1 questionário pendente!"
+                    : `Você tem ${pendingQuizCount} questionários pendentes!`}
+                </h3>
+                <p className="text-sm text-muted-foreground font-body">
+                  Responda antes que o prazo encerre.
+                </p>
+              </div>
+            </div>
+            <Button
+              className="w-full sm:w-auto font-body px-6"
+              onClick={() => navigate("/dashboard/questionarios")}
+            >
+              Responder Agora <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
           </CardContent>
         </Card>
