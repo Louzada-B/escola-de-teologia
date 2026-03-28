@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { toast } from '@/hooks/use-toast';
-import { MapPin, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
+import { MapPin, CheckCircle, Clock, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371000;
@@ -29,15 +29,18 @@ export default function AttendancePage() {
   useEffect(() => {
     const now = new Date();
     const hour = now.getHours();
-    setIsWithinTime(hour >= 19 && hour <= 23);
+    setIsWithinTime(hour >= 7 && hour <= 23);
 
     async function load() {
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toISOString().split("T")[0];
 
       const [lessonsRes, settingsRes, recordsRes] = await Promise.all([
-        supabase.from('lessons').select('*, modules(title)').eq('scheduled_date', today),
-        supabase.from('attendance_settings').select('*').limit(1).maybeSingle(),
-        supabase.from('attendance_records').select('lesson_id').eq('user_id', user?.id || ''),
+        supabase.from("lessons").select("*, modules(title)").eq("scheduled_date", today),
+        supabase.from("attendance_settings").select("*").limit(1).maybeSingle(),
+        supabase
+          .from("attendance_records")
+          .select("lesson_id")
+          .eq("user_id", user?.id || ""),
       ]);
 
       if (lessonsRes.data) setTodayLessons(lessonsRes.data);
@@ -52,17 +55,21 @@ export default function AttendancePage() {
 
   const handleCheckIn = async (lessonId: string) => {
     if (!settings) {
-      toast({ title: 'Erro', description: 'Local da aula não configurado pelo professor.', variant: 'destructive' });
+      toast({ title: "Erro", description: "Local da aula não configurado pelo professor.", variant: "destructive" });
       return;
     }
 
     if (!isWithinTime) {
-      toast({ title: 'Fora do horário', description: 'O registro de presença está disponível apenas das 19:00 às 23:59.', variant: 'destructive' });
+      toast({
+        title: "Fora do horário",
+        description: "O registro de presença está disponível apenas das 19:00 às 23:59.",
+        variant: "destructive",
+      });
       return;
     }
 
     if (!navigator.geolocation) {
-      toast({ title: 'Erro', description: 'Seu navegador não suporta geolocalização.', variant: 'destructive' });
+      toast({ title: "Erro", description: "Seu navegador não suporta geolocalização.", variant: "destructive" });
       return;
     }
 
@@ -75,15 +82,15 @@ export default function AttendancePage() {
 
         if (distance > settings.radius_meters) {
           toast({
-            title: 'Fora do local',
+            title: "Fora do local",
             description: `Você está a ${Math.round(distance)}m do local da aula. Máximo permitido: ${settings.radius_meters}m.`,
-            variant: 'destructive',
+            variant: "destructive",
           });
           setGpsLoading(null);
           return;
         }
 
-        const { error } = await supabase.from('attendance_records').insert({
+        const { error } = await supabase.from("attendance_records").insert({
           user_id: user!.id,
           lesson_id: lessonId,
           latitude,
@@ -91,30 +98,35 @@ export default function AttendancePage() {
         });
 
         if (error) {
-          if (error.code === '23505') {
-            toast({ title: 'Aviso', description: 'Presença já registrada para esta aula.' });
+          if (error.code === "23505") {
+            toast({ title: "Aviso", description: "Presença já registrada para esta aula." });
           } else {
-            toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+            toast({ title: "Erro", description: error.message, variant: "destructive" });
           }
         } else {
           setCheckedIn((prev) => new Set(prev).add(lessonId));
-          toast({ title: 'Presença registrada!', description: 'Sua presença foi confirmada com sucesso.' });
+          toast({ title: "Presença registrada!", description: "Sua presença foi confirmada com sucesso." });
         }
         setGpsLoading(null);
       },
       (err) => {
         toast({
-          title: 'Erro de GPS',
-          description: 'Não foi possível obter sua localização. Verifique as permissões do navegador.',
-          variant: 'destructive',
+          title: "Erro de GPS",
+          description: "Não foi possível obter sua localização. Verifique as permissões do navegador.",
+          variant: "destructive",
         });
         setGpsLoading(null);
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 10000 },
     );
   };
 
-  if (loading) return <div className="page-container"><p className="text-muted-foreground">Carregando...</p></div>;
+  if (loading)
+    return (
+      <div className="page-container">
+        <p className="text-muted-foreground">Carregando...</p>
+      </div>
+    );
 
   return (
     <div className="page-container">
@@ -138,9 +150,7 @@ export default function AttendancePage() {
         <Card className="card-academic mb-6 border-destructive/30 bg-destructive/5">
           <CardContent className="flex items-center gap-3 py-4">
             <AlertTriangle className="w-5 h-5 text-destructive" />
-            <p className="text-sm font-body text-destructive">
-              Local da aula ainda não configurado pelo professor.
-            </p>
+            <p className="text-sm font-body text-destructive">Local da aula ainda não configurado pelo professor.</p>
           </CardContent>
         </Card>
       )}
@@ -177,7 +187,7 @@ export default function AttendancePage() {
                     disabled={!isWithinTime || !settings || gpsLoading === lesson.id}
                   >
                     <MapPin className="w-4 h-4 mr-2" />
-                    {gpsLoading === lesson.id ? 'Verificando localização...' : 'Registrar Presença'}
+                    {gpsLoading === lesson.id ? "Verificando localização..." : "Registrar Presença"}
                   </Button>
                 )}
               </CardContent>
