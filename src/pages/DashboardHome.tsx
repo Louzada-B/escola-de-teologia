@@ -68,7 +68,7 @@ export default function DashboardHome() {
 
   const [stats, setStats] = useState({ modules: 0, announcements: 0, events: 0, quizzes: 0 });
 
-  const [attendanceData, setAttendanceData] = useState<{ name: string; value: number; qty: number }[]>([]);
+  const [attendanceByType, setAttendanceByType] = useState<Record<string, { data: { name: string; value: number; qty: number }[]; perc: number }>>({});
 
   const [quizData, setQuizData] = useState<{ name: string; value: number; qty: number }[]>([]);
 
