@@ -83,7 +83,9 @@ export default function LessonsPage() {
                       <div className="flex items-center gap-3">
                         <CardTitle className="text-base font-body font-semibold">{lesson.title}</CardTitle>
                         {lesson.scheduled_date && (
-                          <span className="text-xs text-muted-foreground">({lesson.scheduled_date})</span>
+                          <span className="text-xs text-muted-foreground">
+                            ({new Date(lesson.scheduled_date + "T12:00:00").toLocaleDateString("pt-BR")})
+                          </span>
                         )}
                       </div>
                       <div className="flex items-center gap-3">
