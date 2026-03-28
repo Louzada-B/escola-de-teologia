@@ -113,8 +113,8 @@ export default function AttendanceSettingsManager({ userId }: Props) {
   };
 
   // Compute stats
-  const aulaLessons = useMemo(() => lessons.filter(l => l.event_type === 'Aula'), [lessons]);
-  const especialLessons = useMemo(() => lessons.filter(l => l.event_type === 'Aula Especial'), [lessons]);
+  const aulaLessons = useMemo(() => lessons.filter(l => l.event_type?.toLowerCase() === 'aula'), [lessons]);
+  const especialLessons = useMemo(() => lessons.filter(l => l.event_type?.toLowerCase() === 'aula_especial'), [lessons]);
 
   const recordSet = useMemo(() => {
     const set = new Set<string>();
