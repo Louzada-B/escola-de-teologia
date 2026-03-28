@@ -123,6 +123,7 @@ export default function ModulesManager({ userId }: { userId: string }) {
         event_date: scheduledDate,
         event_type: eventType,
         created_by: userId,
+        lesson_id: lessonData.id,
       });
     }
 
@@ -183,6 +184,31 @@ export default function ModulesManager({ userId }: { userId: string }) {
       await uploadFilesForLesson(editingLesson.id, editPendingFiles);
     }
 
+    // Sync calendar event
+    if (editLessonDate) {
+      const { data: existing } = await supabase.from('calendar_events').select('id').eq('lesson_id', editingLesson.id).maybeSingle();
+      if (existing) {
+        await supabase.from('calendar_events').update({
+          title: editLessonTitle,
+          description: editLessonDesc || null,
+          event_date: editLessonDate,
+          event_type: editEventType,
+        }).eq('id', existing.id);
+      } else {
+        await supabase.from('calendar_events').insert({
+          title: editLessonTitle,
+          description: editLessonDesc || null,
+          event_date: editLessonDate,
+          event_type: editEventType,
+          created_by: userId,
+          lesson_id: editingLesson.id,
+        });
+      }
+    } else {
+      // Remove calendar event if date was cleared
+      await supabase.from('calendar_events').delete().eq('lesson_id', editingLesson.id);
+    }
+
     setEditingLesson(null);
     setFilesToDelete([]);
     setEditPendingFiles([]);
@@ -191,6 +217,7 @@ export default function ModulesManager({ userId }: { userId: string }) {
   };
 
   const deleteLesson = async (id: string) => {
+    await supabase.from('calendar_events').delete().eq('lesson_id', id);
     await supabase.from('lessons').delete().eq('id', id);
     loadData();
   };
