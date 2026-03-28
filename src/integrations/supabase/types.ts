@@ -38,6 +38,60 @@ export type Database = {
         }
         Relationships: []
       }
+      attendance_records: {
+        Row: {
+          checked_in_at: string
+          id: string
+          latitude: number
+          lesson_id: string
+          longitude: number
+          user_id: string
+        }
+        Insert: {
+          checked_in_at?: string
+          id?: string
+          latitude: number
+          lesson_id: string
+          longitude: number
+          user_id: string
+        }
+        Update: {
+          checked_in_at?: string
+          id?: string
+          latitude?: number
+          lesson_id?: string
+          longitude?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      attendance_settings: {
+        Row: {
+          id: string
+          latitude: number
+          longitude: number
+          radius_meters: number
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          id?: string
+          latitude: number
+          longitude: number
+          radius_meters?: number
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          id?: string
+          latitude?: number
+          longitude?: number
+          radius_meters?: number
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: []
+      }
       book_promotions: {
         Row: {
           author: string | null

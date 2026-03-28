@@ -15,6 +15,7 @@ import CalendarPage from "./pages/CalendarPage";
 import QuizzesPage from "./pages/QuizzesPage";
 import BooksPage from "./pages/BooksPage";
 import ProfessorPage from "./pages/ProfessorPage";
+import AttendancePage from "./pages/AttendancePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/dashboard/calendario" element={<DashboardLayout><CalendarPage /></DashboardLayout>} />
             <Route path="/dashboard/questionarios" element={<DashboardLayout><QuizzesPage /></DashboardLayout>} />
             <Route path="/dashboard/livros" element={<DashboardLayout><BooksPage /></DashboardLayout>} />
+            <Route path="/dashboard/presenca" element={<DashboardLayout><AttendancePage /></DashboardLayout>} />
             <Route path="/dashboard/professor" element={
               <ProtectedRoute>
                 <ProfessorRoute>

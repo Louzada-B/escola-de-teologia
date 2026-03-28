@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
   BookOpen, LayoutDashboard, Upload, MessageSquare, CalendarDays,
-  ClipboardList, BookMarked, LogOut, Menu, X
+  ClipboardList, BookMarked, LogOut, Menu, X, UserCheck
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -21,6 +21,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { to: '/dashboard/calendario', label: 'Calendário', icon: CalendarDays },
     { to: '/dashboard/questionarios', label: 'Questionários', icon: ClipboardList },
     { to: '/dashboard/livros', label: 'Livros', icon: BookMarked },
+    { to: '/dashboard/presenca', label: 'Presença', icon: UserCheck },
     ...(isProfessor ? [{ to: '/dashboard/professor', label: 'Gestão', icon: Upload }] : []),
   ];
 
@@ -30,7 +31,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <header className="lg:hidden flex items-center justify-between p-4 border-b bg-card">
         <div className="flex items-center gap-2">
           <BookOpen className="w-5 h-5 text-primary" />
-          <span className="font-heading font-semibold text-foreground">Teologia</span>
+          <span className="font-heading font-semibold text-foreground">Escola de Teologia</span>
         </div>
         <Button variant="ghost" size="icon" onClick={() => setMobileOpen(!mobileOpen)}>
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -49,7 +50,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <BookOpen className="w-5 h-5 text-sidebar-primary-foreground" />
             </div>
             <div>
-              <h1 className="font-heading font-semibold text-sm">Portal de Teologia</h1>
+              <h1 className="font-heading font-semibold text-sm">Escola de Teologia</h1>
               <p className="text-xs text-sidebar-foreground/60 capitalize">{profile?.role || 'aluno'}</p>
             </div>
           </div>
