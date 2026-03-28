@@ -228,7 +228,7 @@ export default function DashboardHome() {
   return (
     <div className="page-container pb-10">
       {/* ALERTA DE PRESENÇA PENDENTE */}
-      {isWithinTime && pendingLesson && profiles.role === "aluno" && (
+      {isWithinTime && pendingLesson && profile?.role === "aluno" && (
         <Card className="mb-8 border-accent/40 bg-accent/5 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-700">
           <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-5">
             <div className="flex items-center gap-4 text-center sm:text-left">
