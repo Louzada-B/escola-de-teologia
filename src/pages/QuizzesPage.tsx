@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Lock, Clock } from 'lucide-react';
 
 export default function QuizzesPage() {
   const { user } = useAuth();
@@ -20,7 +20,7 @@ export default function QuizzesPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: quizData } = await supabase.from('quizzes').select('*').order('created_at');
+    const { data: quizData } = await supabase.from('quizzes').select('*, available_from, available_until').order('created_at');
       const { data: qData } = await supabase.from('quiz_questions').select('*').order('order_index');
       const { data: responses } = await supabase
         .from('quiz_responses')
@@ -99,6 +99,17 @@ export default function QuizzesPage() {
     }
   };
 
+  const getQuizStatus = (quiz: any) => {
+    const now = new Date();
+    if (quiz.available_from && new Date(quiz.available_from) > now) {
+      return { status: 'pending' as const, label: `Disponível a partir de ${new Date(quiz.available_from).toLocaleDateString('pt-BR')} às ${new Date(quiz.available_from).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` };
+    }
+    if (quiz.available_until && new Date(quiz.available_until) < now) {
+      return { status: 'closed' as const, label: 'Prazo encerrado' };
+    }
+    return { status: 'open' as const, label: '' };
+  };
+
   if (loading) return <div className="page-container"><p className="text-muted-foreground">Carregando...</p></div>;
 
   return (
@@ -113,6 +124,12 @@ export default function QuizzesPage() {
             <Card key={quiz.id} className="card-academic">
               <CardHeader>
                 <CardTitle className="font-heading text-xl">{quiz.title}</CardTitle>
+                {(() => {
+                  const { status, label } = getQuizStatus(quiz);
+                  if (status === 'pending') return <p className="text-sm text-muted-foreground flex items-center gap-1"><Clock className="w-4 h-4" /> {label}</p>;
+                  if (status === 'closed') return <p className="text-sm text-destructive flex items-center gap-1"><Lock className="w-4 h-4" /> {label}</p>;
+                  return null;
+                })()}
               </CardHeader>
               <CardContent>
                 {submitted.has(quiz.id) ? (
@@ -120,6 +137,8 @@ export default function QuizzesPage() {
                     <CheckCircle className="w-5 h-5" />
                     <span className="font-body font-medium">Questionário já respondido</span>
                   </div>
+                ) : getQuizStatus(quiz).status !== 'open' ? (
+                  <p className="text-muted-foreground font-body">Este questionário não está disponível no momento.</p>
                 ) : (
                   <div className="space-y-6">
                     {(questions[quiz.id] || []).map((q, idx) => {
