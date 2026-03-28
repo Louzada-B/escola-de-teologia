@@ -12,6 +12,10 @@ const typeConfig: Record<string, { label: string; className: string }> = {
     label: "Aula Especial",
     className: "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30",
   },
+  aula_sincrona: {
+    label: "Aula Síncrona",
+    className: "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30",
+  },
   //prova: { label: 'Prova', className: 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30' },
   evento: { label: "Evento", className: "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30" },
 };
