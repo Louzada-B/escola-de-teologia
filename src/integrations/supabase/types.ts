@@ -197,9 +197,12 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          event_type: string
           id: string
+          mandatory_attendance: boolean
           module_id: string
           order_index: number
+          professor_name: string | null
           scheduled_date: string | null
           title: string
           updated_at: string
@@ -208,9 +211,12 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          event_type?: string
           id?: string
+          mandatory_attendance?: boolean
           module_id: string
           order_index?: number
+          professor_name?: string | null
           scheduled_date?: string | null
           title: string
           updated_at?: string
@@ -219,9 +225,12 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          event_type?: string
           id?: string
+          mandatory_attendance?: boolean
           module_id?: string
           order_index?: number
+          professor_name?: string | null
           scheduled_date?: string | null
           title?: string
           updated_at?: string
