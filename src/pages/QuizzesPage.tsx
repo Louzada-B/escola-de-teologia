@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
 import { CheckCircle, Lock, Clock } from 'lucide-react';
+import QuizGabarito from '@/components/quiz/QuizGabarito';
 
 interface MatchPair { left: string; right: string }
 
@@ -21,6 +22,7 @@ export default function QuizzesPage() {
   const [vfAnswers, setVfAnswers] = useState<Record<string, Record<string, Record<string, string>>>>({});
   const [matchAnswers, setMatchAnswers] = useState<Record<string, Record<string, Record<string, string>>>>({});
   const [submitted, setSubmitted] = useState<Set<string>>(new Set());
+  const [gabaritoData, setGabaritoData] = useState<Record<string, { questions: any[]; studentAnswers: Record<string, any> }>>({});
   const [loading, setLoading] = useState(true);
 
   // Shuffled right-column options per question (so the student doesn't see them in order)
@@ -141,13 +143,11 @@ export default function QuizzesPage() {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } else {
       setSubmitted((prev) => new Set(prev).add(quizId));
-      const totalGraded = quizQuestions.filter((q) => (q.question_type || 'objetiva') !== 'dissertativa').length;
-      toast({
-        title: 'Respostas enviadas!',
-        description: totalGraded > 0
-          ? `Você acertou ${score} de ${totalGraded} questões.`
-          : 'Suas respostas foram registradas.',
-      });
+      setGabaritoData((prev) => ({
+        ...prev,
+        [quizId]: { questions: quizQuestions, studentAnswers: mergedAnswers },
+      }));
+      toast({ title: 'Respostas enviadas!', description: 'Confira o gabarito abaixo.' });
     }
   };
 
@@ -185,10 +185,17 @@ export default function QuizzesPage() {
               </CardHeader>
               <CardContent>
                 {submitted.has(quiz.id) ? (
-                  <div className="flex items-center gap-2 text-accent">
-                    <CheckCircle className="w-5 h-5" />
-                    <span className="font-body font-medium">Questionário já respondido</span>
-                  </div>
+                  gabaritoData[quiz.id] ? (
+                    <QuizGabarito
+                      questions={gabaritoData[quiz.id].questions}
+                      studentAnswers={gabaritoData[quiz.id].studentAnswers}
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 text-accent">
+                      <CheckCircle className="w-5 h-5" />
+                      <span className="font-body font-medium">Questionário já respondido</span>
+                    </div>
+                  )
                 ) : getQuizStatus(quiz).status !== 'open' ? (
                   <p className="text-muted-foreground font-body">Este questionário não está disponível no momento.</p>
                 ) : (
