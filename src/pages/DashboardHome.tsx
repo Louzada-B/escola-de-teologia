@@ -68,13 +68,11 @@ export default function DashboardHome() {
 
   const [stats, setStats] = useState({ modules: 0, announcements: 0, events: 0, quizzes: 0 });
 
-  const [attendanceData, setAttendanceData] = useState<{ name: string; value: number; qty: number }[]>([]);
+  const [attendanceByType, setAttendanceByType] = useState<Record<string, { data: { name: string; value: number; qty: number }[]; perc: number }>>({});
 
   const [quizData, setQuizData] = useState<{ name: string; value: number; qty: number }[]>([]);
 
   // Estados de Gráfico (Centro)
-
-  const [mainAttendancePerc, setMainAttendancePerc] = useState(0);
 
   const [mainQuizPerc, setMainQuizPerc] = useState(0);
 
@@ -140,32 +138,34 @@ export default function DashboardHome() {
         if (pending) setPendingLesson(pending);
       }
 
-      // 3. Lógica do Gráfico de Presença Histórica
-
-      const { data: allLessons } = await supabase.from("lessons").select("id, scheduled_date");
+      // 3. Lógica do Gráfico de Presença por Categoria
+      const { data: allLessons } = await supabase.from("lessons").select("id, scheduled_date, event_type, mandatory_attendance");
 
       if (allLessons && userRecords) {
         const checkedInIds = new Set(userRecords.map((r) => r.lesson_id));
+        const pastMandatory = allLessons.filter(
+          (l) => l.scheduled_date && new Date(l.scheduled_date) < new Date() && l.mandatory_attendance
+        );
 
-        const pastLessons = allLessons.filter((l) => l.scheduled_date && new Date(l.scheduled_date) < new Date());
+        const categories = ["aula", "aula_especial"];
+        const result: Record<string, { data: { name: string; value: number; qty: number }[]; perc: number }> = {};
 
-        const totalLessons = pastLessons.length;
-
-        const totalPresent = pastLessons.filter((l) => checkedInIds.has(l.id)).length;
-
-        const totalAbsent = totalLessons - totalPresent;
-
-        const pPerc = totalLessons > 0 ? Math.round((totalPresent / totalLessons) * 100) : 0;
-
-        const aPerc = totalLessons > 0 ? 100 - pPerc : 0;
-
-        setMainAttendancePerc(pPerc);
-
-        setAttendanceData([
-          { name: "Presenças", value: pPerc, qty: totalPresent },
-
-          { name: "Faltas", value: aPerc, qty: totalAbsent },
-        ]);
+        for (const cat of categories) {
+          const lessons = pastMandatory.filter((l) => l.event_type === cat);
+          const total = lessons.length;
+          const present = lessons.filter((l) => checkedInIds.has(l.id)).length;
+          const absent = total - present;
+          const pPerc = total > 0 ? Math.round((present / total) * 100) : 0;
+          const aPerc = total > 0 ? 100 - pPerc : 0;
+          result[cat] = {
+            perc: pPerc,
+            data: [
+              { name: "Presenças", value: pPerc, qty: present },
+              { name: "Faltas", value: aPerc, qty: absent },
+            ],
+          };
+        }
+        setAttendanceByType(result);
       }
 
       // 4. Lógica do Gráfico de Quizzes
@@ -268,80 +268,74 @@ export default function DashboardHome() {
 
       {/* Seção de Gráficos */}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Gráfico de Presença (Rosca com Número Central) */}
-
-        <Card className="card-academic overflow-hidden relative">
-          <CardHeader className="flex flex-row items-center gap-2">
-            <UserCheck className="w-5 h-5 text-accent" />
-
-            <CardTitle className="font-heading text-lg">Aproveitamento de Presença</CardTitle>
-          </CardHeader>
-
-          <CardContent>
-            {attendanceData.length === 0 ? (
-              <p className="text-center py-10 text-muted-foreground font-body">
-                Sem dados suficientes para gerar o gráfico.
-              </p>
-            ) : (
-              <div className="flex flex-col items-center">
-                <div className="h-[250px] w-full relative">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <ChartTooltip content={<CustomTooltip />} />
-
-                      <Pie
-                        data={attendanceData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={68}
-                        outerRadius={88}
-                        paddingAngle={5}
-                        dataKey="value"
-                        stroke="none"
-                      >
-                        {attendanceData.map((entry, idx) => (
-                          <Cell key={idx} fill={entry.name === "Presenças" ? COLORS.present : COLORS.absent} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-
-                  {/* Texto Centralizado Fixado via CSS */}
-
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">
-                      Geral
-                    </span>
-
-                    <span className="text-4xl font-bold font-heading text-foreground leading-none">
-                      {mainAttendancePerc}%
-                    </span>
-                  </div>
-                </div>
-
-                {/* Legendas Percentuais */}
-
-                <div className="flex gap-8 mt-4">
-                  {attendanceData.map((d) => (
-                    <div key={d.name} className="flex items-center gap-2 text-sm font-body">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: d.name === "Presenças" ? COLORS.present : COLORS.absent }}
-                      />
-
-                      <span className="text-muted-foreground">
-                        {d.name}: <strong className="text-foreground">{d.value}%</strong>
-                      </span>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {/* Gráficos de Presença por Categoria */}
+        {[
+          { key: "aula", label: "Aula" },
+          { key: "aula_especial", label: "Aula Especial" },
+        ].map(({ key, label }) => {
+          const catData = attendanceByType[key];
+          return (
+            <Card key={key} className="card-academic overflow-hidden relative">
+              <CardHeader className="flex flex-row items-center gap-2">
+                <UserCheck className="w-5 h-5 text-accent" />
+                <CardTitle className="font-heading text-lg">Presença — {label}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {!catData || catData.data.every((d) => d.qty === 0) ? (
+                  <p className="text-center py-10 text-muted-foreground font-body">
+                    Sem dados de presença para {label.toLowerCase()}.
+                  </p>
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <div className="h-[220px] w-full relative">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <ChartTooltip content={<CustomTooltip />} />
+                          <Pie
+                            data={catData.data}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={80}
+                            paddingAngle={5}
+                            dataKey="value"
+                            stroke="none"
+                          >
+                            {catData.data.map((entry, idx) => (
+                              <Cell key={idx} fill={entry.name === "Presenças" ? COLORS.present : COLORS.absent} />
+                            ))}
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">
+                          {label}
+                        </span>
+                        <span className="text-4xl font-bold font-heading text-foreground leading-none">
+                          {catData.perc}%
+                        </span>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Gráfico de Quizzes (Rosca com Número Central) */}
+                    <div className="flex gap-8 mt-4">
+                      {catData.data.map((d) => (
+                        <div key={d.name} className="flex items-center gap-2 text-sm font-body">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: d.name === "Presenças" ? COLORS.present : COLORS.absent }}
+                          />
+                          <span className="text-muted-foreground">
+                            {d.name}: <strong className="text-foreground">{d.value}%</strong>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
 
         <Card className="card-academic overflow-hidden relative">
           <CardHeader className="flex flex-row items-center gap-2">
