@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { MapPin, CheckCircle, Clock, AlertTriangle } from "lucide-react";
+import { MapPin, CheckCircle, Clock, AlertTriangle, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -20,6 +20,7 @@ function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: numbe
 export default function AttendancePage() {
   const { user } = useAuth();
   const [todayLessons, setTodayLessons] = useState<any[]>([]);
+  const [pastLessons, setPastLessons] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>(null);
   const [checkedIn, setCheckedIn] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -35,7 +36,11 @@ export default function AttendancePage() {
       const today = new Date().toISOString().split("T")[0];
 
       const [lessonsRes, settingsRes, recordsRes] = await Promise.all([
-        supabase.from("lessons").select("*, modules(title)").eq("scheduled_date", today),
+        supabase
+          .from("lessons")
+          .select("*, modules(title)")
+          .lte("scheduled_date", today)
+          .order("scheduled_date", { ascending: false }),
         supabase.from("attendance_settings").select("*").limit(1).maybeSingle(),
         supabase
           .from("attendance_records")
@@ -43,7 +48,10 @@ export default function AttendancePage() {
           .eq("user_id", user?.id || ""),
       ]);
 
-      if (lessonsRes.data) setTodayLessons(lessonsRes.data);
+      if (lessonsRes.data) {
+        setTodayLessons(lessonsRes.data.filter((l) => l.scheduled_date === today));
+        setPastLessons(lessonsRes.data.filter((l) => l.scheduled_date < today));
+      }
       if (settingsRes.data) setSettings(settingsRes.data);
       if (recordsRes.data) {
         setCheckedIn(new Set(recordsRes.data.map((r: any) => r.lesson_id)));
@@ -109,7 +117,7 @@ export default function AttendancePage() {
         }
         setGpsLoading(null);
       },
-      (err) => {
+      () => {
         toast({
           title: "Erro de GPS",
           description: "Não foi possível obter sua localização. Verifique as permissões do navegador.",
@@ -155,14 +163,16 @@ export default function AttendancePage() {
         </Card>
       )}
 
+      {/* ── AULA DE HOJE ── */}
+      <h2 className="font-heading text-base font-semibold mb-3 text-foreground">Aula de Hoje</h2>
       {todayLessons.length === 0 ? (
-        <Card className="card-academic">
+        <Card className="card-academic mb-8">
           <CardContent className="py-8 text-center">
             <p className="text-muted-foreground font-body">Nenhuma aula presencial agendada para hoje.</p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 mb-8">
           {todayLessons.map((lesson) => (
             <Card key={lesson.id} className="card-academic">
               <CardHeader className="pb-2">
@@ -194,6 +204,44 @@ export default function AttendancePage() {
             </Card>
           ))}
         </div>
+      )}
+
+      {/* ── HISTÓRICO ── */}
+      {pastLessons.length > 0 && (
+        <>
+          <h2 className="font-heading text-base font-semibold mb-3 text-foreground">Histórico de Presenças</h2>
+          <div className="space-y-2">
+            {pastLessons.map((lesson) => {
+              const present = checkedIn.has(lesson.id);
+              return (
+                <Card key={lesson.id} className="card-academic">
+                  <CardContent className="flex items-center justify-between py-4">
+                    <div>
+                      <p className="font-heading text-sm font-medium">{lesson.title}</p>
+                      <p className="text-xs text-muted-foreground font-body mt-0.5">
+                        {new Date(lesson.scheduled_date + "T12:00:00").toLocaleDateString("pt-BR", {
+                          weekday: "long",
+                          day: "2-digit",
+                          month: "long",
+                        })}
+                        {lesson.professor_name && ` · ${lesson.professor_name}`}
+                      </p>
+                    </div>
+                    {present ? (
+                      <Badge variant="default" className="bg-green-600 shrink-0">
+                        <CheckCircle className="w-3 h-3 mr-1" /> Presente
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="border-destructive/50 text-destructive shrink-0">
+                        <XCircle className="w-3 h-3 mr-1" /> Ausente
+                      </Badge>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );
