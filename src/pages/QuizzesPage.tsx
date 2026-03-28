@@ -44,7 +44,7 @@ export default function QuizzesPage() {
           grouped[q.quiz_id].push(q);
           // Shuffle right column for ligar_colunas
           if (q.question_type === 'ligar_colunas' && Array.isArray(q.options)) {
-            const rights = (q.options as MatchPair[]).map(p => p.right);
+            const rights = (q.options as unknown as MatchPair[]).map(p => p.right);
             shuffled[q.id] = [...rights].sort(() => Math.random() - 0.5);
           }
         });
