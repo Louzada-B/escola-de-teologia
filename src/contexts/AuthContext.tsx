@@ -30,27 +30,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const loadProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Erro ao carregar perfil:', error.message);
+      return null;
+    }
+    return data;
+  };
+
   useEffect(() => {
     let isMounted = true;
 
-    const loadProfile = async (userId: string) => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Erro ao carregar perfil:', error.message);
-        return null;
-      }
-
-      return data;
-    };
-
     const syncAuthState = async (nextSession: Session | null) => {
       if (!isMounted) return;
-
       setSession(nextSession);
 
       if (!nextSession?.user) {
@@ -60,9 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const nextProfile = await loadProfile(nextSession.user.id);
-
       if (!isMounted) return;
-
       setProfile(nextProfile);
       setLoading(false);
     };
