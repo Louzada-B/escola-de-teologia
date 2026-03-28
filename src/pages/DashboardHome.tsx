@@ -15,7 +15,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from "recharts";
 
 const COLORS = {
   present: "hsl(142, 60%, 45%)",
@@ -49,11 +49,8 @@ export default function DashboardHome() {
 
   // Estados de Dados
   const [stats, setStats] = useState({ modules: 0, announcements: 0, events: 0, quizzes: 0 });
-  const [attendanceData, setAttendanceData] = useState<{ name: string; value: number; qty: number }[]>([]);
+  const [attendanceByType, setAttendanceByType] = useState<{ type: string; present: number; absent: number; total: number }[]>([]);
   const [quizData, setQuizData] = useState<{ name: string; value: number; qty: number }[]>([]);
-
-  // Estados de Gráfico (Centro)
-  const [mainAttendancePerc, setMainAttendancePerc] = useState(0);
   const [mainQuizPerc, setMainQuizPerc] = useState(0);
 
   // Estado do Alerta de Presença Pendente
@@ -97,24 +94,31 @@ export default function DashboardHome() {
         if (pending) setPendingLesson(pending);
       }
 
-      // 3. Lógica do Gráfico de Presença Histórica
-      const { data: allLessons } = await supabase.from("lessons").select("id, scheduled_date");
+      // 3. Lógica de Presença por Tipo (apenas aulas com presença obrigatória)
+      const { data: allLessons } = await supabase.from("lessons").select("id, scheduled_date, event_type, mandatory_attendance");
       if (allLessons && userRecords) {
         const checkedInIds = new Set(userRecords.map((r) => r.lesson_id));
-        const pastLessons = allLessons.filter((l) => l.scheduled_date && new Date(l.scheduled_date) < new Date());
+        const pastMandatory = allLessons.filter(
+          (l) => l.mandatory_attendance && l.scheduled_date && new Date(l.scheduled_date) < new Date()
+        );
 
-        const totalLessons = pastLessons.length;
-        const totalPresent = pastLessons.filter((l) => checkedInIds.has(l.id)).length;
-        const totalAbsent = totalLessons - totalPresent;
+        const typeLabels: Record<string, string> = { aula: "Aula", aula_especial: "Aula Especial", aula_sincrona: "Aula Síncrona", evento: "Evento" };
+        const grouped: Record<string, { present: number; absent: number }> = {};
 
-        const pPerc = totalLessons > 0 ? Math.round((totalPresent / totalLessons) * 100) : 0;
-        const aPerc = totalLessons > 0 ? 100 - pPerc : 0;
+        for (const l of pastMandatory) {
+          const t = l.event_type || "aula";
+          if (!grouped[t]) grouped[t] = { present: 0, absent: 0 };
+          if (checkedInIds.has(l.id)) grouped[t].present++;
+          else grouped[t].absent++;
+        }
 
-        setMainAttendancePerc(pPerc);
-        setAttendanceData([
-          { name: "Presenças", value: pPerc, qty: totalPresent },
-          { name: "Faltas", value: aPerc, qty: totalAbsent },
-        ]);
+        const result = Object.entries(grouped).map(([type, counts]) => ({
+          type: typeLabels[type] || type,
+          present: counts.present,
+          absent: counts.absent,
+          total: counts.present + counts.absent,
+        }));
+        setAttendanceByType(result);
       }
 
       // 4. Lógica do Gráfico de Quizzes
@@ -198,65 +202,32 @@ export default function DashboardHome() {
 
       {/* Seção de Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Gráfico de Presença (Rosca com Número Central) */}
+        {/* Gráfico de Presença por Tipo */}
         <Card className="card-academic overflow-hidden relative">
           <CardHeader className="flex flex-row items-center gap-2">
             <UserCheck className="w-5 h-5 text-accent" />
-            <CardTitle className="font-heading text-lg">Aproveitamento de Presença</CardTitle>
+            <CardTitle className="font-heading text-lg">Presença por Categoria</CardTitle>
           </CardHeader>
           <CardContent>
-            {attendanceData.length === 0 ? (
+            {attendanceByType.length === 0 ? (
               <p className="text-center py-10 text-muted-foreground font-body">
                 Sem dados suficientes para gerar o gráfico.
               </p>
             ) : (
-              <div className="flex flex-col items-center">
-                <div className="h-[250px] w-full relative">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <ChartTooltip content={<CustomTooltip />} />
-                      <Pie
-                        data={attendanceData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={68}
-                        outerRadius={88}
-                        paddingAngle={5}
-                        dataKey="value"
-                        stroke="none"
-                      >
-                        {attendanceData.map((entry, idx) => (
-                          <Cell key={idx} fill={entry.name === "Presenças" ? COLORS.present : COLORS.absent} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-
-                  {/* Texto Centralizado Fixado via CSS */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">
-                      Geral
-                    </span>
-                    <span className="text-4xl font-bold font-heading text-foreground leading-none">
-                      {mainAttendancePerc}%
-                    </span>
-                  </div>
-                </div>
-
-                {/* Legendas Percentuais */}
-                <div className="flex gap-8 mt-4">
-                  {attendanceData.map((d) => (
-                    <div key={d.name} className="flex items-center gap-2 text-sm font-body">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: d.name === "Presenças" ? COLORS.present : COLORS.absent }}
-                      />
-                      <span className="text-muted-foreground">
-                        {d.name}: <strong className="text-foreground">{d.value}%</strong>
-                      </span>
-                    </div>
-                  ))}
-                </div>
+              <div className="h-[280px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={attendanceByType} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                    <XAxis dataKey="type" tick={{ fontSize: 12 }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
+                      labelStyle={{ fontWeight: "bold" }}
+                    />
+                    <Legend />
+                    <Bar dataKey="present" name="Presenças" fill={COLORS.present} radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="absent" name="Faltas" fill={COLORS.absent} radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             )}
           </CardContent>

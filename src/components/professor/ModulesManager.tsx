@@ -8,6 +8,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { Plus, Upload, Trash2, Pencil, X } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const EVENT_TYPES = [
+  { value: 'aula', label: 'Aula' },
+  { value: 'aula_especial', label: 'Aula Especial' },
+  { value: 'aula_sincrona', label: 'Aula Síncrona' },
+  { value: 'evento', label: 'Evento' },
+];
 
 export default function ModulesManager({ userId }: { userId: string }) {
   const [modules, setModules] = useState<any[]>([]);
@@ -17,6 +26,9 @@ export default function ModulesManager({ userId }: { userId: string }) {
   const [lessonDesc, setLessonDesc] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [scheduledDate, setScheduledDate] = useState('');
+  const [professorName, setProfessorName] = useState('');
+  const [eventType, setEventType] = useState('aula');
+  const [mandatoryAttendance, setMandatoryAttendance] = useState(true);
   const [selectedModule, setSelectedModule] = useState('');
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [lessons, setLessons] = useState<any[]>([]);
@@ -31,6 +43,9 @@ export default function ModulesManager({ userId }: { userId: string }) {
   const [editLessonDesc, setEditLessonDesc] = useState('');
   const [editLessonVideo, setEditLessonVideo] = useState('');
   const [editLessonDate, setEditLessonDate] = useState('');
+  const [editProfessorName, setEditProfessorName] = useState('');
+  const [editEventType, setEditEventType] = useState('aula');
+  const [editMandatoryAttendance, setEditMandatoryAttendance] = useState(true);
   const [editExistingFiles, setEditExistingFiles] = useState<any[]>([]);
   const [editPendingFiles, setEditPendingFiles] = useState<File[]>([]);
   const [filesToDelete, setFilesToDelete] = useState<any[]>([]);
@@ -90,6 +105,9 @@ export default function ModulesManager({ userId }: { userId: string }) {
       title: lessonTitle, description: lessonDesc, video_url: videoUrl || null,
       module_id: selectedModule, order_index: moduleLessons.length,
       scheduled_date: scheduledDate || null,
+      professor_name: professorName || null,
+      event_type: eventType,
+      mandatory_attendance: mandatoryAttendance,
     }).select().single();
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
 
@@ -103,12 +121,13 @@ export default function ModulesManager({ userId }: { userId: string }) {
         title: lessonTitle,
         description: lessonDesc || null,
         event_date: scheduledDate,
-        event_type: 'aula',
+        event_type: eventType,
         created_by: userId,
       });
     }
 
     setLessonTitle(''); setLessonDesc(''); setVideoUrl(''); setScheduledDate('');
+    setProfessorName(''); setEventType('aula'); setMandatoryAttendance(true);
     setPendingFiles([]);
     if (fileInputRef.current) fileInputRef.current.value = '';
     loadData();
@@ -147,6 +166,9 @@ export default function ModulesManager({ userId }: { userId: string }) {
     const { error } = await supabase.from('lessons').update({
       title: editLessonTitle, description: editLessonDesc, video_url: editLessonVideo || null,
       scheduled_date: editLessonDate || null,
+      professor_name: editProfessorName || null,
+      event_type: editEventType,
+      mandatory_attendance: editMandatoryAttendance,
     }).eq('id', editingLesson.id);
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
 
@@ -184,6 +206,9 @@ export default function ModulesManager({ userId }: { userId: string }) {
     setEditLessonDesc(l.description || '');
     setEditLessonVideo(l.video_url || '');
     setEditLessonDate(l.scheduled_date || '');
+    setEditProfessorName(l.professor_name || '');
+    setEditEventType(l.event_type || 'aula');
+    setEditMandatoryAttendance(l.mandatory_attendance ?? true);
     setEditExistingFiles(l.lesson_files || []);
     setEditPendingFiles([]);
     setFilesToDelete([]);
@@ -213,6 +238,20 @@ export default function ModulesManager({ userId }: { userId: string }) {
           </div>
           <div><Label>Título da Aula</Label><Input value={lessonTitle} onChange={e => setLessonTitle(e.target.value)} /></div>
           <div><Label>Descrição</Label><Textarea value={lessonDesc} onChange={e => setLessonDesc(e.target.value)} /></div>
+          <div><Label>Nome do Professor</Label><Input value={professorName} onChange={e => setProfessorName(e.target.value)} placeholder="Ex: Prof. João Silva" /></div>
+          <div>
+            <Label>Tipo de Evento</Label>
+            <Select value={eventType} onValueChange={setEventType}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {EVENT_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox id="mandatory" checked={mandatoryAttendance} onCheckedChange={(v) => setMandatoryAttendance(!!v)} />
+            <Label htmlFor="mandatory" className="cursor-pointer">Presença obrigatória</Label>
+          </div>
           <div><Label>Data da Aula</Label><Input type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)} /></div>
           <div><Label>Link do Vídeo (YouTube)</Label><Input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..." /></div>
           <div>
@@ -302,6 +341,20 @@ export default function ModulesManager({ userId }: { userId: string }) {
           <div className="space-y-3">
             <div><Label>Título</Label><Input value={editLessonTitle} onChange={e => setEditLessonTitle(e.target.value)} /></div>
             <div><Label>Descrição</Label><Textarea value={editLessonDesc} onChange={e => setEditLessonDesc(e.target.value)} /></div>
+            <div><Label>Nome do Professor</Label><Input value={editProfessorName} onChange={e => setEditProfessorName(e.target.value)} placeholder="Ex: Prof. João Silva" /></div>
+            <div>
+              <Label>Tipo de Evento</Label>
+              <Select value={editEventType} onValueChange={setEditEventType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {EVENT_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox id="edit-mandatory" checked={editMandatoryAttendance} onCheckedChange={(v) => setEditMandatoryAttendance(!!v)} />
+              <Label htmlFor="edit-mandatory" className="cursor-pointer">Presença obrigatória</Label>
+            </div>
             <div><Label>Data da Aula</Label><Input type="date" value={editLessonDate} onChange={e => setEditLessonDate(e.target.value)} /></div>
             <div><Label>Link do Vídeo</Label><Input value={editLessonVideo} onChange={e => setEditLessonVideo(e.target.value)} /></div>
 
