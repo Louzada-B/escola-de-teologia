@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useCohort } from '@/contexts/CohortContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +11,7 @@ import { toast } from '@/hooks/use-toast';
 import { Plus, Trash2, Pencil } from 'lucide-react';
 
 export default function AnnouncementsManager({ userId }: { userId: string }) {
+  const { selectedCohort, effectiveCutoffDate } = useCohort();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [items, setItems] = useState<any[]>([]);
@@ -22,7 +24,16 @@ export default function AnnouncementsManager({ userId }: { userId: string }) {
     setItems(data || []);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [selectedCohort, effectiveCutoffDate]);
+
+  const filteredItems = useMemo(() => {
+    if (!selectedCohort) return items;
+    return items.filter(item => {
+      const date = item.created_at?.split('T')[0];
+      if (!date) return true;
+      return date >= selectedCohort.start_date && date <= effectiveCutoffDate;
+    });
+  }, [items, selectedCohort, effectiveCutoffDate]);
 
   const add = async () => {
     if (!title.trim() || !content.trim()) return;
@@ -66,7 +77,7 @@ export default function AnnouncementsManager({ userId }: { userId: string }) {
 
       <div className="space-y-2">
         <h3 className="font-heading font-semibold">Avisos Existentes</h3>
-        {items.map(item => (
+        {filteredItems.map(item => (
           <div key={item.id} className="flex items-center justify-between bg-card p-3 rounded-md border">
             <div>
               <span className="font-body font-medium">{item.title}</span>

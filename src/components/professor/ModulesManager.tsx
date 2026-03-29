@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useCohort } from '@/contexts/CohortContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,7 @@ const EVENT_TYPES = [
 ];
 
 export default function ModulesManager({ userId }: { userId: string }) {
+  const { selectedCohort, effectiveCutoffDate } = useCohort();
   const [modules, setModules] = useState<any[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -58,7 +60,16 @@ export default function ModulesManager({ userId }: { userId: string }) {
     setLessons(less || []);
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); }, [selectedCohort, effectiveCutoffDate]);
+
+  // Filter lessons by cohort dates for display
+  const filteredLessons = useMemo(() => {
+    if (!selectedCohort) return lessons;
+    return lessons.filter(l => {
+      if (!l.scheduled_date) return true;
+      return l.scheduled_date >= selectedCohort.start_date && l.scheduled_date <= effectiveCutoffDate;
+    });
+  }, [lessons, selectedCohort, effectiveCutoffDate]);
 
   const addModule = async () => {
     if (!title.trim()) return;
@@ -348,7 +359,7 @@ export default function ModulesManager({ userId }: { userId: string }) {
       <div className="space-y-4">
         <h3 className="font-heading font-semibold">Módulos Existentes</h3>
         {modules.map(m => {
-          const moduleLessons = lessons.filter(l => l.module_id === m.id);
+          const moduleLessons = filteredLessons.filter(l => l.module_id === m.id);
           return (
             <Card key={m.id} className="border">
               <CardContent className="p-4 space-y-3">
