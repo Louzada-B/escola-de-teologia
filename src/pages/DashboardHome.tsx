@@ -155,12 +155,13 @@ export default function DashboardHome() {
         const checkedInIds = new Set(userRecords.map((r) => r.lesson_id));
 
         const calcForType = (type: string) => {
+          const today = new Date().toISOString().split("T")[0];
           const past = allLessons.filter(
             (l) =>
               l.event_type === type &&
               l.mandatory_attendance &&
               l.scheduled_date &&
-              new Date(l.scheduled_date) < new Date(),
+              l.scheduled_date <= today,
           );
           const total = past.length;
           const present = past.filter((l) => checkedInIds.has(l.id)).length;

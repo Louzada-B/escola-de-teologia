@@ -19,8 +19,7 @@ import { ptBR } from 'date-fns/locale';
 import { useCohort } from '@/contexts/CohortContext';
 
 export default function AnalyticsPage() {
-  const today = new Date().toISOString().split('T')[0];
-  const { selectedCohortId, selectedCohortStudentIds } = useCohort();
+  const { selectedCohortId, selectedCohortStudentIds, selectedCohort, effectiveCutoffDate } = useCohort();
 
   const { data: allStudents = [] } = useQuery({
     queryKey: ['analytics-students'],
@@ -79,10 +78,15 @@ export default function AnalyticsPage() {
     return allQuizResponses.filter(r => studentIds.has(r.user_id));
   }, [allQuizResponses, selectedCohortId, studentIds]);
 
-  const pastLessons = useMemo(
-    () => lessons.filter((l) => l.scheduled_date && l.scheduled_date <= today),
-    [lessons, today]
-  );
+  const pastLessons = useMemo(() => {
+    const start = selectedCohort?.start_date;
+    return lessons.filter((l) => {
+      if (!l.scheduled_date) return false;
+      if (l.scheduled_date > effectiveCutoffDate) return false;
+      if (start && l.scheduled_date < start) return false;
+      return true;
+    });
+  }, [lessons, effectiveCutoffDate, selectedCohort]);
 
   const totalStudents = students.length;
   const totalPastLessons = pastLessons.length;

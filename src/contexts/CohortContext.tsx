@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,6 +19,9 @@ interface CohortContextType {
   selectedCohortId: string | null;
   setSelectedCohortId: (id: string | null) => void;
   selectedCohortStudentIds: string[];
+  selectedCohort: Cohort | null;
+  /** The effective cutoff date for "past lessons": MIN(today, cohort.end_date) */
+  effectiveCutoffDate: string;
   isLoading: boolean;
 }
 
@@ -27,6 +30,8 @@ const CohortContext = createContext<CohortContextType>({
   selectedCohortId: null,
   setSelectedCohortId: () => {},
   selectedCohortStudentIds: [],
+  selectedCohort: null,
+  effectiveCutoffDate: new Date().toISOString().split('T')[0],
   isLoading: false,
 });
 
@@ -90,12 +95,22 @@ export function CohortProvider({ children }: { children: ReactNode }) {
     enabled: !!selectedCohortId && isAdminOrProfessor,
   });
 
+  const selectedCohort = cohorts.find(c => c.id === selectedCohortId) || null;
+
+  const effectiveCutoffDate = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    if (!selectedCohort) return today;
+    return selectedCohort.end_date < today ? selectedCohort.end_date : today;
+  }, [selectedCohort]);
+
   return (
     <CohortContext.Provider value={{
       cohorts,
       selectedCohortId,
       setSelectedCohortId,
       selectedCohortStudentIds,
+      selectedCohort,
+      effectiveCutoffDate,
       isLoading: cohortsLoading || studentsLoading,
     }}>
       {children}
