@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Download, Play, FileText } from "lucide-react";
+import { useCohort } from "@/contexts/CohortContext";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Database } from "@/integrations/supabase/types";
 
 type Module = Database["public"]["Tables"]["modules"]["Row"];
@@ -14,6 +16,9 @@ type Lesson = Database["public"]["Tables"]["lessons"]["Row"] & {
 export default function LessonsPage() {
   const [modules, setModules] = useState<(Module & { lessons: Lesson[] })[]>([]);
   const [loading, setLoading] = useState(true);
+  const { selectedCohort } = useCohort();
+  const { profile } = useAuth();
+  const isStudent = profile?.role === 'aluno';
 
   useEffect(() => {
     async function load() {
@@ -25,16 +30,30 @@ export default function LessonsPage() {
         .order("scheduled_date", { ascending: true, nullsFirst: false });
 
       if (mods && lessons) {
-        const mapped = mods.map((m) => ({
-          ...m,
-          lessons: (lessons as Lesson[]).filter((l) => l.module_id === m.id),
-        }));
+        const allLessons = lessons as Lesson[];
+
+        // Students: only show lessons within their cohort date range
+        const filteredLessons = (isStudent && selectedCohort)
+          ? allLessons.filter((l) => {
+              if (!l.scheduled_date) return false;
+              return l.scheduled_date >= selectedCohort.start_date && l.scheduled_date <= selectedCohort.end_date;
+            })
+          : allLessons;
+
+        const mapped = mods
+          .map((m) => ({
+            ...m,
+            lessons: filteredLessons.filter((l) => l.module_id === m.id),
+          }))
+          // Students: hide modules with no lessons in their period
+          .filter((m) => !isStudent || m.lessons.length > 0);
+
         setModules(mapped);
       }
       setLoading(false);
     }
     load();
-  }, []);
+  }, [selectedCohort, isStudent]);
 
   const getFileUrl = (path: string) => {
     const { data } = supabase.storage.from("course-files").getPublicUrl(path);
