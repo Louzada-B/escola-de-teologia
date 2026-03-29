@@ -95,12 +95,22 @@ export function CohortProvider({ children }: { children: ReactNode }) {
     enabled: !!selectedCohortId && isAdminOrProfessor,
   });
 
+  const selectedCohort = cohorts.find(c => c.id === selectedCohortId) || null;
+
+  const effectiveCutoffDate = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    if (!selectedCohort) return today;
+    return selectedCohort.end_date < today ? selectedCohort.end_date : today;
+  }, [selectedCohort]);
+
   return (
     <CohortContext.Provider value={{
       cohorts,
       selectedCohortId,
       setSelectedCohortId,
       selectedCohortStudentIds,
+      selectedCohort,
+      effectiveCutoffDate,
       isLoading: cohortsLoading || studentsLoading,
     }}>
       {children}
