@@ -263,7 +263,7 @@ export default function CohortsManager({ userId }: { userId: string }) {
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {new Date(cohort.start_date + "T12:00:00").toLocaleDateString("pt-BR")} até{" "}
-                    {new Date(cohort.end_date + "T12:00:00").toLocaleDateString("pt-BR")}• {cohort.year}/
+                    {new Date(cohort.end_date + "T12:00:00").toLocaleDateString("pt-BR")} • {cohort.year}/
                     {cohort.semester}º sem.
                   </p>
                 </CardHeader>
