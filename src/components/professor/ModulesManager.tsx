@@ -359,7 +359,7 @@ export default function ModulesManager({ userId }: { userId: string }) {
       <div className="space-y-4">
         <h3 className="font-heading font-semibold">Módulos Existentes</h3>
         {modules.map(m => {
-          const moduleLessons = lessons.filter(l => l.module_id === m.id);
+          const moduleLessons = filteredLessons.filter(l => l.module_id === m.id);
           return (
             <Card key={m.id} className="border">
               <CardContent className="p-4 space-y-3">
