@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCohort } from "@/contexts/CohortContext";
+import { isDateWithinCohortPeriod } from "@/lib/cohortDateUtils";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -99,6 +101,7 @@ function DonutChart({
 
 export default function DashboardHome() {
   const { profile, user } = useAuth();
+  const { selectedCohort, effectiveCutoffDate } = useCohort();
   const navigate = useNavigate();
 
   const [stats, setStats] = useState({ modules: 0, announcements: 0, events: 0, quizzes: 0 });
@@ -112,6 +115,9 @@ export default function DashboardHome() {
   const [pendingQuizCount, setPendingQuizCount] = useState(0);
   const [isWithinTime, setIsWithinTime] = useState(false);
 
+  const cohortStart = selectedCohort?.start_date;
+  const cohortEnd = selectedCohort?.end_date;
+
   useEffect(() => {
     const hour = new Date().getHours();
     setIsWithinTime(hour >= 7 && hour <= 23);
@@ -120,20 +126,37 @@ export default function DashboardHome() {
       if (!user) return;
       const today = new Date().toISOString().split("T")[0];
 
-      const [m, a, e, q] = await Promise.all([
-        supabase.from("modules").select("id", { count: "exact", head: true }),
-        supabase.from("announcements").select("id", { count: "exact", head: true }),
-        supabase.from("calendar_events").select("id", { count: "exact", head: true }),
-        supabase.from("quizzes").select("id", { count: "exact", head: true }),
+      // Fetch all raw data
+      const [mRes, aRes, eRes, qRes] = await Promise.all([
+        supabase.from("modules").select("id"),
+        supabase.from("announcements").select("id, created_at"),
+        supabase.from("calendar_events").select("id, event_date"),
+        supabase.from("quizzes").select("id, available_from, available_until"),
       ]);
 
+      const allEvents = eRes.data || [];
+      const allQuizzes = qRes.data || [];
+
+      // Filter events and quizzes by cohort full period
+      const filteredEvents = cohortStart && cohortEnd
+        ? allEvents.filter(e => e.event_date >= cohortStart && e.event_date <= cohortEnd)
+        : allEvents;
+      const filteredQuizzes = cohortStart && cohortEnd
+        ? allQuizzes.filter(q => {
+            const qDate = q.available_from ? q.available_from.split('T')[0] : null;
+            if (!qDate) return true; // no date = always show
+            return qDate >= cohortStart && qDate <= cohortEnd;
+          })
+        : allQuizzes;
+
       setStats({
-        modules: m.count || 0,
-        announcements: a.count || 0,
-        events: e.count || 0,
-        quizzes: q.count || 0,
+        modules: mRes.data?.length || 0,
+        announcements: aRes.data?.length || 0,
+        events: filteredEvents.length,
+        quizzes: filteredQuizzes.length,
       });
 
+      // Today's lessons for attendance alert
       const { data: todayLessons } = await supabase.from("lessons").select("*").eq("scheduled_date", today);
       const { data: userRecords } = await supabase
         .from("attendance_records")
@@ -146,7 +169,7 @@ export default function DashboardHome() {
         if (pending) setPendingLesson(pending);
       }
 
-      // Attendance by type
+      // Attendance by type — filtered by cohort period
       const { data: allLessons } = await supabase
         .from("lessons")
         .select("id, scheduled_date, event_type, mandatory_attendance");
@@ -155,13 +178,11 @@ export default function DashboardHome() {
         const checkedInIds = new Set(userRecords.map((r) => r.lesson_id));
 
         const calcForType = (type: string) => {
-          const today = new Date().toISOString().split("T")[0];
           const past = allLessons.filter(
             (l) =>
               l.event_type === type &&
               l.mandatory_attendance &&
-              l.scheduled_date &&
-              l.scheduled_date <= today,
+              isDateWithinCohortPeriod(l.scheduled_date, cohortStart, effectiveCutoffDate),
           );
           const total = past.length;
           const present = past.filter((l) => checkedInIds.has(l.id)).length;
@@ -186,35 +207,32 @@ export default function DashboardHome() {
         setAulaEspecialData(especial.data);
       }
 
-      // Quizzes
+      // Quizzes — filtered by cohort
       const now = new Date().toISOString();
-      const { data: allQuizzes } = await supabase.from("quizzes").select("id, available_from, available_until");
       const { data: quizResponses } = await supabase.from("quiz_responses").select("quiz_id").eq("user_id", user.id);
-      if (allQuizzes) {
-        const answeredIds = new Set((quizResponses || []).map((r) => r.quiz_id));
-        const answered = allQuizzes.filter((q) => answeredIds.has(q.id)).length;
-        const available = allQuizzes.length - answered;
+      const answeredIds = new Set((quizResponses || []).map((r) => r.quiz_id));
+      const answered = filteredQuizzes.filter((q) => answeredIds.has(q.id)).length;
+      const available = filteredQuizzes.length - answered;
 
-        // Pending open quizzes (within availability window and not answered)
-        const openUnanswered = allQuizzes.filter((q) => {
-          if (answeredIds.has(q.id)) return false;
-          if (q.available_from && q.available_from > now) return false;
-          if (q.available_until && q.available_until < now) return false;
-          return true;
-        });
-        setPendingQuizCount(openUnanswered.length);
-        const ansPerc = allQuizzes.length > 0 ? Math.round((answered / allQuizzes.length) * 100) : 0;
-        const availPerc = allQuizzes.length > 0 ? 100 - ansPerc : 0;
-        setMainQuizPerc(ansPerc);
-        setQuizData([
-          { name: "Respondidos", value: ansPerc, qty: answered },
-          { name: "Disponíveis", value: availPerc, qty: available },
-        ]);
-      }
+      // Pending open quizzes
+      const openUnanswered = filteredQuizzes.filter((q) => {
+        if (answeredIds.has(q.id)) return false;
+        if (q.available_from && q.available_from > now) return false;
+        if (q.available_until && q.available_until < now) return false;
+        return true;
+      });
+      setPendingQuizCount(openUnanswered.length);
+      const ansPerc = filteredQuizzes.length > 0 ? Math.round((answered / filteredQuizzes.length) * 100) : 0;
+      const availPerc = filteredQuizzes.length > 0 ? 100 - ansPerc : 0;
+      setMainQuizPerc(ansPerc);
+      setQuizData([
+        { name: "Respondidos", value: ansPerc, qty: answered },
+        { name: "Disponíveis", value: availPerc, qty: available },
+      ]);
     }
 
     loadDashboardData();
-  }, [user]);
+  }, [user, selectedCohort, effectiveCutoffDate]);
 
   const summaryCards = [
     { label: "Módulos", value: stats.modules, icon: BookOpen },
@@ -255,33 +273,31 @@ export default function DashboardHome() {
       )}
 
       {/* ALERTA DE QUESTIONÁRIOS PENDENTES */}
-      {pendingQuizCount > 0 &&
-        profile?.role ===
-          "aluno" &&(
-            <Card className="mb-8 border-primary/40 bg-primary/5 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-700">
-              <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-5">
-                <div className="flex items-center gap-4 text-center sm:text-left">
-                  <div className="bg-primary/20 p-3 rounded-full hidden sm:block">
-                    <ClipboardList className="w-6 h-6 text-primary animate-pulse" />
-                  </div>
-                  <div>
-                    <h3 className="font-heading font-bold text-lg text-foreground">
-                      {pendingQuizCount === 1
-                        ? "Você tem 1 questionário pendente!"
-                        : `Você tem ${pendingQuizCount} questionários pendentes!`}
-                    </h3>
-                    <p className="text-sm text-muted-foreground font-body">Responda antes que o prazo encerre.</p>
-                  </div>
-                </div>
-                <Button
-                  className="w-full sm:w-auto font-body px-6"
-                  onClick={() => navigate("/dashboard/questionarios")}
-                >
-                  Responder Agora <ArrowRight className="ml-2 w-4 h-4" />
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+      {pendingQuizCount > 0 && profile?.role === "aluno" && (
+        <Card className="mb-8 border-primary/40 bg-primary/5 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-700">
+          <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-5">
+            <div className="flex items-center gap-4 text-center sm:text-left">
+              <div className="bg-primary/20 p-3 rounded-full hidden sm:block">
+                <ClipboardList className="w-6 h-6 text-primary animate-pulse" />
+              </div>
+              <div>
+                <h3 className="font-heading font-bold text-lg text-foreground">
+                  {pendingQuizCount === 1
+                    ? "Você tem 1 questionário pendente!"
+                    : `Você tem ${pendingQuizCount} questionários pendentes!`}
+                </h3>
+                <p className="text-sm text-muted-foreground font-body">Responda antes que o prazo encerre.</p>
+              </div>
+            </div>
+            <Button
+              className="w-full sm:w-auto font-body px-6"
+              onClick={() => navigate("/dashboard/questionarios")}
+            >
+              Responder Agora <ArrowRight className="ml-2 w-4 h-4" />
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* BOAS-VINDAS */}
       <div className="mb-8">
@@ -307,7 +323,6 @@ export default function DashboardHome() {
       {/* GRÁFICOS */}
       {profile?.role === 'aluno' && (
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Presença — Aula */}
         <Card className="card-academic">
           <CardHeader className="flex flex-row items-center gap-2">
             <UserCheck className="w-5 h-5 text-accent" />
@@ -322,7 +337,6 @@ export default function DashboardHome() {
           </CardContent>
         </Card>
 
-        {/* Presença — Aula Especial */}
         <Card className="card-academic">
           <CardHeader className="flex flex-row items-center gap-2">
             <Star className="w-5 h-5 text-accent" />
@@ -342,7 +356,6 @@ export default function DashboardHome() {
           </CardContent>
         </Card>
 
-        {/* Gráfico de Quizzes */}
         <Card className="card-academic">
           <CardHeader className="flex flex-row items-center gap-2">
             <TrendingUp className="w-5 h-5 text-accent" />

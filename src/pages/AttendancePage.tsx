@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCohort } from "@/contexts/CohortContext";
+import { isDateWithinCohortPeriod } from "@/lib/cohortDateUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
@@ -19,6 +21,7 @@ function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: numbe
 
 export default function AttendancePage() {
   const { user } = useAuth();
+  const { selectedCohort, effectiveCutoffDate } = useCohort();
   const [todayLessons, setTodayLessons] = useState<any[]>([]);
   const [pastLessons, setPastLessons] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>(null);
@@ -26,6 +29,8 @@ export default function AttendancePage() {
   const [loading, setLoading] = useState(true);
   const [gpsLoading, setGpsLoading] = useState<string | null>(null);
   const [isWithinTime, setIsWithinTime] = useState(false);
+
+  const cohortStart = selectedCohort?.start_date;
 
   useEffect(() => {
     const now = new Date();
@@ -39,7 +44,6 @@ export default function AttendancePage() {
         supabase
           .from("lessons")
           .select("*, modules(title)")
-          .lte("scheduled_date", today)
           .order("scheduled_date", { ascending: false }),
         supabase.from("attendance_settings").select("*").limit(1).maybeSingle(),
         supabase
@@ -49,8 +53,15 @@ export default function AttendancePage() {
       ]);
 
       if (lessonsRes.data) {
+        // Today's lessons (always show for check-in, regardless of cohort)
         setTodayLessons(lessonsRes.data.filter((l) => l.scheduled_date === today));
-        setPastLessons(lessonsRes.data.filter((l) => l.scheduled_date < today));
+        // Past lessons filtered by cohort period
+        setPastLessons(
+          lessonsRes.data.filter((l) =>
+            l.scheduled_date < today &&
+            isDateWithinCohortPeriod(l.scheduled_date, cohortStart, effectiveCutoffDate)
+          )
+        );
       }
       if (settingsRes.data) setSettings(settingsRes.data);
       if (recordsRes.data) {
@@ -59,7 +70,7 @@ export default function AttendancePage() {
       setLoading(false);
     }
     load();
-  }, [user]);
+  }, [user, selectedCohort, effectiveCutoffDate]);
 
   const handleCheckIn = async (lessonId: string) => {
     if (!settings) {
