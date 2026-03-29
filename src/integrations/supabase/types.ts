@@ -158,6 +158,68 @@ export type Database = {
         }
         Relationships: []
       }
+      cohort_students: {
+        Row: {
+          cohort_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          cohort_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          cohort_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cohort_students_cohort_id_fkey"
+            columns: ["cohort_id"]
+            isOneToOne: false
+            referencedRelation: "cohorts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cohorts: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          is_active: boolean
+          name: string
+          semester: number
+          start_date: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          is_active?: boolean
+          name: string
+          semester: number
+          start_date: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          semester?: number
+          start_date?: string
+          year?: number
+        }
+        Relationships: []
+      }
       lesson_files: {
         Row: {
           created_at: string
