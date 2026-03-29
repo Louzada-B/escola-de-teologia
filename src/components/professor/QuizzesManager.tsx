@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useCohort } from '@/contexts/CohortContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,10 +31,13 @@ function defaultQuestionState() {
 }
 
 export default function QuizzesManager({ userId }: { userId: string }) {
+  const { selectedCohort, effectiveCutoffDate } = useCohort();
   const [title, setTitle] = useState('');
   const [availableFrom, setAvailableFrom] = useState('');
   const [availableUntil, setAvailableUntil] = useState('');
+  const [lessonId, setLessonId] = useState('');
   const [quizzes, setQuizzes] = useState<any[]>([]);
+  const [allLessons, setAllLessons] = useState<any[]>([]);
   const [selectedQuiz, setSelectedQuiz] = useState('');
 
   // New question form
@@ -44,6 +48,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
   const [editTitle, setEditTitle] = useState('');
   const [editFrom, setEditFrom] = useState('');
   const [editUntil, setEditUntil] = useState('');
+  const [editLessonId, setEditLessonId] = useState('');
 
   // Questions listing & editing
   const [quizQuestions, setQuizQuestions] = useState<Record<string, any[]>>({});
@@ -52,8 +57,22 @@ export default function QuizzesManager({ userId }: { userId: string }) {
   const [eqForm, setEqForm] = useState(defaultQuestionState());
 
   const load = async () => {
-    const { data } = await supabase.from('quizzes').select('*, quiz_questions(id)').order('created_at');
-    setQuizzes(data || []);
+    const [quizzesRes, lessonsRes] = await Promise.all([
+      supabase.from('quizzes').select('*, quiz_questions(id), lessons(title, scheduled_date)').order('created_at'),
+      supabase.from('lessons').select('id, title, scheduled_date, module_id').order('scheduled_date'),
+    ]);
+    let quizData = quizzesRes.data || [];
+    setAllLessons(lessonsRes.data || []);
+
+    // Filter by cohort dates
+    if (selectedCohort) {
+      quizData = quizData.filter((q: any) => {
+        const lessonDate = q.lessons?.scheduled_date;
+        if (!lessonDate) return true;
+        return lessonDate >= selectedCohort.start_date && lessonDate <= effectiveCutoffDate;
+      });
+    }
+    setQuizzes(quizData);
   };
 
   const loadQuestions = async (quizId: string) => {
@@ -61,7 +80,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
     setQuizQuestions(prev => ({ ...prev, [quizId]: data || [] }));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [selectedCohort, effectiveCutoffDate]);
 
   const createQuiz = async () => {
     if (!title.trim()) return;
@@ -69,9 +88,10 @@ export default function QuizzesManager({ userId }: { userId: string }) {
       title, created_by: userId,
       available_from: availableFrom || null,
       available_until: availableUntil || null,
+      lesson_id: lessonId || null,
     });
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
-    setTitle(''); setAvailableFrom(''); setAvailableUntil('');
+    setTitle(''); setAvailableFrom(''); setAvailableUntil(''); setLessonId('');
     load();
     toast({ title: 'Questionário criado!' });
   };
@@ -82,6 +102,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
       title: editTitle,
       available_from: editFrom || null,
       available_until: editUntil || null,
+      lesson_id: editLessonId || null,
     }).eq('id', editing.id);
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
     setEditing(null);
@@ -98,6 +119,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
     setEditTitle(q.title);
     setEditFrom(q.available_from ? q.available_from.slice(0, 16) : '');
     setEditUntil(q.available_until ? q.available_until.slice(0, 16) : '');
+    setEditLessonId(q.lesson_id || '');
     setEditing(q);
   };
 
