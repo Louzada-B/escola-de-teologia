@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCohort } from '@/contexts/CohortContext';
+import { isDateWithinCohortPeriod } from '@/lib/cohortDateUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,8 +13,9 @@ import QuizAnswerDialog from '@/components/quiz/QuizAnswerDialog';
 
 export default function QuizzesPage() {
   const { user, profile } = useAuth();
-  const { selectedCohort } = useCohort();
+  const { selectedCohort, effectiveCutoffDate } = useCohort();
   const isStudent = profile?.role === 'aluno';
+  const isAdminOrProfessor = profile?.role === 'admin' || profile?.role === 'professor';
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [questions, setQuestions] = useState<Record<string, any[]>>({});
   const [submitted, setSubmitted] = useState<Set<string>>(new Set());
@@ -35,11 +37,14 @@ export default function QuizzesPage() {
         .eq('user_id', user?.id || '');
 
       if (quizData) {
-        const filtered = (isStudent && selectedCohort)
+        const filtered = selectedCohort
           ? quizData.filter((q: any) => {
               const lessonDate = q.lessons?.scheduled_date;
               if (!lessonDate) return true;
-              return lessonDate >= selectedCohort.start_date && lessonDate <= selectedCohort.end_date;
+              if (isStudent) {
+                return lessonDate >= selectedCohort.start_date && lessonDate <= selectedCohort.end_date;
+              }
+              return lessonDate >= selectedCohort.start_date && lessonDate <= effectiveCutoffDate;
             })
           : quizData;
         setQuizzes(filtered);
@@ -58,7 +63,7 @@ export default function QuizzesPage() {
       setLoading(false);
     }
     load();
-  }, [user, selectedCohort, isStudent]);
+  }, [user, selectedCohort, isStudent, effectiveCutoffDate]);
 
   const getQuizStatus = (quiz: any) => {
     if (submitted.has(quiz.id)) {
