@@ -289,7 +289,7 @@ export default function CohortsManager({ userId }: { userId: string }) {
                                   });
                                 }}
                               />
-                              <span>{student.full_name || student.email}</span>
+                              <span>{student.full_name && student.email}</span>
                             </label>
                           );
                         })}
