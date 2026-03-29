@@ -18,16 +18,17 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   if (!session) return <Navigate to="/auth" replace />;
 
   // Block students without active cohort (block if not explicitly true)
-  if (profile?.role === 'aluno' && hasActiveCohort !== true) {
+  if (profile?.role === "aluno" && hasActiveCohort !== true) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="max-w-md w-full text-center space-y-6">
           <div className="mx-auto w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
             <ShieldX className="w-8 h-8 text-destructive" />
           </div>
-          <h1 className="text-2xl font-heading font-bold text-foreground">Acesso Encerrado</h1>
+          <h1 className="text-2xl font-heading font-bold text-foreground">Sem acesso!</h1>
+          <p className="text-muted-foreground">Você está sem acesso no momento.</p>
           <p className="text-muted-foreground">
-            Seu acesso ao portal está encerrado. Entre em contato com a coordenação.
+            Se você é um aluno de uma turma ativa, aguarde aprovação da coordenação.
           </p>
           <Button onClick={signOut} variant="outline" className="gap-2">
             <LogOut className="w-4 h-4" />
