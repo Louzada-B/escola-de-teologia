@@ -1,15 +1,15 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { toast } from 'sonner';
-import { Plus, Trash2, Users, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
+import { Plus, Trash2, Users, ChevronDown, ChevronUp } from "lucide-react";
 
 interface Cohort {
   id: string;
@@ -27,45 +27,43 @@ export default function CohortsManager({ userId }: { userId: string }) {
   const [showForm, setShowForm] = useState(false);
   const [expandedCohort, setExpandedCohort] = useState<string | null>(null);
   const [form, setForm] = useState({
-    name: '',
+    name: "",
     year: new Date().getFullYear(),
     semester: 1,
-    start_date: '',
-    end_date: '',
+    start_date: "",
+    end_date: "",
   });
 
   const { data: cohorts = [], isLoading } = useQuery({
-    queryKey: ['cohorts'],
+    queryKey: ["cohorts"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('cohorts')
-        .select('*')
-        .order('year', { ascending: false })
-        .order('semester', { ascending: false });
+        .from("cohorts")
+        .select("*")
+        .order("year", { ascending: false })
+        .order("semester", { ascending: false });
       if (error) throw error;
       return data as Cohort[];
     },
   });
 
   const { data: allStudents = [] } = useQuery({
-    queryKey: ['all-students'],
+    queryKey: ["all-students"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, email')
-        .eq('role', 'aluno')
-        .order('full_name');
+        .from("profiles")
+        .select("id, full_name, email")
+        .eq("role", "aluno")
+        .order("full_name");
       if (error) throw error;
       return data;
     },
   });
 
   const { data: cohortStudents = [] } = useQuery({
-    queryKey: ['all-cohort-students'],
+    queryKey: ["all-cohort-students"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('cohort_students')
-        .select('*');
+      const { data, error } = await supabase.from("cohort_students").select("*");
       if (error) throw error;
       return data;
     },
@@ -73,7 +71,7 @@ export default function CohortsManager({ userId }: { userId: string }) {
 
   const createCohort = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from('cohorts').insert({
+      const { error } = await supabase.from("cohorts").insert({
         name: form.name,
         year: form.year,
         semester: form.semester,
@@ -83,56 +81,58 @@ export default function CohortsManager({ userId }: { userId: string }) {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cohorts'] });
-      toast.success('Turma criada com sucesso');
+      queryClient.invalidateQueries({ queryKey: ["cohorts"] });
+      toast.success("Turma criada com sucesso");
       setShowForm(false);
-      setForm({ name: '', year: new Date().getFullYear(), semester: 1, start_date: '', end_date: '' });
+      setForm({ name: "", year: new Date().getFullYear(), semester: 1, start_date: "", end_date: "" });
     },
-    onError: (e: any) => toast.error('Erro ao criar turma: ' + e.message),
+    onError: (e: any) => toast.error("Erro ao criar turma: " + e.message),
   });
 
   const toggleActive = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      const { error } = await supabase.from('cohorts').update({ is_active }).eq('id', id);
+      const { error } = await supabase.from("cohorts").update({ is_active }).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cohorts'] }),
-    onError: (e: any) => toast.error('Erro: ' + e.message),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cohorts"] }),
+    onError: (e: any) => toast.error("Erro: " + e.message),
   });
 
   const deleteCohort = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('cohorts').delete().eq('id', id);
+      const { error } = await supabase.from("cohorts").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cohorts'] });
-      toast.success('Turma removida');
+      queryClient.invalidateQueries({ queryKey: ["cohorts"] });
+      toast.success("Turma removida");
     },
-    onError: (e: any) => toast.error('Erro: ' + e.message),
+    onError: (e: any) => toast.error("Erro: " + e.message),
   });
 
   const toggleStudent = useMutation({
     mutationFn: async ({ cohortId, studentId, add }: { cohortId: string; studentId: string; add: boolean }) => {
       if (add) {
-        const { error } = await supabase.from('cohort_students').insert({ cohort_id: cohortId, user_id: studentId });
+        const { error } = await supabase.from("cohort_students").insert({ cohort_id: cohortId, user_id: studentId });
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('cohort_students').delete()
-          .eq('cohort_id', cohortId)
-          .eq('user_id', studentId);
+        const { error } = await supabase
+          .from("cohort_students")
+          .delete()
+          .eq("cohort_id", cohortId)
+          .eq("user_id", studentId);
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['all-cohort-students'] });
-      queryClient.invalidateQueries({ queryKey: ['cohort-students'] });
+      queryClient.invalidateQueries({ queryKey: ["all-cohort-students"] });
+      queryClient.invalidateQueries({ queryKey: ["cohort-students"] });
     },
-    onError: (e: any) => toast.error('Erro: ' + e.message),
+    onError: (e: any) => toast.error("Erro: " + e.message),
   });
 
   const getStudentsForCohort = (cohortId: string) => {
-    return cohortStudents.filter(cs => cs.cohort_id === cohortId).map(cs => cs.user_id);
+    return cohortStudents.filter((cs) => cs.cohort_id === cohortId).map((cs) => cs.user_id);
   };
 
   return (
@@ -153,7 +153,7 @@ export default function CohortsManager({ userId }: { userId: string }) {
                 <Input
                   placeholder="Ex: Turma 2026/1"
                   value={form.name}
-                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 />
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -162,14 +162,14 @@ export default function CohortsManager({ userId }: { userId: string }) {
                   <Input
                     type="number"
                     value={form.year}
-                    onChange={e => setForm(f => ({ ...f, year: parseInt(e.target.value) || 0 }))}
+                    onChange={(e) => setForm((f) => ({ ...f, year: parseInt(e.target.value) }))}
                   />
                 </div>
                 <div>
                   <Label>Semestre</Label>
                   <select
                     value={form.semester}
-                    onChange={e => setForm(f => ({ ...f, semester: parseInt(e.target.value) }))}
+                    onChange={(e) => setForm((f) => ({ ...f, semester: parseInt(e.target.value) }))}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   >
                     <option value={1}>1º Semestre</option>
@@ -182,7 +182,7 @@ export default function CohortsManager({ userId }: { userId: string }) {
                 <Input
                   type="date"
                   value={form.start_date}
-                  onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value }))}
                 />
               </div>
               <div>
@@ -190,7 +190,7 @@ export default function CohortsManager({ userId }: { userId: string }) {
                 <Input
                   type="date"
                   value={form.end_date}
-                  onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, end_date: e.target.value }))}
                 />
               </div>
             </div>
@@ -202,7 +202,9 @@ export default function CohortsManager({ userId }: { userId: string }) {
               >
                 Criar Turma
               </Button>
-              <Button size="sm" variant="outline" onClick={() => setShowForm(false)}>Cancelar</Button>
+              <Button size="sm" variant="outline" onClick={() => setShowForm(false)}>
+                Cancelar
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -214,7 +216,7 @@ export default function CohortsManager({ userId }: { userId: string }) {
         <p className="text-sm text-muted-foreground">Nenhuma turma cadastrada.</p>
       ) : (
         <div className="space-y-3">
-          {cohorts.map(cohort => {
+          {cohorts.map((cohort) => {
             const studentIds = getStudentsForCohort(cohort.id);
             const isExpanded = expandedCohort === cohort.id;
 
@@ -224,8 +226,8 @@ export default function CohortsManager({ userId }: { userId: string }) {
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2">
                       <CardTitle className="text-sm">{cohort.name}</CardTitle>
-                      <Badge variant={cohort.is_active ? 'default' : 'secondary'} className="text-[10px]">
-                        {cohort.is_active ? 'Ativa' : 'Inativa'}
+                      <Badge variant={cohort.is_active ? "default" : "secondary"} className="text-[10px]">
+                        {cohort.is_active ? "Ativa" : "Inativa"}
                       </Badge>
                       <Badge variant="outline" className="text-[10px] gap-1">
                         <Users className="w-3 h-3" /> {studentIds.length}
@@ -251,7 +253,7 @@ export default function CohortsManager({ userId }: { userId: string }) {
                         variant="ghost"
                         className="text-destructive"
                         onClick={() => {
-                          if (confirm('Excluir esta turma?')) deleteCohort.mutate(cohort.id);
+                          if (confirm("Excluir esta turma?")) deleteCohort.mutate(cohort.id);
                         }}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -270,7 +272,7 @@ export default function CohortsManager({ userId }: { userId: string }) {
                       <p className="text-xs text-muted-foreground">Nenhum aluno cadastrado.</p>
                     ) : (
                       <div className="max-h-60 overflow-y-auto space-y-1">
-                        {allStudents.map(student => {
+                        {allStudents.map((student) => {
                           const isInCohort = studentIds.includes(student.id);
                           return (
                             <label
