@@ -44,7 +44,7 @@ export default function AnalyticsPage() {
     },
   });
 
-  const { data: attendanceRecords = [] } = useQuery({
+  const { data: allAttendanceRecords = [] } = useQuery({
     queryKey: ['analytics-attendance'],
     queryFn: async () => {
       const { data } = await supabase.from('attendance_records').select('*');
@@ -60,13 +60,24 @@ export default function AnalyticsPage() {
     },
   });
 
-  const { data: quizResponses = [] } = useQuery({
+  const { data: allQuizResponses = [] } = useQuery({
     queryKey: ['analytics-quiz-responses'],
     queryFn: async () => {
       const { data } = await supabase.from('quiz_responses').select('*');
       return data || [];
     },
   });
+
+  // Filter attendance and quiz responses by cohort students
+  const studentIds = useMemo(() => new Set(students.map(s => s.id)), [students]);
+  const attendanceRecords = useMemo(() => {
+    if (!selectedCohortId) return allAttendanceRecords;
+    return allAttendanceRecords.filter(a => studentIds.has(a.user_id));
+  }, [allAttendanceRecords, selectedCohortId, studentIds]);
+  const quizResponses = useMemo(() => {
+    if (!selectedCohortId) return allQuizResponses;
+    return allQuizResponses.filter(r => studentIds.has(r.user_id));
+  }, [allQuizResponses, selectedCohortId, studentIds]);
 
   const pastLessons = useMemo(
     () => lessons.filter((l) => l.scheduled_date && l.scheduled_date <= today),
