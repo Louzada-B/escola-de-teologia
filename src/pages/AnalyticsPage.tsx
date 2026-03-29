@@ -16,17 +16,25 @@ import {
 import { Users, BookOpen, UserCheck, ClipboardList, AlertTriangle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useCohort } from '@/contexts/CohortContext';
 
 export default function AnalyticsPage() {
   const today = new Date().toISOString().split('T')[0];
+  const { selectedCohortId, selectedCohortStudentIds } = useCohort();
 
-  const { data: students = [] } = useQuery({
+  const { data: allStudents = [] } = useQuery({
     queryKey: ['analytics-students'],
     queryFn: async () => {
       const { data } = await supabase.from('profiles').select('*').eq('role', 'aluno');
       return data || [];
     },
   });
+
+  // Filter students by selected cohort
+  const students = useMemo(() => {
+    if (!selectedCohortId || selectedCohortStudentIds.length === 0) return allStudents;
+    return allStudents.filter(s => selectedCohortStudentIds.includes(s.id));
+  }, [allStudents, selectedCohortId, selectedCohortStudentIds]);
 
   const { data: lessons = [] } = useQuery({
     queryKey: ['analytics-lessons'],
@@ -36,7 +44,7 @@ export default function AnalyticsPage() {
     },
   });
 
-  const { data: attendanceRecords = [] } = useQuery({
+  const { data: allAttendanceRecords = [] } = useQuery({
     queryKey: ['analytics-attendance'],
     queryFn: async () => {
       const { data } = await supabase.from('attendance_records').select('*');
@@ -52,13 +60,24 @@ export default function AnalyticsPage() {
     },
   });
 
-  const { data: quizResponses = [] } = useQuery({
+  const { data: allQuizResponses = [] } = useQuery({
     queryKey: ['analytics-quiz-responses'],
     queryFn: async () => {
       const { data } = await supabase.from('quiz_responses').select('*');
       return data || [];
     },
   });
+
+  // Filter attendance and quiz responses by cohort students
+  const studentIds = useMemo(() => new Set(students.map(s => s.id)), [students]);
+  const attendanceRecords = useMemo(() => {
+    if (!selectedCohortId) return allAttendanceRecords;
+    return allAttendanceRecords.filter(a => studentIds.has(a.user_id));
+  }, [allAttendanceRecords, selectedCohortId, studentIds]);
+  const quizResponses = useMemo(() => {
+    if (!selectedCohortId) return allQuizResponses;
+    return allQuizResponses.filter(r => studentIds.has(r.user_id));
+  }, [allQuizResponses, selectedCohortId, studentIds]);
 
   const pastLessons = useMemo(
     () => lessons.filter((l) => l.scheduled_date && l.scheduled_date <= today),
