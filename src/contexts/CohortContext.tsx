@@ -19,6 +19,9 @@ interface CohortContextType {
   selectedCohortId: string | null;
   setSelectedCohortId: (id: string | null) => void;
   selectedCohortStudentIds: string[];
+  selectedCohort: Cohort | null;
+  /** The effective cutoff date for "past lessons": MIN(today, cohort.end_date) */
+  effectiveCutoffDate: string;
   isLoading: boolean;
 }
 
