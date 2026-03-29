@@ -15,14 +15,14 @@ export default function ProfessorPage() {
     <div className="page-container">
       <h1 className="section-title mb-6">Gestão de Conteúdo</h1>
       <Tabs defaultValue="modules" className="space-y-4">
-        <TabsList className="bg-card border flex-wrap">
-          <TabsTrigger value="modules">Módulos & Aulas</TabsTrigger>
-          <TabsTrigger value="announcements">Avisos</TabsTrigger>
-          <TabsTrigger value="events">Eventos</TabsTrigger>
-          <TabsTrigger value="quizzes">Questionários</TabsTrigger>
-          <TabsTrigger value="books">Livros</TabsTrigger>
-          <TabsTrigger value="attendance">Presença</TabsTrigger>
-          <TabsTrigger value="cohorts">Turmas</TabsTrigger>
+        <TabsList className="bg-card border h-auto flex-wrap gap-1 p-1">
+          <TabsTrigger value="modules" className="text-xs sm:text-sm">Módulos & Aulas</TabsTrigger>
+          <TabsTrigger value="announcements" className="text-xs sm:text-sm">Avisos</TabsTrigger>
+          <TabsTrigger value="events" className="text-xs sm:text-sm">Eventos</TabsTrigger>
+          <TabsTrigger value="quizzes" className="text-xs sm:text-sm">Questionários</TabsTrigger>
+          <TabsTrigger value="books" className="text-xs sm:text-sm">Livros</TabsTrigger>
+          <TabsTrigger value="attendance" className="text-xs sm:text-sm">Presença</TabsTrigger>
+          <TabsTrigger value="cohorts" className="text-xs sm:text-sm">Turmas</TabsTrigger>
         </TabsList>
 
         <TabsContent value="modules"><ModulesManager userId={user!.id} /></TabsContent>

@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useCohort } from '@/contexts/CohortContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export default function AnnouncementsPage() {
+  const { selectedCohort } = useCohort();
   const [announcements, setAnnouncements] = useState<any[]>([]);
 
   useEffect(() => {
@@ -15,15 +17,24 @@ export default function AnnouncementsPage() {
       .then(({ data }) => setAnnouncements(data || []));
   }, []);
 
+  const filtered = useMemo(() => {
+    if (!selectedCohort) return announcements;
+    return announcements.filter(a => {
+      const date = a.created_at?.split('T')[0];
+      if (!date) return true;
+      return date >= selectedCohort.start_date && date <= selectedCohort.end_date;
+    });
+  }, [announcements, selectedCohort]);
+
   return (
     <div className="page-container">
       <h1 className="section-title mb-6">Mural de Avisos</h1>
 
-      {announcements.length === 0 ? (
+      {filtered.length === 0 ? (
         <p className="text-muted-foreground">Nenhum aviso publicado.</p>
       ) : (
         <div className="space-y-4">
-          {announcements.map((a) => (
+          {filtered.map((a) => (
             <Card key={a.id} className="card-academic">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">

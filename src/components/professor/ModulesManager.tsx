@@ -67,9 +67,9 @@ export default function ModulesManager({ userId }: { userId: string }) {
     if (!selectedCohort) return lessons;
     return lessons.filter(l => {
       if (!l.scheduled_date) return true;
-      return l.scheduled_date >= selectedCohort.start_date && l.scheduled_date <= effectiveCutoffDate;
+      return l.scheduled_date >= selectedCohort.start_date && l.scheduled_date <= selectedCohort.end_date;
     });
-  }, [lessons, selectedCohort, effectiveCutoffDate]);
+  }, [lessons, selectedCohort]);
 
   const addModule = async () => {
     if (!title.trim()) return;

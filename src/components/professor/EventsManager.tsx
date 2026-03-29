@@ -34,9 +34,9 @@ export default function EventsManager({ userId }: { userId: string }) {
     if (!selectedCohort) return items;
     return items.filter(item => {
       if (!item.event_date) return true;
-      return item.event_date >= selectedCohort.start_date && item.event_date <= effectiveCutoffDate;
+      return item.event_date >= selectedCohort.start_date && item.event_date <= selectedCohort.end_date;
     });
-  }, [items, selectedCohort, effectiveCutoffDate]);
+  }, [items, selectedCohort]);
 
   const add = async () => {
     if (!title.trim() || !eventDate) return;

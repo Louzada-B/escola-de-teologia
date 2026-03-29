@@ -41,10 +41,7 @@ export default function QuizzesPage() {
           ? quizData.filter((q: any) => {
               const lessonDate = q.lessons?.scheduled_date;
               if (!lessonDate) return true;
-              if (isStudent) {
-                return lessonDate >= selectedCohort.start_date && lessonDate <= selectedCohort.end_date;
-              }
-              return lessonDate >= selectedCohort.start_date && lessonDate <= effectiveCutoffDate;
+              return lessonDate >= selectedCohort.start_date && lessonDate <= selectedCohort.end_date;
             })
           : quizData;
         setQuizzes(filtered);
