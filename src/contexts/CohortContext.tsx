@@ -30,6 +30,8 @@ const CohortContext = createContext<CohortContextType>({
   selectedCohortId: null,
   setSelectedCohortId: () => {},
   selectedCohortStudentIds: [],
+  selectedCohort: null,
+  effectiveCutoffDate: new Date().toISOString().split('T')[0],
   isLoading: false,
 });
 
