@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import CohortSelector from "@/components/CohortSelector";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { profile, signOut } = useAuth();
@@ -127,7 +128,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto">{children}</main>
+      <main className="flex-1 overflow-auto">
+        {(isProfessor || isAdmin) && (
+          <div className="px-4 pt-3 md:px-8 md:pt-4 flex justify-end">
+            <CohortSelector />
+          </div>
+        )}
+        {children}
+      </main>
     </div>
   );
 }

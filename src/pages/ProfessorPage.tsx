@@ -6,6 +6,7 @@ import EventsManager from '@/components/professor/EventsManager';
 import QuizzesManager from '@/components/professor/QuizzesManager';
 import BooksManager from '@/components/professor/BooksManager';
 import AttendanceSettingsManager from '@/components/professor/AttendanceSettingsManager';
+import CohortsManager from '@/components/professor/CohortsManager';
 
 export default function ProfessorPage() {
   const { user } = useAuth();
@@ -21,6 +22,7 @@ export default function ProfessorPage() {
           <TabsTrigger value="quizzes">Questionários</TabsTrigger>
           <TabsTrigger value="books">Livros</TabsTrigger>
           <TabsTrigger value="attendance">Presença</TabsTrigger>
+          <TabsTrigger value="cohorts">Turmas</TabsTrigger>
         </TabsList>
 
         <TabsContent value="modules"><ModulesManager userId={user!.id} /></TabsContent>
@@ -29,6 +31,7 @@ export default function ProfessorPage() {
         <TabsContent value="quizzes"><QuizzesManager userId={user!.id} /></TabsContent>
         <TabsContent value="books"><BooksManager userId={user!.id} /></TabsContent>
         <TabsContent value="attendance"><AttendanceSettingsManager userId={user!.id} /></TabsContent>
+        <TabsContent value="cohorts"><CohortsManager userId={user!.id} /></TabsContent>
       </Tabs>
     </div>
   );

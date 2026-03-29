@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { CohortProvider } from "@/contexts/CohortContext";
 import { ProtectedRoute, ProfessorRoute, AdminRoute } from "@/components/ProtectedRoute";
 import AppLayout from "@/components/AppLayout";
 import Index from "./pages/Index";
@@ -32,6 +33,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
+        <CohortProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -63,6 +65,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
+        </CohortProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
