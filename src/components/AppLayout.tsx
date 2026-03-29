@@ -20,6 +20,7 @@ import {
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import CohortSelector from "@/components/CohortSelector";
+import { useCohort } from "@/contexts/CohortContext";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { profile, signOut } = useAuth();
@@ -27,6 +28,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const isProfessor = profile?.role === "professor";
   const isAdmin = profile?.role === "admin";
+  const isStudent = profile?.role === "aluno";
+
+  const { selectedCohort } = useCohort();
+  const studentCohortName = isStudent && selectedCohort ? selectedCohort.name : null;
 
   const navItems = [
     { to: "/dashboard", label: "Painel", icon: LayoutDashboard },
@@ -95,6 +100,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
+
+        {isStudent && studentCohortName && (
+          <div className="px-4 py-2 border-t border-sidebar-border">
+            <p className="text-xs text-sidebar-foreground/60">Turma</p>
+            <p className="text-sm font-medium text-sidebar-foreground truncate">{studentCohortName}</p>
+          </div>
+        )}
 
         <div className="p-4 border-t border-sidebar-border">
           <Link

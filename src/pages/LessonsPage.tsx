@@ -32,8 +32,8 @@ export default function LessonsPage() {
       if (mods && lessons) {
         const allLessons = lessons as Lesson[];
 
-        // Students: only show lessons within their cohort date range
-        const filteredLessons = (isStudent && selectedCohort)
+        // Filter lessons by selected cohort date range (all roles)
+        const filteredLessons = selectedCohort
           ? allLessons.filter((l) => {
               if (!l.scheduled_date) return false;
               return l.scheduled_date >= selectedCohort.start_date && l.scheduled_date <= selectedCohort.end_date;
@@ -45,8 +45,8 @@ export default function LessonsPage() {
             ...m,
             lessons: filteredLessons.filter((l) => l.module_id === m.id),
           }))
-          // Students: hide modules with no lessons in their period
-          .filter((m) => !isStudent || m.lessons.length > 0);
+          // Hide modules with no lessons when a cohort is selected
+          .filter((m) => !selectedCohort || m.lessons.length > 0);
 
         setModules(mapped);
       }
