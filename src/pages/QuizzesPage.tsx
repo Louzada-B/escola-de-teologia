@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCohort } from '@/contexts/CohortContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -14,7 +15,9 @@ import QuizGabarito from '@/components/quiz/QuizGabarito';
 interface MatchPair { left: string; right: string }
 
 export default function QuizzesPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const { selectedCohort } = useCohort();
+  const isStudent = profile?.role === 'aluno';
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [questions, setQuestions] = useState<Record<string, any[]>>({});
   const [answers, setAnswers] = useState<Record<string, Record<string, string>>>({});
@@ -30,14 +33,24 @@ export default function QuizzesPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: quizData } = await supabase.from('quizzes').select('*').order('created_at');
+      const { data: quizData } = await supabase.from('quizzes').select('*, lessons(scheduled_date)').order('created_at');
       const { data: qData } = await supabase.from('quiz_questions').select('*').order('order_index');
       const { data: responses } = await supabase
         .from('quiz_responses')
         .select('quiz_id')
         .eq('user_id', user?.id || '');
 
-      if (quizData) setQuizzes(quizData);
+      if (quizData) {
+        // Students: filter quizzes by cohort date range using linked lesson's scheduled_date
+        const filtered = (isStudent && selectedCohort)
+          ? quizData.filter((q: any) => {
+              const lessonDate = q.lessons?.scheduled_date;
+              if (!lessonDate) return true; // quizzes without a linked lesson are always shown
+              return lessonDate >= selectedCohort.start_date && lessonDate <= selectedCohort.end_date;
+            })
+          : quizData;
+        setQuizzes(filtered);
+      }
       if (qData) {
         const grouped: Record<string, any[]> = {};
         const shuffled: Record<string, string[]> = {};
@@ -59,7 +72,7 @@ export default function QuizzesPage() {
       setLoading(false);
     }
     load();
-  }, [user]);
+  }, [user, selectedCohort, isStudent]);
 
   const handleAnswer = (quizId: string, questionId: string, value: string) => {
     setAnswers((prev) => ({ ...prev, [quizId]: { ...prev[quizId], [questionId]: value } }));
