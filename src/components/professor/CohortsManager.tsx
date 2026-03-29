@@ -165,16 +165,312 @@ export default function CohortsManager({ userId }: { userId: string }) {
                     onChange={e => setForm(f => ({ ...f, year: parseInt(e.target.value) || 0 }))}
                   />
                 </div>
+                import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from 'sonner';
+import { Plus, Trash2, Users, ChevronDown, ChevronUp } from 'lucide-react';
+
+interface Cohort {
+  id: string;
+  name: string;
+  year: number;
+  semester: number;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export default function CohortsManager({ userId }: { userId: string }) {
+  const queryClient = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
+  const [expandedCohort, setExpandedCohort] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    name: '',
+    year: new Date().getFullYear(),
+    semester: 1,
+    start_date: '',
+    end_date: '',
+  });
+
+  const { data: cohorts = [], isLoading } = useQuery({
+    queryKey: ['cohorts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cohorts')
+        .select('*')
+        .order('year', { ascending: false })
+        .order('semester', { ascending: false });
+      if (error) throw error;
+      return data as Cohort[];
+    },
+  });
+
+  const { data: allStudents = [] } = useQuery({
+    queryKey: ['all-students'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .eq('role', 'aluno')
+        .order('full_name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: cohortStudents = [] } = useQuery({
+    queryKey: ['all-cohort-students'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cohort_students')
+        .select('*');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const createCohort = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from('cohorts').insert({
+        name: form.name,
+        year: form.year,
+        semester: form.semester,
+        start_date: form.start_date,
+        end_date: form.end_date,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cohorts'] });
+      toast.success('Turma criada com sucesso');
+      setShowForm(false);
+      setForm({ name: '', year: new Date().getFullYear(), semester: 1, start_date: '', end_date: '' });
+    },
+    onError: (e: any) => toast.error('Erro ao criar turma: ' + e.message),
+  });
+
+  const toggleActive = useMutation({
+    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+      const { error } = await supabase.from('cohorts').update({ is_active }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cohorts'] }),
+    onError: (e: any) => toast.error('Erro: ' + e.message),
+  });
+
+  const deleteCohort = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('cohorts').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cohorts'] });
+      toast.success('Turma removida');
+    },
+    onError: (e: any) => toast.error('Erro: ' + e.message),
+  });
+
+  const toggleStudent = useMutation({
+    mutationFn: async ({ cohortId, studentId, add }: { cohortId: string; studentId: string; add: boolean }) => {
+      if (add) {
+        const { error } = await supabase.from('cohort_students').insert({ cohort_id: cohortId, user_id: studentId });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('cohort_students').delete()
+          .eq('cohort_id', cohortId)
+          .eq('user_id', studentId);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-cohort-students'] });
+      queryClient.invalidateQueries({ queryKey: ['cohort-students'] });
+    },
+    onError: (e: any) => toast.error('Erro: ' + e.message),
+  });
+
+  const getStudentsForCohort = (cohortId: string) => {
+    return cohortStudents.filter(cs => cs.cohort_id === cohortId).map(cs => cs.user_id);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-foreground">Turmas</h2>
+        <Button size="sm" onClick={() => setShowForm(!showForm)} className="gap-1">
+          <Plus className="w-4 h-4" /> Nova Turma
+        </Button>
+      </div>
+
+      {showForm && (
+        <Card>
+          <CardContent className="pt-4 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label>Nome</Label>
+                <Input
+                  placeholder='Ex: Turma 2026/1'
+                  value={form.name}
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label>Semestre</Label>
+                  <Label>Ano</Label>
                   <Input
                     type="number"
-                    min={1}
-                    max={2}
-                    value={form.semester}
-                    onChange={e => setForm(f => ({ ...f, semester: parseInt(e.target.value) || 1 }))}
+                    value={form.year}
+                    onChange={e => setForm(f => ({ ...f, year: parseInt(e.target.value) || 0 }))}
                   />
                 </div>
+                <div>
+  <Label>Semestre</Label>
+  <select
+    value={form.semester}
+    onChange={e => setForm(f => ({ ...f, semester: parseInt(e.target.value) }))}
+    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+  >
+    <option value={1}>1º Semestre</option>
+    <option value={2}>2º Semestre</option>
+  </select>
+</div>
+              </div>
+              <div>
+                <Label>Data de Início</Label>
+                <Input
+                  type="date"
+                  value={form.start_date}
+                  onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label>Data de Fim</Label>
+                <Input
+                  type="date"
+                  value={form.end_date}
+                  onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => createCohort.mutate()}
+                disabled={!form.name || !form.start_date || !form.end_date}
+              >
+                Criar Turma
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setShowForm(false)}>Cancelar</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Carregando...</p>
+      ) : cohorts.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Nenhuma turma cadastrada.</p>
+      ) : (
+        <div className="space-y-3">
+          {cohorts.map(cohort => {
+            const studentIds = getStudentsForCohort(cohort.id);
+            const isExpanded = expandedCohort === cohort.id;
+
+            return (
+              <Card key={cohort.id}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-sm">{cohort.name}</CardTitle>
+                      <Badge variant={cohort.is_active ? 'default' : 'secondary'} className="text-[10px]">
+                        {cohort.is_active ? 'Ativa' : 'Inativa'}
+                      </Badge>
+                      <Badge variant="outline" className="text-[10px] gap-1">
+                        <Users className="w-3 h-3" /> {studentIds.length}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <Label className="text-xs text-muted-foreground">Ativa</Label>
+                        <Switch
+                          checked={cohort.is_active}
+                          onCheckedChange={(checked) => toggleActive.mutate({ id: cohort.id, is_active: checked })}
+                        />
+                      </div>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => setExpandedCohort(isExpanded ? null : cohort.id)}
+                      >
+                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-destructive"
+                        onClick={() => {
+                          if (confirm('Excluir esta turma?')) deleteCohort.mutate(cohort.id);
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {cohort.start_date} até {cohort.end_date} • {cohort.year}/{cohort.semester}º sem.
+                  </p>
+                </CardHeader>
+
+                {isExpanded && (
+                  <CardContent className="pt-0">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Alunos da turma:</p>
+                    {allStudents.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Nenhum aluno cadastrado.</p>
+                    ) : (
+                      <div className="max-h-60 overflow-y-auto space-y-1">
+                        {allStudents.map(student => {
+                          const isInCohort = studentIds.includes(student.id);
+                          return (
+                            <label
+                              key={student.id}
+                              className="flex items-center gap-2 py-1 px-2 rounded hover:bg-muted/50 cursor-pointer text-sm"
+                            >
+                              <Checkbox
+                                checked={isInCohort}
+                                onCheckedChange={(checked) => {
+                                  toggleStudent.mutate({
+                                    cohortId: cohort.id,
+                                    studentId: student.id,
+                                    add: !!checked,
+                                  });
+                                }}
+                              />
+                              <span>{student.full_name || student.email}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
               </div>
               <div>
                 <Label>Data de Início</Label>
