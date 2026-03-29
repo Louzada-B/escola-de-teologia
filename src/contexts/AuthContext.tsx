@@ -54,15 +54,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const today = new Date().toISOString().split('T')[0];
-
     const { data, error } = await supabase
       .from('cohort_students')
-      .select('cohort_id, cohorts!inner(is_active, start_date, end_date)')
+      .select('cohort_id, cohorts!inner(is_active)')
       .eq('user_id', userId)
-      .eq('cohorts.is_active', true)
-      .lte('cohorts.start_date', today)
-      .gte('cohorts.end_date', today);
+      .eq('cohorts.is_active', true);
 
     if (error) {
       console.error('Erro ao verificar turma:', error.message);
