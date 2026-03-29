@@ -35,16 +35,13 @@ export default function AttendancePage() {
   useEffect(() => {
     const now = new Date();
     const hour = now.getHours();
-    setIsWithinTime(hour >= 7 && hour <= 23);
+    setIsWithinTime(hour >= 19 && hour <= 23);
 
     async function load() {
       const today = new Date().toISOString().split("T")[0];
 
       const [lessonsRes, settingsRes, recordsRes] = await Promise.all([
-        supabase
-          .from("lessons")
-          .select("*, modules(title)")
-          .order("scheduled_date", { ascending: false }),
+        supabase.from("lessons").select("*, modules(title)").order("scheduled_date", { ascending: false }),
         supabase.from("attendance_settings").select("*").limit(1).maybeSingle(),
         supabase
           .from("attendance_records")
@@ -57,10 +54,10 @@ export default function AttendancePage() {
         setTodayLessons(lessonsRes.data.filter((l) => l.scheduled_date === today));
         // Past lessons filtered by cohort period
         setPastLessons(
-          lessonsRes.data.filter((l) =>
-            l.scheduled_date < today &&
-            isDateWithinCohortPeriod(l.scheduled_date, cohortStart, effectiveCutoffDate)
-          )
+          lessonsRes.data.filter(
+            (l) =>
+              l.scheduled_date < today && isDateWithinCohortPeriod(l.scheduled_date, cohortStart, effectiveCutoffDate),
+          ),
         );
       }
       if (settingsRes.data) setSettings(settingsRes.data);

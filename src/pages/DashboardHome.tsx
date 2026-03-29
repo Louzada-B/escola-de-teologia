@@ -120,7 +120,7 @@ export default function DashboardHome() {
 
   useEffect(() => {
     const hour = new Date().getHours();
-    setIsWithinTime(hour >= 7 && hour <= 23);
+    setIsWithinTime(hour >= 19 && hour <= 23);
 
     async function loadDashboardData() {
       if (!user) return;
@@ -138,16 +138,18 @@ export default function DashboardHome() {
       const allQuizzes = qRes.data || [];
 
       // Filter events and quizzes by cohort full period
-      const filteredEvents = cohortStart && cohortEnd
-        ? allEvents.filter(e => e.event_date >= cohortStart && e.event_date <= cohortEnd)
-        : allEvents;
-      const filteredQuizzes = cohortStart && cohortEnd
-        ? allQuizzes.filter(q => {
-            const qDate = q.available_from ? q.available_from.split('T')[0] : null;
-            if (!qDate) return true; // no date = always show
-            return qDate >= cohortStart && qDate <= cohortEnd;
-          })
-        : allQuizzes;
+      const filteredEvents =
+        cohortStart && cohortEnd
+          ? allEvents.filter((e) => e.event_date >= cohortStart && e.event_date <= cohortEnd)
+          : allEvents;
+      const filteredQuizzes =
+        cohortStart && cohortEnd
+          ? allQuizzes.filter((q) => {
+              const qDate = q.available_from ? q.available_from.split("T")[0] : null;
+              if (!qDate) return true; // no date = always show
+              return qDate >= cohortStart && qDate <= cohortEnd;
+            })
+          : allQuizzes;
 
       setStats({
         modules: mRes.data?.length || 0,
@@ -289,10 +291,7 @@ export default function DashboardHome() {
                 <p className="text-sm text-muted-foreground font-body">Responda antes que o prazo encerre.</p>
               </div>
             </div>
-            <Button
-              className="w-full sm:w-auto font-body px-6"
-              onClick={() => navigate("/dashboard/questionarios")}
-            >
+            <Button className="w-full sm:w-auto font-body px-6" onClick={() => navigate("/dashboard/questionarios")}>
               Responder Agora <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
           </CardContent>
@@ -321,55 +320,66 @@ export default function DashboardHome() {
       </div>
 
       {/* GRÁFICOS */}
-      {profile?.role === 'aluno' && (
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <Card className="card-academic">
-          <CardHeader className="flex flex-row items-center gap-2">
-            <UserCheck className="w-5 h-5 text-accent" />
-            <CardTitle className="font-heading text-lg">Presença — Aula</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {aulaData.length === 0 || (aulaData[0].qty === 0 && aulaData[1].qty === 0) ? (
-              <p className="text-center py-10 text-muted-foreground font-body">Sem dados de aulas regulares.</p>
-            ) : (
-              <DonutChart data={aulaData} centerLabel="Aula" centerValue={`${aulaPerc}%`} colorFn={attendanceColorFn} />
-            )}
-          </CardContent>
-        </Card>
+      {profile?.role === "aluno" && (
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <Card className="card-academic">
+            <CardHeader className="flex flex-row items-center gap-2">
+              <UserCheck className="w-5 h-5 text-accent" />
+              <CardTitle className="font-heading text-lg">Presença — Aula</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {aulaData.length === 0 || (aulaData[0].qty === 0 && aulaData[1].qty === 0) ? (
+                <p className="text-center py-10 text-muted-foreground font-body">Sem dados de aulas regulares.</p>
+              ) : (
+                <DonutChart
+                  data={aulaData}
+                  centerLabel="Aula"
+                  centerValue={`${aulaPerc}%`}
+                  colorFn={attendanceColorFn}
+                />
+              )}
+            </CardContent>
+          </Card>
 
-        <Card className="card-academic">
-          <CardHeader className="flex flex-row items-center gap-2">
-            <Star className="w-5 h-5 text-accent" />
-            <CardTitle className="font-heading text-lg">Presença — Aula Especial</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {aulaEspecialData.length === 0 || (aulaEspecialData[0].qty === 0 && aulaEspecialData[1].qty === 0) ? (
-              <p className="text-center py-10 text-muted-foreground font-body">Sem dados de aulas especiais.</p>
-            ) : (
-              <DonutChart
-                data={aulaEspecialData}
-                centerLabel="Especial"
-                centerValue={`${aulaEspecialPerc}%`}
-                colorFn={attendanceColorFn}
-              />
-            )}
-          </CardContent>
-        </Card>
+          <Card className="card-academic">
+            <CardHeader className="flex flex-row items-center gap-2">
+              <Star className="w-5 h-5 text-accent" />
+              <CardTitle className="font-heading text-lg">Presença — Aula Especial</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {aulaEspecialData.length === 0 || (aulaEspecialData[0].qty === 0 && aulaEspecialData[1].qty === 0) ? (
+                <p className="text-center py-10 text-muted-foreground font-body">Sem dados de aulas especiais.</p>
+              ) : (
+                <DonutChart
+                  data={aulaEspecialData}
+                  centerLabel="Especial"
+                  centerValue={`${aulaEspecialPerc}%`}
+                  colorFn={attendanceColorFn}
+                />
+              )}
+            </CardContent>
+          </Card>
 
-        <Card className="card-academic">
-          <CardHeader className="flex flex-row items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-accent" />
-            <CardTitle className="font-heading text-lg">Status dos Questionários</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {quizData.length === 0 ? (
-              <p className="text-center py-10 text-muted-foreground font-body">Nenhum questionário encontrado.</p>
-            ) : (
-              <DonutChart data={quizData} centerLabel="Total" centerValue={`${mainQuizPerc}%`} colorFn={quizColorFn} />
-            )}
-          </CardContent>
-        </Card>
-      </div>)}
+          <Card className="card-academic">
+            <CardHeader className="flex flex-row items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-accent" />
+              <CardTitle className="font-heading text-lg">Status dos Questionários</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {quizData.length === 0 ? (
+                <p className="text-center py-10 text-muted-foreground font-body">Nenhum questionário encontrado.</p>
+              ) : (
+                <DonutChart
+                  data={quizData}
+                  centerLabel="Total"
+                  centerValue={`${mainQuizPerc}%`}
+                  colorFn={quizColorFn}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
