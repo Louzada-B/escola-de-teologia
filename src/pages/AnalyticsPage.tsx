@@ -16,17 +16,25 @@ import {
 import { Users, BookOpen, UserCheck, ClipboardList, AlertTriangle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useCohort } from '@/contexts/CohortContext';
 
 export default function AnalyticsPage() {
   const today = new Date().toISOString().split('T')[0];
+  const { selectedCohortId, selectedCohortStudentIds } = useCohort();
 
-  const { data: students = [] } = useQuery({
+  const { data: allStudents = [] } = useQuery({
     queryKey: ['analytics-students'],
     queryFn: async () => {
       const { data } = await supabase.from('profiles').select('*').eq('role', 'aluno');
       return data || [];
     },
   });
+
+  // Filter students by selected cohort
+  const students = useMemo(() => {
+    if (!selectedCohortId || selectedCohortStudentIds.length === 0) return allStudents;
+    return allStudents.filter(s => selectedCohortStudentIds.includes(s.id));
+  }, [allStudents, selectedCohortId, selectedCohortStudentIds]);
 
   const { data: lessons = [] } = useQuery({
     queryKey: ['analytics-lessons'],
