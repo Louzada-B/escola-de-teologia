@@ -1,18 +1,14 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCohort } from '@/contexts/CohortContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { CheckCircle, Lock, Clock } from 'lucide-react';
+import { CheckCircle, Lock, Clock, FileText } from 'lucide-react';
 import QuizGabarito from '@/components/quiz/QuizGabarito';
-
-interface MatchPair { left: string; right: string }
+import QuizAnswerDialog from '@/components/quiz/QuizAnswerDialog';
 
 export default function QuizzesPage() {
   const { user, profile } = useAuth();
@@ -20,20 +16,18 @@ export default function QuizzesPage() {
   const isStudent = profile?.role === 'aluno';
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [questions, setQuestions] = useState<Record<string, any[]>>({});
-  const [answers, setAnswers] = useState<Record<string, Record<string, string>>>({});
-  const [textAnswers, setTextAnswers] = useState<Record<string, Record<string, string>>>({});
-  const [vfAnswers, setVfAnswers] = useState<Record<string, Record<string, Record<string, string>>>>({});
-  const [matchAnswers, setMatchAnswers] = useState<Record<string, Record<string, Record<string, string>>>>({});
   const [submitted, setSubmitted] = useState<Set<string>>(new Set());
   const [gabaritoData, setGabaritoData] = useState<Record<string, { questions: any[]; studentAnswers: Record<string, any> }>>({});
   const [loading, setLoading] = useState(true);
-
-  // Shuffled right-column options per question (so the student doesn't see them in order)
-  const [shuffledRights, setShuffledRights] = useState<Record<string, string[]>>({});
+  const [activeQuizId, setActiveQuizId] = useState<string | null>(null);
+  const [showGabaritoId, setShowGabaritoId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
-      const { data: quizData } = await supabase.from('quizzes').select('*, lessons(scheduled_date)').order('created_at');
+      const { data: quizData } = await supabase
+        .from('quizzes')
+        .select('*, lessons(scheduled_date, title)')
+        .order('created_at');
       const { data: qData } = await supabase.from('quiz_questions').select('*').order('order_index');
       const { data: responses } = await supabase
         .from('quiz_responses')
@@ -41,11 +35,10 @@ export default function QuizzesPage() {
         .eq('user_id', user?.id || '');
 
       if (quizData) {
-        // Students: filter quizzes by cohort date range using linked lesson's scheduled_date
         const filtered = (isStudent && selectedCohort)
           ? quizData.filter((q: any) => {
               const lessonDate = q.lessons?.scheduled_date;
-              if (!lessonDate) return true; // quizzes without a linked lesson are always shown
+              if (!lessonDate) return true;
               return lessonDate >= selectedCohort.start_date && lessonDate <= selectedCohort.end_date;
             })
           : quizData;
@@ -53,18 +46,11 @@ export default function QuizzesPage() {
       }
       if (qData) {
         const grouped: Record<string, any[]> = {};
-        const shuffled: Record<string, string[]> = {};
         qData.forEach((q) => {
           if (!grouped[q.quiz_id]) grouped[q.quiz_id] = [];
           grouped[q.quiz_id].push(q);
-          // Shuffle right column for ligar_colunas
-          if (q.question_type === 'ligar_colunas' && Array.isArray(q.options)) {
-            const rights = (q.options as unknown as MatchPair[]).map(p => p.right);
-            shuffled[q.id] = [...rights].sort(() => Math.random() - 0.5);
-          }
         });
         setQuestions(grouped);
-        setShuffledRights(shuffled);
       }
       if (responses) {
         setSubmitted(new Set(responses.map((r) => r.quiz_id)));
@@ -74,108 +60,29 @@ export default function QuizzesPage() {
     load();
   }, [user, selectedCohort, isStudent]);
 
-  const handleAnswer = (quizId: string, questionId: string, value: string) => {
-    setAnswers((prev) => ({ ...prev, [quizId]: { ...prev[quizId], [questionId]: value } }));
-  };
-
-  const handleTextAnswer = (quizId: string, questionId: string, value: string) => {
-    setTextAnswers((prev) => ({ ...prev, [quizId]: { ...prev[quizId], [questionId]: value } }));
-  };
-
-  const handleVfAnswer = (quizId: string, questionId: string, phraseIdx: string, value: string) => {
-    setVfAnswers((prev) => ({
-      ...prev,
-      [quizId]: {
-        ...prev[quizId],
-        [questionId]: { ...prev[quizId]?.[questionId], [phraseIdx]: value },
-      },
-    }));
-  };
-
-  const handleMatchAnswer = (quizId: string, questionId: string, leftIdx: string, rightValue: string) => {
-    setMatchAnswers((prev) => ({
-      ...prev,
-      [quizId]: {
-        ...prev[quizId],
-        [questionId]: { ...prev[quizId]?.[questionId], [leftIdx]: rightValue },
-      },
-    }));
-  };
-
-  const handleSubmit = async (quizId: string) => {
-    const quizQuestions = questions[quizId] || [];
-    const mergedAnswers: Record<string, any> = {};
-    let score = 0;
-
-    quizQuestions.forEach((q) => {
-      const qType = q.question_type || 'objetiva';
-
-      if (qType === 'dissertativa') {
-        mergedAnswers[q.id] = textAnswers[quizId]?.[q.id] || '';
-      } else if (qType === 'objetiva') {
-        mergedAnswers[q.id] = answers[quizId]?.[q.id] || '';
-        if (q.correct_option !== null && answers[quizId]?.[q.id] === String(q.correct_option)) {
-          score++;
-        }
-      } else if (qType === 'verdadeiro_falso') {
-        const studentVf = vfAnswers[quizId]?.[q.id] || {};
-        mergedAnswers[q.id] = studentVf;
-        // Score: compare each phrase
-        try {
-          const correctVf: Record<string, string> = q.expected_text ? JSON.parse(q.expected_text) : {};
-          const phrases = Array.isArray(q.options) ? q.options : [];
-          let allCorrect = true;
-          phrases.forEach((_: any, i: number) => {
-            if ((studentVf[String(i)] || '') !== (correctVf[String(i)] || '')) allCorrect = false;
-          });
-          if (allCorrect && phrases.length > 0) score++;
-        } catch {}
-      } else if (qType === 'ligar_colunas') {
-        const studentMatch = matchAnswers[quizId]?.[q.id] || {};
-        mergedAnswers[q.id] = studentMatch;
-        // Score: all pairs must match
-        if (Array.isArray(q.options)) {
-          const pairs = q.options as MatchPair[];
-          let allCorrect = true;
-          pairs.forEach((pair, i) => {
-            if (studentMatch[String(i)] !== pair.right) allCorrect = false;
-          });
-          if (allCorrect && pairs.length > 0) score++;
-        }
-      }
-    });
-
-    const { error } = await supabase.from('quiz_responses').insert({
-      quiz_id: quizId,
-      user_id: user!.id,
-      answers: mergedAnswers,
-      score,
-    });
-
-    if (error) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
-    } else {
-      setSubmitted((prev) => new Set(prev).add(quizId));
-      setGabaritoData((prev) => ({
-        ...prev,
-        [quizId]: { questions: quizQuestions, studentAnswers: mergedAnswers },
-      }));
-      toast({ title: 'Respostas enviadas!', description: 'Confira o gabarito abaixo.' });
-    }
-  };
-
   const getQuizStatus = (quiz: any) => {
+    if (submitted.has(quiz.id)) {
+      return { status: 'answered' as const, label: 'Respondido', variant: 'secondary' as const };
+    }
     const now = new Date();
     if (quiz.available_from && new Date(quiz.available_from) > now) {
-      return { status: 'pending' as const, label: `Disponível a partir de ${new Date(quiz.available_from).toLocaleDateString('pt-BR')} às ${new Date(quiz.available_from).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` };
+      return { status: 'pending' as const, label: 'Indisponível', variant: 'outline' as const };
     }
     if (quiz.available_until && new Date(quiz.available_until) < now) {
-      return { status: 'closed' as const, label: 'Prazo encerrado' };
+      return { status: 'closed' as const, label: 'Indisponível', variant: 'destructive' as const };
     }
-    return { status: 'open' as const, label: '' };
+    return { status: 'open' as const, label: 'Disponível', variant: 'default' as const };
+  };
+
+  const handleSubmitted = (quizId: string, qs: any[], mergedAnswers: Record<string, any>) => {
+    setSubmitted((prev) => new Set(prev).add(quizId));
+    setGabaritoData((prev) => ({ ...prev, [quizId]: { questions: qs, studentAnswers: mergedAnswers } }));
+    setShowGabaritoId(quizId);
   };
 
   if (loading) return <div className="page-container"><p className="text-muted-foreground">Carregando...</p></div>;
+
+  const activeQuiz = quizzes.find(q => q.id === activeQuizId);
 
   return (
     <div className="page-container">
@@ -184,132 +91,85 @@ export default function QuizzesPage() {
       {quizzes.length === 0 ? (
         <p className="text-muted-foreground">Nenhum questionário disponível.</p>
       ) : (
-        <div className="space-y-6">
-          {quizzes.map((quiz) => (
-            <Card key={quiz.id} className="card-academic">
-              <CardHeader>
-                <CardTitle className="font-heading text-xl">{quiz.title}</CardTitle>
-                {(() => {
-                  const { status, label } = getQuizStatus(quiz);
-                  if (status === 'pending') return <p className="text-sm text-muted-foreground flex items-center gap-1"><Clock className="w-4 h-4" /> {label}</p>;
-                  if (status === 'closed') return <p className="text-sm text-destructive flex items-center gap-1"><Lock className="w-4 h-4" /> {label}</p>;
-                  return null;
-                })()}
-              </CardHeader>
-              <CardContent>
-                {submitted.has(quiz.id) ? (
-                  gabaritoData[quiz.id] ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {quizzes.map((quiz) => {
+            const { status, label, variant } = getQuizStatus(quiz);
+            const lessonTitle = quiz.lessons?.title;
+            const questionCount = (questions[quiz.id] || []).length;
+
+            return (
+              <Card key={quiz.id} className="card-academic flex flex-col">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <CardTitle className="font-heading text-lg leading-tight">{quiz.title}</CardTitle>
+                    <Badge variant={variant} className="shrink-0">
+                      {status === 'answered' && <CheckCircle className="w-3 h-3 mr-1" />}
+                      {status === 'pending' && <Clock className="w-3 h-3 mr-1" />}
+                      {status === 'closed' && <Lock className="w-3 h-3 mr-1" />}
+                      {label}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex flex-col flex-1 gap-3">
+                  <div className="space-y-1 text-sm text-muted-foreground flex-1">
+                    {lessonTitle && (
+                      <p className="flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5" />
+                        Aula: {lessonTitle}
+                      </p>
+                    )}
+                    <p>{questionCount} {questionCount === 1 ? 'questão' : 'questões'}</p>
+                    {quiz.available_from && status === 'pending' && (
+                      <p className="text-xs">
+                        Disponível a partir de {new Date(quiz.available_from).toLocaleDateString('pt-BR')} às {new Date(quiz.available_from).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    )}
+                    {quiz.available_until && status === 'open' && (
+                      <p className="text-xs">
+                        Até {new Date(quiz.available_until).toLocaleDateString('pt-BR')} às {new Date(quiz.available_until).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    )}
+                  </div>
+
+                  {status === 'open' && (
+                    <Button onClick={() => setActiveQuizId(quiz.id)} className="w-full">
+                      Responder
+                    </Button>
+                  )}
+
+                  {status === 'answered' && gabaritoData[quiz.id] && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowGabaritoId(showGabaritoId === quiz.id ? null : quiz.id)}
+                      className="w-full"
+                    >
+                      {showGabaritoId === quiz.id ? 'Ocultar Gabarito' : 'Ver Gabarito'}
+                    </Button>
+                  )}
+                </CardContent>
+
+                {showGabaritoId === quiz.id && gabaritoData[quiz.id] && (
+                  <div className="px-6 pb-6">
                     <QuizGabarito
                       questions={gabaritoData[quiz.id].questions}
                       studentAnswers={gabaritoData[quiz.id].studentAnswers}
                     />
-                  ) : (
-                    <div className="flex items-center gap-2 text-accent">
-                      <CheckCircle className="w-5 h-5" />
-                      <span className="font-body font-medium">Questionário já respondido</span>
-                    </div>
-                  )
-                ) : getQuizStatus(quiz).status !== 'open' ? (
-                  <p className="text-muted-foreground font-body">Este questionário não está disponível no momento.</p>
-                ) : (
-                  <div className="space-y-6">
-                    {(questions[quiz.id] || []).map((q, idx) => {
-                      const qType = q.question_type || 'objetiva';
-                      return (
-                        <div key={q.id} className="space-y-2">
-                          <p className="font-body font-medium">
-                            {idx + 1}. {q.question}
-                            <span className="ml-2 text-xs text-muted-foreground">
-                              ({qType === 'objetiva' ? 'Objetiva' : qType === 'verdadeiro_falso' ? 'V ou F' : qType === 'ligar_colunas' ? 'Ligar Colunas' : 'Dissertativa'})
-                            </span>
-                          </p>
-
-                          {/* Objetiva */}
-                          {qType === 'objetiva' && (
-                            <RadioGroup
-                              value={answers[quiz.id]?.[q.id] || ''}
-                              onValueChange={(v) => handleAnswer(quiz.id, q.id, v)}
-                            >
-                              {(q.options as string[]).map((opt: string, i: number) => (
-                                <div key={i} className="flex items-center gap-2">
-                                  <RadioGroupItem value={String(i)} id={`${q.id}-${i}`} />
-                                  <Label htmlFor={`${q.id}-${i}`} className="font-body">{opt}</Label>
-                                </div>
-                              ))}
-                            </RadioGroup>
-                          )}
-
-                          {/* Verdadeiro ou Falso — múltiplas frases */}
-                          {qType === 'verdadeiro_falso' && Array.isArray(q.options) && (
-                            <div className="space-y-3 pl-2">
-                              {(q.options as string[]).map((phrase: string, i: number) => (
-                                <div key={i} className="flex items-center justify-between gap-4 bg-muted/30 p-3 rounded-md">
-                                  <span className="font-body text-sm flex-1">{phrase}</span>
-                                  <div className="flex items-center gap-2 shrink-0">
-                                    <span className="text-xs font-medium text-muted-foreground">
-                                      {vfAnswers[quiz.id]?.[q.id]?.[String(i)] === 'verdadeiro' ? 'V' : vfAnswers[quiz.id]?.[q.id]?.[String(i)] === 'falso' ? 'F' : '—'}
-                                    </span>
-                                    <div className="flex gap-1">
-                                      <Button
-                                        size="sm"
-                                        variant={vfAnswers[quiz.id]?.[q.id]?.[String(i)] === 'verdadeiro' ? 'default' : 'outline'}
-                                        className="h-7 px-2 text-xs"
-                                        onClick={() => handleVfAnswer(quiz.id, q.id, String(i), 'verdadeiro')}
-                                      >V</Button>
-                                      <Button
-                                        size="sm"
-                                        variant={vfAnswers[quiz.id]?.[q.id]?.[String(i)] === 'falso' ? 'default' : 'outline'}
-                                        className="h-7 px-2 text-xs"
-                                        onClick={() => handleVfAnswer(quiz.id, q.id, String(i), 'falso')}
-                                      >F</Button>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Ligar Colunas */}
-                          {qType === 'ligar_colunas' && Array.isArray(q.options) && (
-                            <div className="space-y-3 pl-2">
-                              {(q.options as MatchPair[]).map((pair, i) => (
-                                <div key={i} className="flex items-center gap-3">
-                                  <span className="font-body text-sm flex-1 bg-muted/30 p-2 rounded">{pair.left}</span>
-                                  <span className="text-muted-foreground">→</span>
-                                  <select
-                                    value={matchAnswers[quiz.id]?.[q.id]?.[String(i)] || ''}
-                                    onChange={e => handleMatchAnswer(quiz.id, q.id, String(i), e.target.value)}
-                                    className="flex-1 border rounded-md p-2 bg-background text-foreground text-sm"
-                                  >
-                                    <option value="">Selecione</option>
-                                    {(shuffledRights[q.id] || []).map((right, ri) => (
-                                      <option key={ri} value={right}>{right}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Dissertativa */}
-                          {qType === 'dissertativa' && (
-                            <Textarea
-                              value={textAnswers[quiz.id]?.[q.id] || ''}
-                              onChange={(e) => handleTextAnswer(quiz.id, q.id, e.target.value)}
-                              placeholder="Digite sua resposta..."
-                              rows={4}
-                            />
-                          )}
-                        </div>
-                      );
-                    })}
-                    <Button onClick={() => handleSubmit(quiz.id)}>Enviar Respostas</Button>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
+      )}
+
+      {activeQuiz && (
+        <QuizAnswerDialog
+          open={!!activeQuizId}
+          onOpenChange={(open) => { if (!open) setActiveQuizId(null); }}
+          quiz={activeQuiz}
+          questions={questions[activeQuiz.id] || []}
+          onSubmitted={handleSubmitted}
+        />
       )}
     </div>
   );
