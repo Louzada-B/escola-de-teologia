@@ -32,7 +32,7 @@ export default function AnalyticsPage() {
 
   // Filter students by selected cohort
   const students = useMemo(() => {
-    if (!selectedCohortId || selectedCohortStudentIds.length === 0) return allStudents;
+    if (!selectedCohortId) return allStudents;
     return allStudents.filter(s => selectedCohortStudentIds.includes(s.id));
   }, [allStudents, selectedCohortId, selectedCohortStudentIds]);
 

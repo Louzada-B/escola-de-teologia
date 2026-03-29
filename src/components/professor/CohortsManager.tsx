@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Plus, Trash2, Users, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Trash2, Users, ChevronDown, ChevronUp, Search } from "lucide-react";
 
 interface Cohort {
   id: string;
@@ -26,6 +26,7 @@ export default function CohortsManager({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [expandedCohort, setExpandedCohort] = useState<string | null>(null);
+  const [studentSearch, setStudentSearch] = useState("");
   const [form, setForm] = useState({
     name: "",
     year: new Date().getFullYear(),
@@ -271,8 +272,22 @@ export default function CohortsManager({ userId }: { userId: string }) {
                     {allStudents.length === 0 ? (
                       <p className="text-xs text-muted-foreground">Nenhum aluno cadastrado.</p>
                     ) : (
+                      <div className="space-y-2">
+                        <div className="relative">
+                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                          <Input
+                            placeholder="Buscar aluno por nome ou e-mail..."
+                            value={studentSearch}
+                            onChange={(e) => setStudentSearch(e.target.value)}
+                            className="pl-8 h-8 text-xs"
+                          />
+                        </div>
                       <div className="max-h-60 overflow-y-auto space-y-1">
-                        {allStudents.map((student) => {
+                        {allStudents.filter((s) => {
+                          if (!studentSearch) return true;
+                          const q = studentSearch.toLowerCase();
+                          return (s.full_name?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q));
+                        }).map((student) => {
                           const isInCohort = studentIds.includes(student.id);
                           return (
                             <label
@@ -293,6 +308,7 @@ export default function CohortsManager({ userId }: { userId: string }) {
                             </label>
                           );
                         })}
+                      </div>
                       </div>
                     )}
                   </CardContent>
