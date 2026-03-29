@@ -236,6 +236,13 @@ export default function QuizzesManager({ userId }: { userId: string }) {
         <CardHeader><CardTitle className="font-heading text-lg">Novo Questionário</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div><Label>Título</Label><Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Quiz Aula 1" /></div>
+          <div>
+            <Label>Aula vinculada</Label>
+            <select value={lessonId} onChange={e => setLessonId(e.target.value)} className="w-full border rounded-md p-2 bg-background text-foreground">
+              <option value="">Nenhuma (sem vínculo)</option>
+              {allLessons.map(l => <option key={l.id} value={l.id}>{l.title}{l.scheduled_date ? ` (${l.scheduled_date})` : ''}</option>)}
+            </select>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Disponível a partir de</Label><Input type="datetime-local" value={availableFrom} onChange={e => setAvailableFrom(e.target.value)} /></div>
             <div><Label>Encerra em</Label><Input type="datetime-local" value={availableUntil} onChange={e => setAvailableUntil(e.target.value)} /></div>
@@ -331,6 +338,13 @@ export default function QuizzesManager({ userId }: { userId: string }) {
           <DialogHeader><DialogTitle>Editar Questionário</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label>Título</Label><Input value={editTitle} onChange={e => setEditTitle(e.target.value)} /></div>
+            <div>
+              <Label>Aula vinculada</Label>
+              <select value={editLessonId} onChange={e => setEditLessonId(e.target.value)} className="w-full border rounded-md p-2 bg-background text-foreground">
+                <option value="">Nenhuma (sem vínculo)</option>
+                {allLessons.map(l => <option key={l.id} value={l.id}>{l.title}{l.scheduled_date ? ` (${l.scheduled_date})` : ''}</option>)}
+              </select>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Disponível a partir de</Label><Input type="datetime-local" value={editFrom} onChange={e => setEditFrom(e.target.value)} /></div>
               <div><Label>Encerra em</Label><Input type="datetime-local" value={editUntil} onChange={e => setEditUntil(e.target.value)} /></div>
