@@ -96,6 +96,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
+        {isStudent && studentCohortName && (
+          <div className="px-4 py-2 border-t border-sidebar-border">
+            <p className="text-xs text-sidebar-foreground/60">Turma</p>
+            <p className="text-sm font-medium text-sidebar-foreground truncate">{studentCohortName}</p>
+          </div>
+        )}
+
         <div className="p-4 border-t border-sidebar-border">
           <Link
             to="/dashboard/perfil"
