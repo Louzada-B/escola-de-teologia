@@ -290,6 +290,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
                   <span className="font-body font-medium">{q.title}</span>
                   <p className="text-sm text-muted-foreground">
                     {q.quiz_questions?.length || 0} perguntas · De {formatDate(q.available_from)} até {formatDate(q.available_until)}
+                    {q.lessons?.title && <span className="ml-1">· Aula: {q.lessons.title}</span>}
                   </p>
                 </div>
                 <div className="flex gap-1">
