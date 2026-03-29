@@ -262,7 +262,9 @@ export default function CohortsManager({ userId }: { userId: string }) {
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {cohort.start_date} até {cohort.end_date} • {cohort.year}/{cohort.semester}º sem.
+                    {new Date(cohort.start_date + "T12:00:00").toLocaleDateString("pt-BR")} até{" "}
+                    {new Date(cohort.end_date + "T12:00:00").toLocaleDateString("pt-BR")}• {cohort.year}/
+                    {cohort.semester}º sem.
                   </p>
                 </CardHeader>
 
@@ -282,33 +284,35 @@ export default function CohortsManager({ userId }: { userId: string }) {
                             className="pl-8 h-8 text-xs"
                           />
                         </div>
-                      <div className="max-h-60 overflow-y-auto space-y-1">
-                        {allStudents.filter((s) => {
-                          if (!studentSearch) return true;
-                          const q = studentSearch.toLowerCase();
-                          return (s.full_name?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q));
-                        }).map((student) => {
-                          const isInCohort = studentIds.includes(student.id);
-                          return (
-                            <label
-                              key={student.id}
-                              className="flex items-center gap-2 py-1 px-2 rounded hover:bg-muted/50 cursor-pointer text-sm"
-                            >
-                              <Checkbox
-                                checked={isInCohort}
-                                onCheckedChange={(checked) => {
-                                  toggleStudent.mutate({
-                                    cohortId: cohort.id,
-                                    studentId: student.id,
-                                    add: !!checked,
-                                  });
-                                }}
-                              />
-                              <span>{student.email}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
+                        <div className="max-h-60 overflow-y-auto space-y-1">
+                          {allStudents
+                            .filter((s) => {
+                              if (!studentSearch) return true;
+                              const q = studentSearch.toLowerCase();
+                              return s.full_name?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q);
+                            })
+                            .map((student) => {
+                              const isInCohort = studentIds.includes(student.id);
+                              return (
+                                <label
+                                  key={student.id}
+                                  className="flex items-center gap-2 py-1 px-2 rounded hover:bg-muted/50 cursor-pointer text-sm"
+                                >
+                                  <Checkbox
+                                    checked={isInCohort}
+                                    onCheckedChange={(checked) => {
+                                      toggleStudent.mutate({
+                                        cohortId: cohort.id,
+                                        studentId: student.id,
+                                        add: !!checked,
+                                      });
+                                    }}
+                                  />
+                                  <span>{student.email}</span>
+                                </label>
+                              );
+                            })}
+                        </div>
                       </div>
                     )}
                   </CardContent>
