@@ -1,14 +1,10 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { isDateWithinCohortPeriod } from '@/lib/cohortDateUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from '@/components/ui/chart';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   ResponsiveContainer, Cell, Tooltip,
@@ -20,6 +16,8 @@ import { useCohort } from '@/contexts/CohortContext';
 
 export default function AnalyticsPage() {
   const { selectedCohortId, selectedCohortStudentIds, selectedCohort, effectiveCutoffDate } = useCohort();
+  const cohortStart = selectedCohort?.start_date;
+  const cohortEnd = selectedCohort?.end_date;
 
   const { data: allStudents = [] } = useQuery({
     queryKey: ['analytics-students'],
@@ -29,7 +27,6 @@ export default function AnalyticsPage() {
     },
   });
 
-  // Filter students by selected cohort
   const students = useMemo(() => {
     if (!selectedCohortId) return allStudents;
     return allStudents.filter(s => selectedCohortStudentIds.includes(s.id));
@@ -51,7 +48,7 @@ export default function AnalyticsPage() {
     },
   });
 
-  const { data: quizzes = [] } = useQuery({
+  const { data: allQuizzes = [] } = useQuery({
     queryKey: ['analytics-quizzes'],
     queryFn: async () => {
       const { data } = await supabase.from('quizzes').select('*');
@@ -67,7 +64,16 @@ export default function AnalyticsPage() {
     },
   });
 
-  // Filter attendance and quiz responses by cohort students
+  // Filter quizzes by cohort period
+  const quizzes = useMemo(() => {
+    if (!cohortStart || !cohortEnd) return allQuizzes;
+    return allQuizzes.filter(q => {
+      const qDate = q.available_from ? q.available_from.split('T')[0] : null;
+      if (!qDate) return true;
+      return qDate >= cohortStart && qDate <= cohortEnd;
+    });
+  }, [allQuizzes, cohortStart, cohortEnd]);
+
   const studentIds = useMemo(() => new Set(students.map(s => s.id)), [students]);
   const attendanceRecords = useMemo(() => {
     if (!selectedCohortId) return allAttendanceRecords;
@@ -78,21 +84,24 @@ export default function AnalyticsPage() {
     return allQuizResponses.filter(r => studentIds.has(r.user_id));
   }, [allQuizResponses, selectedCohortId, studentIds]);
 
+  // Filter quizResponses further to only count responses for cohort-period quizzes
+  const cohortQuizIds = useMemo(() => new Set(quizzes.map(q => q.id)), [quizzes]);
+  const filteredQuizResponses = useMemo(() => {
+    return quizResponses.filter(r => cohortQuizIds.has(r.quiz_id));
+  }, [quizResponses, cohortQuizIds]);
+
   const pastLessons = useMemo(() => {
-    const start = selectedCohort?.start_date;
     return lessons.filter((l) => {
-      if (!l.scheduled_date) return false;
-      if (l.scheduled_date > effectiveCutoffDate) return false;
-      if (start && l.scheduled_date < start) return false;
-      return true;
+      return isDateWithinCohortPeriod(l.scheduled_date, cohortStart, effectiveCutoffDate);
     });
-  }, [lessons, effectiveCutoffDate, selectedCohort]);
+  }, [lessons, effectiveCutoffDate, cohortStart]);
 
   const totalStudents = students.length;
   const totalPastLessons = pastLessons.length;
-  const totalLessons = lessons.length;
+  const totalLessons = cohortStart && cohortEnd
+    ? lessons.filter(l => l.scheduled_date && l.scheduled_date >= cohortStart && l.scheduled_date <= cohortEnd).length
+    : lessons.length;
 
-  // Average attendance
   const avgAttendance = useMemo(() => {
     if (!totalStudents || !pastLessons.length) return 0;
     const totalPossible = totalStudents * pastLessons.length;
@@ -102,13 +111,11 @@ export default function AnalyticsPage() {
     return Math.round((totalPresent / totalPossible) * 100);
   }, [totalStudents, pastLessons, attendanceRecords]);
 
-  // Quizzes answered
   const uniqueRespondedQuizzes = useMemo(
-    () => new Set(quizResponses.map((r) => r.quiz_id)).size,
-    [quizResponses]
+    () => new Set(filteredQuizResponses.map((r) => r.quiz_id)).size,
+    [filteredQuizResponses]
   );
 
-  // --- Chart 1: Attendance evolution ---
   const attendanceEvolution = useMemo(() => {
     return pastLessons
       .sort((a, b) => (a.scheduled_date! > b.scheduled_date! ? 1 : -1))
@@ -119,7 +126,6 @@ export default function AnalyticsPage() {
       }));
   }, [pastLessons, attendanceRecords]);
 
-  // --- Chart 2: Student ranking ---
   const studentRanking = useMemo(() => {
     return students
       .map((s) => {
@@ -132,14 +138,12 @@ export default function AnalyticsPage() {
       .sort((a, b) => b.pct - a.pct);
   }, [students, pastLessons, attendanceRecords]);
 
-  // --- Chart 3: Lessons with most/least attendance ---
   const lessonAttendance = useMemo(() => {
-    const data = pastLessons.map((l) => ({
+    return pastLessons.map((l) => ({
       name: l.title.length > 15 ? l.title.slice(0, 15) + '…' : l.title,
       presentes: attendanceRecords.filter((a) => a.lesson_id === l.id).length,
       id: l.id,
     }));
-    return data;
   }, [pastLessons, attendanceRecords]);
 
   const minAttendance = useMemo(
@@ -151,7 +155,6 @@ export default function AnalyticsPage() {
     [lessonAttendance]
   );
 
-  // --- At-risk students (< 75%) ---
   const atRiskStudents = useMemo(() => {
     return students
       .map((s) => {
@@ -166,17 +169,18 @@ export default function AnalyticsPage() {
       .sort((a, b) => a.pct - b.pct);
   }, [students, pastLessons, attendanceRecords]);
 
-  // --- Students with zero attendance ---
   const zeroAttendanceStudents = useMemo(() => {
-    const studentIdsWithAttendance = new Set(attendanceRecords.map((a) => a.user_id));
+    const pastLessonIds = new Set(pastLessons.map(l => l.id));
+    const studentIdsWithAttendance = new Set(
+      attendanceRecords.filter(a => pastLessonIds.has(a.lesson_id)).map(a => a.user_id)
+    );
     return students.filter((s) => !studentIdsWithAttendance.has(s.id));
-  }, [students, attendanceRecords]);
+  }, [students, attendanceRecords, pastLessons]);
 
-  // --- Students with zero quiz responses ---
   const zeroQuizStudents = useMemo(() => {
-    const studentIdsWithResponse = new Set(quizResponses.map((r) => r.user_id));
+    const studentIdsWithResponse = new Set(filteredQuizResponses.map((r) => r.user_id));
     return students.filter((s) => !studentIdsWithResponse.has(s.id));
-  }, [students, quizResponses]);
+  }, [students, filteredQuizResponses]);
 
   const progressPct = totalLessons ? Math.round((totalPastLessons / totalLessons) * 100) : 0;
 
@@ -184,7 +188,6 @@ export default function AnalyticsPage() {
     <div className="p-4 md:p-8 space-y-8 max-w-7xl mx-auto">
       <h1 className="text-2xl font-heading font-bold text-foreground">Análises</h1>
 
-      {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -220,14 +223,13 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold text-foreground">
-              {quizResponses.length} <span className="text-lg text-muted-foreground">/ {quizzes.length}</span>
+              {filteredQuizResponses.length} <span className="text-lg text-muted-foreground">/ {quizzes.length}</span>
             </p>
             <p className="text-xs text-muted-foreground mt-1">respostas / questionários</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Progress bar */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -239,7 +241,6 @@ export default function AnalyticsPage() {
         </CardContent>
       </Card>
 
-      {/* Chart 1: Attendance evolution */}
       {attendanceEvolution.length > 0 && (
         <Card>
           <CardHeader>
@@ -265,7 +266,6 @@ export default function AnalyticsPage() {
         </Card>
       )}
 
-      {/* Chart 2: Student ranking */}
       {studentRanking.length > 0 && (
         <Card>
           <CardHeader>
@@ -294,7 +294,6 @@ export default function AnalyticsPage() {
         </Card>
       )}
 
-      {/* Chart 3: Lessons attendance */}
       {lessonAttendance.length > 0 && (
         <Card>
           <CardHeader>
@@ -333,7 +332,6 @@ export default function AnalyticsPage() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* At-risk students */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -372,7 +370,6 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        {/* Zero attendance */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Nunca Registraram Presença</CardTitle>
@@ -392,7 +389,6 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        {/* Zero quiz responses */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Não Responderam Nenhum Questionário</CardTitle>

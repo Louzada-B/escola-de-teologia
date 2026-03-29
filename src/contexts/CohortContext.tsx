@@ -20,7 +20,7 @@ interface CohortContextType {
   setSelectedCohortId: (id: string | null) => void;
   selectedCohortStudentIds: string[];
   selectedCohort: Cohort | null;
-  /** The effective cutoff date for "past lessons": MIN(today, cohort.end_date) */
+  /** MIN(today, cohort.end_date) */
   effectiveCutoffDate: string;
   isLoading: boolean;
 }
@@ -38,8 +38,9 @@ const CohortContext = createContext<CohortContextType>({
 export const useCohort = () => useContext(CohortContext);
 
 export function CohortProvider({ children }: { children: ReactNode }) {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const isAdminOrProfessor = profile?.role === 'admin' || profile?.role === 'professor';
+  const isStudent = profile?.role === 'aluno';
 
   const [selectedCohortId, setSelectedCohortIdState] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
@@ -57,6 +58,7 @@ export function CohortProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Admin/professor: load all cohorts
   const { data: cohorts = [], isLoading: cohortsLoading } = useQuery({
     queryKey: ['cohorts'],
     queryFn: async () => {
@@ -71,15 +73,46 @@ export function CohortProvider({ children }: { children: ReactNode }) {
     enabled: isAdminOrProfessor,
   });
 
-  // Auto-select first active cohort if none selected
+  // Student: load their cohort via cohort_students
+  const { data: studentCohort, isLoading: studentCohortLoading } = useQuery({
+    queryKey: ['student-cohort', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data: membership } = await supabase
+        .from('cohort_students')
+        .select('cohort_id')
+        .eq('user_id', user.id);
+      if (!membership || membership.length === 0) return null;
+      const cohortIds = membership.map(m => m.cohort_id);
+      const { data: cohortData } = await supabase
+        .from('cohorts')
+        .select('*')
+        .in('id', cohortIds)
+        .eq('is_active', true)
+        .order('year', { ascending: false })
+        .order('semester', { ascending: false })
+        .limit(1);
+      return (cohortData && cohortData.length > 0 ? cohortData[0] : null) as Cohort | null;
+    },
+    enabled: isStudent && !!user?.id,
+  });
+
+  // Auto-select for admin/professor
   useEffect(() => {
-    if (cohorts.length > 0 && !selectedCohortId) {
+    if (isAdminOrProfessor && cohorts.length > 0 && !selectedCohortId) {
       const activeCohort = cohorts.find(c => c.is_active);
       if (activeCohort) {
         setSelectedCohortId(activeCohort.id);
       }
     }
-  }, [cohorts, selectedCohortId]);
+  }, [cohorts, selectedCohortId, isAdminOrProfessor]);
+
+  // Auto-set for student
+  useEffect(() => {
+    if (isStudent && studentCohort && !selectedCohortId) {
+      setSelectedCohortId(studentCohort.id);
+    }
+  }, [isStudent, studentCohort, selectedCohortId]);
 
   const { data: selectedCohortStudentIds = [], isLoading: studentsLoading } = useQuery({
     queryKey: ['cohort-students', selectedCohortId],
@@ -92,10 +125,19 @@ export function CohortProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       return data.map(d => d.user_id);
     },
-    enabled: !!selectedCohortId && isAdminOrProfessor,
+    enabled: !!selectedCohortId,
   });
 
-  const selectedCohort = cohorts.find(c => c.id === selectedCohortId) || null;
+  // Resolve selected cohort object
+  const selectedCohort = useMemo(() => {
+    if (isAdminOrProfessor) {
+      return cohorts.find(c => c.id === selectedCohortId) || null;
+    }
+    if (isStudent && studentCohort && studentCohort.id === selectedCohortId) {
+      return studentCohort;
+    }
+    return null;
+  }, [cohorts, selectedCohortId, isAdminOrProfessor, isStudent, studentCohort]);
 
   const effectiveCutoffDate = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -111,7 +153,7 @@ export function CohortProvider({ children }: { children: ReactNode }) {
       selectedCohortStudentIds,
       selectedCohort,
       effectiveCutoffDate,
-      isLoading: cohortsLoading || studentsLoading,
+      isLoading: cohortsLoading || studentsLoading || studentCohortLoading,
     }}>
       {children}
     </CohortContext.Provider>

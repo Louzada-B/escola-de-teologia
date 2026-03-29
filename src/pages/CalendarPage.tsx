@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCohort } from "@/contexts/CohortContext";
+import { isDateWithinCohortFullPeriod } from "@/lib/cohortDateUtils";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,12 +18,12 @@ const typeConfig: Record<string, { label: string; className: string }> = {
     label: "Aula Síncrona",
     className: "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30",
   },
-  //prova: { label: 'Prova', className: 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30' },
   evento: { label: "Evento", className: "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30" },
 };
 
 export default function CalendarPage() {
-  const [events, setEvents] = useState<any[]>([]);
+  const { selectedCohort } = useCohort();
+  const [allEvents, setAllEvents] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
 
   useEffect(() => {
@@ -29,16 +31,14 @@ export default function CalendarPage() {
       .from("calendar_events")
       .select("*")
       .order("event_date")
-      .then(({ data }) => setEvents(data || []));
+      .then(({ data }) => setAllEvents(data || []));
   }, []);
 
-  const eventDates = events.map((e) => new Date(e.event_date + "T00:00:00"));
+  const events = selectedCohort
+    ? allEvents.filter(e => isDateWithinCohortFullPeriod(e.event_date, selectedCohort.start_date, selectedCohort.end_date))
+    : allEvents;
 
-  const eventDateTypes = events.reduce((acc: Record<string, Set<string>>, e) => {
-    if (!acc[e.event_date]) acc[e.event_date] = new Set();
-    acc[e.event_date].add(e.event_type);
-    return acc;
-  }, {});
+  const eventDates = events.map((e) => new Date(e.event_date + "T00:00:00"));
 
   const selectedEvents = events.filter((e) => selectedDate && e.event_date === format(selectedDate, "yyyy-MM-dd"));
 
