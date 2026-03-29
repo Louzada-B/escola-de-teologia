@@ -17,8 +17,8 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   if (!session) return <Navigate to="/auth" replace />;
 
-  // Block students without active cohort
-  if (profile?.role === 'aluno' && hasActiveCohort === false) {
+  // Block students without active cohort (block if not explicitly true)
+  if (profile?.role === 'aluno' && hasActiveCohort !== true) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="max-w-md w-full text-center space-y-6">
