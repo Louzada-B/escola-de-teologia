@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useCohort } from '@/contexts/CohortContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ interface StudentStats {
 }
 
 export default function AttendanceSettingsManager({ userId }: Props) {
+  const { selectedCohortId, selectedCohortStudentIds, selectedCohort, effectiveCutoffDate } = useCohort();
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [radius, setRadius] = useState('200');
@@ -41,14 +43,14 @@ export default function AttendanceSettingsManager({ userId }: Props) {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [effectiveCutoffDate, selectedCohortId]);
 
   async function load() {
     const today = new Date().toISOString().split('T')[0];
 
     const [settingsRes, lessonsRes, recordsRes, profilesRes] = await Promise.all([
       supabase.from('attendance_settings').select('*').limit(1).maybeSingle(),
-      supabase.from('lessons').select('id, title, scheduled_date, event_type, mandatory_attendance').lte('scheduled_date', today).order('scheduled_date', { ascending: false }),
+      supabase.from('lessons').select('id, title, scheduled_date, event_type, mandatory_attendance').lte('scheduled_date', effectiveCutoffDate).order('scheduled_date', { ascending: false }),
       supabase.from('attendance_records').select('id, user_id, lesson_id'),
       supabase.from('profiles').select('id, full_name, email').eq('role', 'aluno'),
     ]);
@@ -59,10 +61,23 @@ export default function AttendanceSettingsManager({ userId }: Props) {
       setRadius(String(settingsRes.data.radius_meters));
       setExistingId(settingsRes.data.id);
     }
-    if (lessonsRes.data) setLessons(lessonsRes.data);
+    if (lessonsRes.data) {
+      // Filter by cohort start_date if applicable
+      const startDate = selectedCohort?.start_date;
+      const filtered = startDate
+        ? lessonsRes.data.filter((l: any) => l.scheduled_date >= startDate)
+        : lessonsRes.data;
+      setLessons(filtered);
+    }
     if (recordsRes.data) setRecords(recordsRes.data);
     if (profilesRes.data) {
-      setStudents(profilesRes.data.map((p: any) => ({ id: p.id, name: p.full_name || p.email })));
+      // Filter students by cohort
+      const filteredProfiles = selectedCohortId && selectedCohortStudentIds.length > 0
+        ? profilesRes.data.filter((p: any) => selectedCohortStudentIds.includes(p.id))
+        : selectedCohortId
+        ? []
+        : profilesRes.data;
+      setStudents(filteredProfiles.map((p: any) => ({ id: p.id, name: p.full_name || p.email })));
     }
     setLoading(false);
   }
