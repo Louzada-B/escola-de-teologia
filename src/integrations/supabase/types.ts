@@ -267,6 +267,51 @@ export type Database = {
           },
         ]
       }
+      extra_materials: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string
+          description: string | null
+          external_url: string | null
+          file_name: string | null
+          file_path: string | null
+          file_size: number | null
+          file_type: string | null
+          id: string
+          material_type: string
+          title: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          external_url?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          material_type?: string
+          title: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          external_url?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          material_type?: string
+          title?: string
+        }
+        Relationships: []
+      }
       lesson_files: {
         Row: {
           created_at: string
