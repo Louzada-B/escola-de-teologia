@@ -171,8 +171,8 @@ export default function QuizzesManager({ userId }: { userId: string }) {
       .from("quizzes")
       .update({
         title: editTitle,
-        available_from: editFrom || null,
-        available_until: editUntil || null,
+        available_from: toLocalISO(editFrom),
+        available_until: toLocalISO(editUntil),
         lesson_id: editLessonId || null,
       })
       .eq("id", editing.id);
