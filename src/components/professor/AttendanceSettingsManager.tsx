@@ -120,14 +120,43 @@ export default function AttendanceSettingsManager({ userId }: Props) {
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         setLatitude(String(pos.coords.latitude));
         setLongitude(String(pos.coords.longitude));
+        // Reverse geocode to get address
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`);
+          const data = await res.json();
+          if (data.display_name) setAddress(data.display_name);
+        } catch { /* ignore */ }
         toast({ title: 'Localização obtida', description: 'Coordenadas preenchidas automaticamente.' });
       },
       () => toast({ title: 'Erro', description: 'Não foi possível obter localização.', variant: 'destructive' }),
       { enableHighAccuracy: true }
     );
+  };
+
+  const handleGeocode = async () => {
+    if (!address.trim()) {
+      toast({ title: 'Erro', description: 'Digite um endereço.', variant: 'destructive' });
+      return;
+    }
+    setGeocoding(true);
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`);
+      const data = await res.json();
+      if (data.length > 0) {
+        setLatitude(data[0].lat);
+        setLongitude(data[0].lon);
+        setAddress(data[0].display_name);
+        toast({ title: 'Endereço encontrado', description: 'Coordenadas preenchidas automaticamente.' });
+      } else {
+        toast({ title: 'Não encontrado', description: 'Nenhum resultado para este endereço.', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Erro', description: 'Falha ao buscar endereço.', variant: 'destructive' });
+    }
+    setGeocoding(false);
   };
 
   // Compute stats
