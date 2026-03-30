@@ -10,7 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import { Upload, Download, CheckCircle, AlertCircle, FileSpreadsheet } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-type EntityType = 'modules' | 'lessons' | 'calendar_events' | 'quizzes' | 'cohorts' | 'cohort_students';
+type EntityType = 'modules' | 'lessons' | 'calendar_events' | 'quizzes' | 'quiz_questions' | 'cohorts' | 'cohort_students';
 
 interface EntityConfig {
   label: string;
