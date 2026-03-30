@@ -261,7 +261,7 @@ export default function TCCPage() {
                 accept="application/pdf"
                 onChange={handleUpload}
                 disabled={uploading}
-                className="max-w-md"
+                className="max-w-full sm:max-w-md"
               />
               {uploading && <p className="text-sm text-muted-foreground mt-2">Enviando...</p>}
               {submission && (
