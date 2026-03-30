@@ -17,6 +17,7 @@ import {
   User,
   BarChart2,
   Heart,
+  ClipboardCheck,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
