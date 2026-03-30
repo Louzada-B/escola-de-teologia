@@ -70,7 +70,7 @@ export default function AnnouncementsManager({ userId }: { userId: string }) {
         <CardHeader><CardTitle className="font-heading text-lg">Novo Aviso</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div><Label>Título</Label><Input value={title} onChange={e => setTitle(e.target.value)} /></div>
-          <div><Label>Conteúdo</Label><Textarea value={content} onChange={e => setContent(e.target.value)} rows={4} /></div>
+          <div><Label>Conteúdo</Label><SimpleEditor value={content} onChange={setContent} placeholder="Escreva o aviso aqui..." /></div>
           <Button onClick={add}><Plus className="w-4 h-4 mr-1" /> Publicar Aviso</Button>
         </CardContent>
       </Card>
