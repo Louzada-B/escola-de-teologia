@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCohort } from "@/contexts/CohortContext";
-
+import { getLocalToday } from "@/lib/cohortDateUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
@@ -36,8 +36,7 @@ export default function AttendancePage() {
     setIsWithinTime(hour >= 19 && hour <= 23);
 
     async function load() {
-      const now = new Date();
-      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const today = getLocalToday();
 
       const [lessonsRes, settingsRes, recordsRes] = await Promise.all([
         supabase.from("lessons").select("*, modules(title)").order("scheduled_date", { ascending: false }),
