@@ -190,10 +190,19 @@ export default function QuizzesManager({ userId }: { userId: string }) {
     load();
   };
 
+  // Convert ISO/UTC date to datetime-local string in local timezone
+  const toDatetimeLocal = (isoStr: string | null) => {
+    if (!isoStr) return "";
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return "";
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
   const openEdit = (q: any) => {
     setEditTitle(q.title);
-    setEditFrom(q.available_from ? q.available_from.slice(0, 16) : "");
-    setEditUntil(q.available_until ? q.available_until.slice(0, 16) : "");
+    setEditFrom(toDatetimeLocal(q.available_from));
+    setEditUntil(toDatetimeLocal(q.available_until));
     setEditLessonId(q.lesson_id || "");
     setEditing(q);
   };
