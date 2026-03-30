@@ -158,14 +158,32 @@ export default function ImportDataManager({ userId }: { userId: string }) {
 
   const downloadTemplate = useCallback(() => {
     if (!config || !entity) return;
-    const ws = XLSX.utils.aoa_to_sheet([
-      config.columns.map(c => c.label),
-      config.columns.map(c => c.example),
-    ]);
+    const headers = config.columns.map(c => c.label);
+    let exampleRows: any[][];
+
+    if (entity === 'quiz_questions') {
+      exampleRows = [
+        ['Quiz - Módulo 1', 'Qual a capital do Brasil?', 'objetiva', 'Brasília;São Paulo;Rio de Janeiro;Salvador', '0', '', '1'],
+        ['Quiz - Módulo 1', 'Explique o conceito de cidadania.', 'dissertativa', '', '', 'Cidadania é o exercício dos direitos e deveres civis, políticos e sociais.', '2'],
+        ['Quiz - Módulo 1', 'Marque V ou F para cada afirmação:', 'verdadeiro_falso', 'O Brasil é uma república;A capital é São Paulo;O país tem 26 estados', '', '{"0":"verdadeiro","1":"falso","2":"verdadeiro"}', '3'],
+        ['Quiz - Módulo 1', 'Ligue cada país à sua capital:', 'ligar_colunas', '[{"left":"Brasil","right":"Brasília"},{"left":"Argentina","right":"Buenos Aires"}]', '', '', '4'],
+      ];
+    } else {
+      exampleRows = [config.columns.map(c => c.example)];
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...exampleRows]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Modelo');
-    // auto column widths
-    ws['!cols'] = config.columns.map(c => ({ wch: Math.max(c.label.length, c.example.length, 15) }));
+    const maxWidths = config.columns.map((c, i) => {
+      let max = Math.max(c.label.length, 15);
+      exampleRows.forEach(row => {
+        const cellLen = String(row[i] || '').length;
+        if (cellLen > max) max = cellLen;
+      });
+      return { wch: Math.min(max, 50) };
+    });
+    ws['!cols'] = maxWidths;
     XLSX.writeFile(wb, `modelo_${entity}.xlsx`);
   }, [config, entity]);
 
