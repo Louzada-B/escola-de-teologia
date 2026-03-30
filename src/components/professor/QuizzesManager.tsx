@@ -420,6 +420,84 @@ export default function QuizzesManager({ userId }: { userId: string }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Resumo de Respostas por Aluno */}
+      <Card className="card-academic">
+        <CardHeader>
+          <CardTitle className="font-heading text-lg">Resumo de Respostas por Aluno</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {students.length === 0 ? (
+            <p className="text-muted-foreground font-body">Nenhum aluno cadastrado{selectedCohortId ? ' nesta turma' : ''}.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome do Aluno</TableHead>
+                  <TableHead className="text-center">% Respondidos</TableHead>
+                  <TableHead className="text-center">Respondidos</TableHead>
+                  <TableHead className="text-center">Pendentes</TableHead>
+                  <TableHead className="text-center">Total</TableHead>
+                  <TableHead className="text-center">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {studentQuizStats.map(s => (
+                  <TableRow key={s.id}>
+                    <TableCell className="font-medium">{s.name}</TableCell>
+                    <TableCell className="text-center">{pct(s.answered, s.total)}</TableCell>
+                    <TableCell className="text-center">{s.answered}/{s.total}</TableCell>
+                    <TableCell className="text-center">{s.pending}</TableCell>
+                    <TableCell className="text-center">{s.total}</TableCell>
+                    <TableCell className="text-center">
+                      <Button size="sm" variant="outline" onClick={() => setSelectedStudent({ id: s.id, name: s.name })}>
+                        <Eye className="w-4 h-4 mr-1" /> Detalhes
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Modal detalhes do aluno */}
+      <Dialog open={!!selectedStudent} onOpenChange={(open) => { if (!open) setSelectedStudent(null); }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-heading">Questionários — {selectedStudent?.name}</DialogTitle>
+          </DialogHeader>
+          {modalQuizDetails.length === 0 ? (
+            <p className="text-muted-foreground font-body">Nenhum questionário disponível.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Questionário</TableHead>
+                  <TableHead>Aula Vinculada</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {modalQuizDetails.map(q => (
+                  <TableRow key={q.id}>
+                    <TableCell className="font-medium">{q.title}</TableCell>
+                    <TableCell>{q.lessonTitle || '—'}</TableCell>
+                    <TableCell className="text-center">
+                      {q.answered ? (
+                        <Badge className="bg-green-600 text-white">Respondido</Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-destructive/50 text-destructive">Pendente</Badge>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
