@@ -98,6 +98,18 @@ const ENTITIES: Record<EntityType, EntityConfig> = {
       { key: 'available_until', label: 'Disponível Até (DD/MM/YYYY)', required: false, example: '30/06/2026' },
     ],
   },
+  quiz_questions: {
+    label: 'Questões de Questionários',
+    table: 'quiz_questions',
+    columns: [
+      { key: 'quiz_title', label: 'Título do Questionário', required: true, example: 'Quiz - Módulo 1' },
+      { key: 'question', label: 'Pergunta', required: true, example: 'Qual a capital do Brasil?' },
+      { key: 'question_type', label: 'Tipo (objetiva/dissertativa/verdadeiro_falso/ligar_colunas)', required: false, example: 'objetiva' },
+      { key: 'options', label: 'Opções (separadas por ;)', required: false, example: 'Brasília;São Paulo;Rio de Janeiro;Salvador' },
+      { key: 'correct_option', label: 'Opção Correta (número, começando em 0)', required: false, example: '0' },
+      { key: 'expected_text', label: 'Resposta Esperada (dissertativa)', required: false, example: 'Texto de referência' },
+      { key: 'order_index', label: 'Ordem', required: false, example: '1' },
+    ],
   cohorts: {
     label: 'Turmas',
     table: 'cohorts',
