@@ -146,8 +146,8 @@ export default function TCCPage() {
   if (loading) return <div className="page-container"><p className="text-muted-foreground">Carregando...</p></div>;
 
   return (
-    <div className="page-container space-y-6">
-      <h1 className="section-title">Trabalho de Conclusão de Curso (TCC)</h1>
+    <div className="page-container space-y-4 sm:space-y-6 px-3 sm:px-6">
+      <h1 className="section-title text-xl sm:text-2xl">Trabalho de Conclusão de Curso (TCC)</h1>
 
       {/* Instructions & Template */}
       <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2">
