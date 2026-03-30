@@ -213,7 +213,7 @@ export default function ImportDataManager({ userId }: { userId: string }) {
     let modulesMap: Record<string, string> = {};
     let lessonsMap: Record<string, string> = {};
     let cohortsMap: Record<string, string> = {};
-    let profilesMap: Record<string, string> = {};
+    let quizzesMap: Record<string, string> = {};
 
     try {
       if (entity === 'lessons') {
