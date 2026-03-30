@@ -50,13 +50,18 @@ export default function AttendancePage() {
       ]);
 
       if (lessonsRes.data) {
-        // Today's lessons (always show for check-in, regardless of cohort)
-        setTodayLessons(lessonsRes.data.filter((l) => l.scheduled_date === today));
+        const inCohort = (date: string | null) => {
+          if (!date) return false;
+          if (!selectedCohort) return true;
+          return date >= selectedCohort.start_date && date <= selectedCohort.end_date;
+        };
+        // Today's lessons filtered by selected cohort
+        setTodayLessons(lessonsRes.data.filter((l) => l.scheduled_date === today && inCohort(l.scheduled_date)));
         // Past lessons filtered by cohort period
         setPastLessons(
           lessonsRes.data.filter(
             (l) =>
-              l.scheduled_date < today && isDateWithinCohortPeriod(l.scheduled_date, cohortStart, effectiveCutoffDate),
+              l.scheduled_date && l.scheduled_date < today && inCohort(l.scheduled_date),
           ),
         );
       }
