@@ -136,13 +136,21 @@ export default function QuizzesManager({ userId }: { userId: string }) {
 
   const pct = (n: number, total: number) => (total === 0 ? "—" : `${Math.round((n / total) * 100)}%`);
 
+  // Convert datetime-local value to ISO string with local timezone offset
+  const toLocalISO = (dtLocal: string) => {
+    if (!dtLocal) return null;
+    const d = new Date(dtLocal);
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString();
+  };
+
   const createQuiz = async () => {
     if (!title.trim()) return;
     const { error } = await supabase.from("quizzes").insert({
       title,
       created_by: userId,
-      available_from: availableFrom || null,
-      available_until: availableUntil || null,
+      available_from: toLocalISO(availableFrom),
+      available_until: toLocalISO(availableUntil),
       lesson_id: lessonId || null,
     });
     if (error) {
