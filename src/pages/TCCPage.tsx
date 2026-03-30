@@ -230,12 +230,12 @@ export default function TCCPage() {
         <CardContent className="space-y-4">
           {submission && (
             <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{submission.file_name}</span>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span className="text-sm font-medium truncate">{submission.file_name}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   {statusBadge(submission.status)}
                   <Button size="sm" variant="ghost" onClick={downloadMyTcc}>
                     <Download className="w-4 h-4" />
