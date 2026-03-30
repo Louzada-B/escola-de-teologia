@@ -239,20 +239,49 @@ export default function AttendanceSettingsManager({ userId }: Props) {
           <CardTitle className="font-heading text-lg">Local da Aula</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Endereço</Label>
+            <div className="flex gap-2">
+              <Input
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Ex: Rua das Flores, 123 - São Paulo, SP"
+                onKeyDown={(e) => e.key === 'Enter' && handleGeocode()}
+              />
+              <Button variant="outline" onClick={handleGeocode} disabled={geocoding}>
+                {geocoding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              </Button>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <Label>Latitude</Label>
+              <Label className="text-muted-foreground text-xs">Latitude</Label>
               <Input value={latitude} onChange={(e) => setLatitude(e.target.value)} placeholder="-23.5505" />
             </div>
             <div>
-              <Label>Longitude</Label>
+              <Label className="text-muted-foreground text-xs">Longitude</Label>
               <Input value={longitude} onChange={(e) => setLongitude(e.target.value)} placeholder="-46.6333" />
             </div>
             <div>
-              <Label>Raio (metros)</Label>
+              <Label className="text-muted-foreground text-xs">Raio (metros)</Label>
               <Input type="number" value={radius} onChange={(e) => setRadius(e.target.value)} min="10" max="5000" />
             </div>
           </div>
+
+          {latitude && longitude && !isNaN(parseFloat(latitude)) && !isNaN(parseFloat(longitude)) && (
+            <div className="rounded-md overflow-hidden border border-input">
+              <iframe
+                title="Mapa do local da aula"
+                width="100%"
+                height="300"
+                style={{ border: 0 }}
+                loading="lazy"
+                src={`https://www.openstreetmap.org/export/embed.html?bbox=${parseFloat(longitude) - 0.005}%2C${parseFloat(latitude) - 0.003}%2C${parseFloat(longitude) + 0.005}%2C${parseFloat(latitude) + 0.003}&layer=mapnik&marker=${latitude}%2C${longitude}`}
+              />
+            </div>
+          )}
+
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleUseMyLocation}>
               <MapPin className="w-4 h-4 mr-2" /> Usar minha localização
