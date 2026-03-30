@@ -580,6 +580,89 @@ export type Database = {
           },
         ]
       }
+      tcc_settings: {
+        Row: {
+          accept_from: string | null
+          deadline: string | null
+          id: string
+          instructions: string | null
+          template_name: string | null
+          template_path: string | null
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          accept_from?: string | null
+          deadline?: string | null
+          id?: string
+          instructions?: string | null
+          template_name?: string | null
+          template_path?: string | null
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          accept_from?: string | null
+          deadline?: string | null
+          id?: string
+          instructions?: string | null
+          template_name?: string | null
+          template_path?: string | null
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: []
+      }
+      tcc_submissions: {
+        Row: {
+          cohort_id: string
+          created_at: string
+          feedback: string | null
+          file_name: string
+          file_path: string
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cohort_id: string
+          created_at?: string
+          feedback?: string | null
+          file_name: string
+          file_path: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cohort_id?: string
+          created_at?: string
+          feedback?: string | null
+          file_name?: string
+          file_path?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tcc_submissions_cohort_id_fkey"
+            columns: ["cohort_id"]
+            isOneToOne: false
+            referencedRelation: "cohorts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       testimonials: {
         Row: {
           approved_at: string | null
