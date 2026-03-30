@@ -78,6 +78,11 @@ export default function ProfessorPage() {
         <TabsContent value="testimonials">
           <TestimonialsManager userId={user!.id} />
         </TabsContent>
+        {isAdmin && (
+          <TabsContent value="evaluations">
+            <EvaluationsManager />
+          </TabsContent>
+        )}
         <TabsContent value="import">
           <ImportDataManager userId={user!.id} />
         </TabsContent>
