@@ -50,6 +50,9 @@ export default function ProfessorPage() {
               Avaliações
             </TabsTrigger>
           )}
+          <TabsTrigger value="extra-materials" className="text-xs sm:text-sm">
+            Materiais Extras
+          </TabsTrigger>
           <TabsTrigger value="import" className="text-xs sm:text-sm">
             Importar Dados
           </TabsTrigger>
