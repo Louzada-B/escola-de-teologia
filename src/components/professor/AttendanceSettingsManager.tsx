@@ -31,6 +31,8 @@ export default function AttendanceSettingsManager({ userId }: Props) {
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [radius, setRadius] = useState('200');
+  const [address, setAddress] = useState('');
+  const [geocoding, setGeocoding] = useState(false);
   const [existingId, setExistingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
