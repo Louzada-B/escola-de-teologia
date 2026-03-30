@@ -12,6 +12,7 @@ import TestimonialsManager from "@/components/professor/TestimonialsManager";
 import EvaluationsManager from "@/components/professor/EvaluationsManager";
 import ExtraMaterialsManager from "@/components/professor/ExtraMaterialsManager";
 import TCCManager from "@/components/professor/TCCManager";
+import CertificatesManager from "@/components/professor/CertificatesManager";
 
 export default function ProfessorPage() {
   const { user, profile } = useAuth();
