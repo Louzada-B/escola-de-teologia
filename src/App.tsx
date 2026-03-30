@@ -52,6 +52,7 @@ const App = () => (
               <Route path="/dashboard/presenca" element={<DashboardLayout><AttendancePage /></DashboardLayout>} />
               <Route path="/dashboard/testemunhos" element={<DashboardLayout><TestimonialsPage /></DashboardLayout>} />
               <Route path="/dashboard/avaliacao" element={<DashboardLayout><EvaluationPage /></DashboardLayout>} />
+              <Route path="/dashboard/materiais" element={<DashboardLayout><ExtraMaterialsPage /></DashboardLayout>} />
               <Route path="/dashboard/perfil" element={<DashboardLayout><ProfilePage /></DashboardLayout>} />
               <Route path="/dashboard/professor" element={
                 <ProtectedRoute>

@@ -87,6 +87,9 @@ export default function ProfessorPage() {
             <EvaluationsManager />
           </TabsContent>
         )}
+        <TabsContent value="extra-materials">
+          <ExtraMaterialsManager userId={user!.id} />
+        </TabsContent>
         <TabsContent value="import">
           <ImportDataManager userId={user!.id} />
         </TabsContent>
