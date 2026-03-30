@@ -110,6 +110,7 @@ const ENTITIES: Record<EntityType, EntityConfig> = {
       { key: 'expected_text', label: 'Resposta Esperada (dissertativa)', required: false, example: 'Texto de referência' },
       { key: 'order_index', label: 'Ordem', required: false, example: '1' },
     ],
+  },
   cohorts: {
     label: 'Turmas',
     table: 'cohorts',
