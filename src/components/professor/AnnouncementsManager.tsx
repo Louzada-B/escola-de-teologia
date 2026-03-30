@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { SimpleEditor } from '@/components/ui/simple-editor';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { Plus, Trash2, Pencil } from 'lucide-react';
@@ -70,7 +70,7 @@ export default function AnnouncementsManager({ userId }: { userId: string }) {
         <CardHeader><CardTitle className="font-heading text-lg">Novo Aviso</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div><Label>Título</Label><Input value={title} onChange={e => setTitle(e.target.value)} /></div>
-          <div><Label>Conteúdo</Label><Textarea value={content} onChange={e => setContent(e.target.value)} rows={4} /></div>
+          <div><Label>Conteúdo</Label><SimpleEditor value={content} onChange={setContent} placeholder="Escreva o aviso aqui..." /></div>
           <Button onClick={add}><Plus className="w-4 h-4 mr-1" /> Publicar Aviso</Button>
         </CardContent>
       </Card>
@@ -100,7 +100,7 @@ export default function AnnouncementsManager({ userId }: { userId: string }) {
           <DialogHeader><DialogTitle>Editar Aviso</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label>Título</Label><Input value={editTitle} onChange={e => setEditTitle(e.target.value)} /></div>
-            <div><Label>Conteúdo</Label><Textarea value={editContent} onChange={e => setEditContent(e.target.value)} rows={4} /></div>
+            <div><Label>Conteúdo</Label><SimpleEditor value={editContent} onChange={setEditContent} placeholder="Escreva o aviso aqui..." /></div>
             <Button onClick={update}>Salvar</Button>
           </div>
         </DialogContent>
