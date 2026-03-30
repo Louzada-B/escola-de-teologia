@@ -221,11 +221,12 @@ export default function TCCManager({ userId }: { userId: string }) {
 
           <div>
             <Label>Modelo de TCC</Label>
-            <div className="flex items-center gap-3 mt-1">
-              <Input type="file" onChange={handleTemplateUpload} disabled={uploadingTemplate} className="max-w-sm" />
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1 min-w-0">
+              <Input type="file" onChange={handleTemplateUpload} disabled={uploadingTemplate} className="max-w-full sm:max-w-sm" />
               {settings.template_name && (
-                <span className="text-sm text-muted-foreground flex items-center gap-1">
-                  <FileText className="w-3 h-3" /> {settings.template_name}
+                <span className="text-sm text-muted-foreground flex items-center gap-1 min-w-0">
+                  <FileText className="w-3 h-3 shrink-0" />
+                  <span className="truncate">{settings.template_name}</span>
                 </span>
               )}
             </div>
