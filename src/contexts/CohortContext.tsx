@@ -108,9 +108,9 @@ export function CohortProvider({ children }: { children: ReactNode }) {
     }
   }, [cohorts, selectedCohortId, isAdminOrProfessor]);
 
-  // Auto-set for student
+  // Auto-set for student – always sync to their actual cohort
   useEffect(() => {
-    if (isStudent && studentCohort && !selectedCohortId) {
+    if (isStudent && studentCohort && selectedCohortId !== studentCohort.id) {
       setSelectedCohortId(studentCohort.id);
     }
   }, [isStudent, studentCohort, selectedCohortId]);
