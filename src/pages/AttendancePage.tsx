@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCohort } from "@/contexts/CohortContext";
-import { isDateWithinCohortPeriod } from "@/lib/cohortDateUtils";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
@@ -30,8 +30,6 @@ export default function AttendancePage() {
   const [gpsLoading, setGpsLoading] = useState<string | null>(null);
   const [isWithinTime, setIsWithinTime] = useState(false);
 
-  const cohortStart = selectedCohort?.start_date;
-
   useEffect(() => {
     const now = new Date();
     const hour = now.getHours();
@@ -50,13 +48,18 @@ export default function AttendancePage() {
       ]);
 
       if (lessonsRes.data) {
-        // Today's lessons (always show for check-in, regardless of cohort)
-        setTodayLessons(lessonsRes.data.filter((l) => l.scheduled_date === today));
+        const inCohort = (date: string | null) => {
+          if (!date) return false;
+          if (!selectedCohort) return true;
+          return date >= selectedCohort.start_date && date <= selectedCohort.end_date;
+        };
+        // Today's lessons filtered by selected cohort
+        setTodayLessons(lessonsRes.data.filter((l) => l.scheduled_date === today && inCohort(l.scheduled_date)));
         // Past lessons filtered by cohort period
         setPastLessons(
           lessonsRes.data.filter(
             (l) =>
-              l.scheduled_date < today && isDateWithinCohortPeriod(l.scheduled_date, cohortStart, effectiveCutoffDate),
+              l.scheduled_date && l.scheduled_date < today && inCohort(l.scheduled_date),
           ),
         );
       }
