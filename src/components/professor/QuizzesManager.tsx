@@ -99,7 +99,33 @@ export default function QuizzesManager({ userId }: { userId: string }) {
     setQuizQuestions(prev => ({ ...prev, [quizId]: data || [] }));
   };
 
-  useEffect(() => { load(); }, [selectedCohort, effectiveCutoffDate]);
+  useEffect(() => { load(); }, [selectedCohort, effectiveCutoffDate, selectedCohortId, selectedCohortStudentIds]);
+
+  // Quiz response stats
+  const responseSet = useMemo(() => {
+    const set = new Set<string>();
+    quizResponses.forEach(r => set.add(`${r.user_id}::${r.quiz_id}`));
+    return set;
+  }, [quizResponses]);
+
+  const studentQuizStats = useMemo(() => {
+    return students.map(s => {
+      const answered = quizzes.filter(q => responseSet.has(`${s.id}::${q.id}`)).length;
+      return { id: s.id, name: s.name, total: quizzes.length, answered, pending: quizzes.length - answered };
+    });
+  }, [students, quizzes, responseSet]);
+
+  const modalQuizDetails = useMemo(() => {
+    if (!selectedStudent) return [];
+    return quizzes.map(q => ({
+      id: q.id,
+      title: q.title,
+      lessonTitle: q.lessons?.title || null,
+      answered: responseSet.has(`${selectedStudent.id}::${q.id}`),
+    }));
+  }, [selectedStudent, quizzes, responseSet]);
+
+  const pct = (n: number, total: number) => total === 0 ? '—' : `${Math.round((n / total) * 100)}%`;
 
   const createQuiz = async () => {
     if (!title.trim()) return;
