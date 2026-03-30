@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useMemo, ReactNode } fr
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { getLocalToday } from '@/lib/cohortDateUtils';
 
 interface Cohort {
   id: string;
@@ -31,7 +32,7 @@ const CohortContext = createContext<CohortContextType>({
   setSelectedCohortId: () => {},
   selectedCohortStudentIds: [],
   selectedCohort: null,
-  effectiveCutoffDate: new Date().toISOString().split('T')[0],
+  effectiveCutoffDate: getLocalToday(),
   isLoading: false,
 });
 
@@ -140,7 +141,7 @@ export function CohortProvider({ children }: { children: ReactNode }) {
   }, [cohorts, selectedCohortId, isAdminOrProfessor, isStudent, studentCohort]);
 
   const effectiveCutoffDate = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalToday();
     if (!selectedCohort) return today;
     return selectedCohort.end_date < today ? selectedCohort.end_date : today;
   }, [selectedCohort]);

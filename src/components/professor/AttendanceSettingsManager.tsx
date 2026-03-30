@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useCohort } from '@/contexts/CohortContext';
 import { supabase } from '@/integrations/supabase/client';
+import { getLocalToday } from '@/lib/cohortDateUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,7 +47,7 @@ export default function AttendanceSettingsManager({ userId }: Props) {
   }, [effectiveCutoffDate, selectedCohortId]);
 
   async function load() {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalToday();
 
     const [settingsRes, lessonsRes, recordsRes, profilesRes] = await Promise.all([
       supabase.from('attendance_settings').select('*').limit(1).maybeSingle(),
