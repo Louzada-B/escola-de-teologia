@@ -10,7 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import { Upload, Download, CheckCircle, AlertCircle, FileSpreadsheet } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-type EntityType = 'modules' | 'lessons' | 'calendar_events' | 'quizzes' | 'cohorts' | 'cohort_students';
+type EntityType = 'modules' | 'lessons' | 'calendar_events' | 'quizzes' | 'quiz_questions' | 'cohorts' | 'cohort_students';
 
 interface EntityConfig {
   label: string;
@@ -96,6 +96,19 @@ const ENTITIES: Record<EntityType, EntityConfig> = {
       { key: 'lesson_title', label: 'Título da Aula (opcional)', required: false, example: 'Aula 1 - Tema' },
       { key: 'available_from', label: 'Disponível De (DD/MM/YYYY)', required: false, example: '01/03/2026' },
       { key: 'available_until', label: 'Disponível Até (DD/MM/YYYY)', required: false, example: '30/06/2026' },
+    ],
+  },
+  quiz_questions: {
+    label: 'Questões de Questionários',
+    table: 'quiz_questions',
+    columns: [
+      { key: 'quiz_title', label: 'Título do Questionário', required: true, example: 'Quiz - Módulo 1' },
+      { key: 'question', label: 'Pergunta', required: true, example: 'Qual a capital do Brasil?' },
+      { key: 'question_type', label: 'Tipo (objetiva/dissertativa/verdadeiro_falso/ligar_colunas)', required: false, example: 'objetiva' },
+      { key: 'options', label: 'Opções (separadas por ;)', required: false, example: 'Brasília;São Paulo;Rio de Janeiro;Salvador' },
+      { key: 'correct_option', label: 'Opção Correta (número, começando em 0)', required: false, example: '0' },
+      { key: 'expected_text', label: 'Resposta Esperada (dissertativa)', required: false, example: 'Texto de referência' },
+      { key: 'order_index', label: 'Ordem', required: false, example: '1' },
     ],
   },
   cohorts: {
@@ -200,6 +213,7 @@ export default function ImportDataManager({ userId }: { userId: string }) {
     let modulesMap: Record<string, string> = {};
     let lessonsMap: Record<string, string> = {};
     let cohortsMap: Record<string, string> = {};
+    let quizzesMap: Record<string, string> = {};
     let profilesMap: Record<string, string> = {};
 
     try {
@@ -210,6 +224,10 @@ export default function ImportDataManager({ userId }: { userId: string }) {
       if (entity === 'quizzes') {
         const { data } = await supabase.from('lessons').select('id, title');
         (data || []).forEach(l => { lessonsMap[l.title.toLowerCase().trim()] = l.id; });
+      }
+      if (entity === 'quiz_questions') {
+        const { data } = await supabase.from('quizzes').select('id, title');
+        (data || []).forEach(q => { quizzesMap[q.title.toLowerCase().trim()] = q.id; });
       }
       if (entity === 'cohort_students') {
         const { data: cData } = await supabase.from('cohorts').select('id, name');
@@ -258,6 +276,22 @@ export default function ImportDataManager({ userId }: { userId: string }) {
             available_from: pr.data.available_from ? convertDateTime(pr.data.available_from) : null,
             available_until: pr.data.available_until ? convertDateTime(pr.data.available_until) : null,
             created_by: userId,
+          };
+        } else if (entity === 'quiz_questions') {
+          const quizKey = String(pr.data.quiz_title || '').toLowerCase().trim();
+          const quizId = quizzesMap[quizKey];
+          if (!quizId) { errors.push({ row: pr.index, msg: `Questionário "${pr.data.quiz_title}" não encontrado` }); continue; }
+          const qType = pr.data.question_type ? String(pr.data.question_type).trim() : 'objetiva';
+          const optionsStr = pr.data.options ? String(pr.data.options).trim() : '';
+          const optionsArr = optionsStr ? optionsStr.split(';').map((o: string) => o.trim()) : [];
+          record = {
+            quiz_id: quizId,
+            question: String(pr.data.question || '').trim(),
+            question_type: qType,
+            options: optionsArr,
+            correct_option: pr.data.correct_option !== '' && pr.data.correct_option != null ? Number(pr.data.correct_option) : null,
+            expected_text: pr.data.expected_text ? String(pr.data.expected_text).trim() : null,
+            order_index: pr.data.order_index ? Number(pr.data.order_index) : 0,
           };
         } else if (entity === 'cohort_students') {
           const cohortKey = String(pr.data.cohort_name || '').toLowerCase().trim();
