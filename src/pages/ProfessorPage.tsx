@@ -54,6 +54,9 @@ export default function ProfessorPage() {
           <TabsTrigger value="extra-materials" className="text-xs sm:text-sm">
             Materiais Extras
           </TabsTrigger>
+          <TabsTrigger value="tcc" className="text-xs sm:text-sm">
+            TCC
+          </TabsTrigger>
           <TabsTrigger value="import" className="text-xs sm:text-sm">
             Importar Dados
           </TabsTrigger>
