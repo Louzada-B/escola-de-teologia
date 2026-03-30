@@ -63,6 +63,11 @@ export default function AttendanceSettingsManager({ userId }: Props) {
       setLongitude(String(settingsRes.data.longitude));
       setRadius(String(settingsRes.data.radius_meters));
       setExistingId(settingsRes.data.id);
+      try {
+        const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${settingsRes.data.latitude}&lon=${settingsRes.data.longitude}&format=json`);
+        const geoData = await geoRes.json();
+        if (geoData.display_name) setAddress(geoData.display_name);
+      } catch { /* ignore */ }
     }
     if (lessonsRes.data) {
       // Filter by cohort start_date if applicable
