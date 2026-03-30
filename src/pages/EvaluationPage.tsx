@@ -29,9 +29,7 @@ function StarRating({ value, onChange, label }: { value: number; onChange: (v: n
             <Star
               className={cn(
                 "w-8 h-8 transition-colors",
-                (hover || value) >= star
-                  ? "fill-yellow-400 text-yellow-400"
-                  : "text-muted-foreground/30"
+                (hover || value) >= star ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30",
               )}
             />
           </button>
@@ -66,7 +64,7 @@ export default function EvaluationPage() {
     const endDate = new Date(selectedCohort.end_date);
     const now = new Date();
     const daysUntilEnd = (endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-    setIsNearEnd(daysUntilEnd <= 30);
+    setIsNearEnd(daysUntilEnd <= 400);
 
     // Check if already submitted
     supabase
@@ -186,18 +184,26 @@ export default function EvaluationPage() {
               />
             </div>
 
-            <StarRating label="Como você avalia os professores? *" value={professorsRating} onChange={setProfessorsRating} />
+            <StarRating
+              label="Como você avalia os professores? *"
+              value={professorsRating}
+              onChange={setProfessorsRating}
+            />
 
             <div className="space-y-2">
               <Label>Você recomendaria o curso? *</Label>
               <RadioGroup value={wouldRecommend} onValueChange={setWouldRecommend} className="flex gap-6 pt-1">
                 <div className="flex items-center gap-2">
                   <RadioGroupItem value="sim" id="rec-sim" />
-                  <Label htmlFor="rec-sim" className="cursor-pointer">Sim</Label>
+                  <Label htmlFor="rec-sim" className="cursor-pointer">
+                    Sim
+                  </Label>
                 </div>
                 <div className="flex items-center gap-2">
                   <RadioGroupItem value="nao" id="rec-nao" />
-                  <Label htmlFor="rec-nao" className="cursor-pointer">Não</Label>
+                  <Label htmlFor="rec-nao" className="cursor-pointer">
+                    Não
+                  </Label>
                 </div>
               </RadioGroup>
             </div>
