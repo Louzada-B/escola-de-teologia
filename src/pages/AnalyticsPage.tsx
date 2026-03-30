@@ -155,19 +155,29 @@ export default function AnalyticsPage() {
     [lessonAttendance]
   );
 
+  const pastAulas = useMemo(() => pastLessons.filter(l => l.event_type !== 'aula_especial'), [pastLessons]);
+  const pastEspeciais = useMemo(() => pastLessons.filter(l => l.event_type === 'aula_especial'), [pastLessons]);
+
   const atRiskStudents = useMemo(() => {
     return students
       .map((s) => {
-        const presencas = pastLessons.filter((l) =>
+        const presAula = pastAulas.filter((l) =>
           attendanceRecords.some((a) => a.lesson_id === l.id && a.user_id === s.id)
         ).length;
-        const faltas = pastLessons.length - presencas;
-        const pct = pastLessons.length ? Math.round((presencas / pastLessons.length) * 100) : 0;
-        return { name: s.full_name || s.email, pct, faltas };
+        const presEsp = pastEspeciais.filter((l) =>
+          attendanceRecords.some((a) => a.lesson_id === l.id && a.user_id === s.id)
+        ).length;
+        const pctAula = pastAulas.length ? Math.round((presAula / pastAulas.length) * 100) : 100;
+        const pctEsp = pastEspeciais.length ? Math.round((presEsp / pastEspeciais.length) * 100) : 100;
+        const faltasAula = pastAulas.length - presAula;
+        const faltasEsp = pastEspeciais.length - presEsp;
+        const riscoAula = pctAula < 75;
+        const riscoEsp = pctEsp < 20;
+        return { name: s.full_name || s.email, pctAula, pctEsp, faltasAula, faltasEsp, riscoAula, riscoEsp };
       })
-      .filter((s) => s.pct < 75)
-      .sort((a, b) => a.pct - b.pct);
-  }, [students, pastLessons, attendanceRecords]);
+      .filter((s) => s.riscoAula || s.riscoEsp)
+      .sort((a, b) => a.pctAula - b.pctAula);
+  }, [students, pastAulas, pastEspeciais, attendanceRecords]);
 
   const zeroAttendanceStudents = useMemo(() => {
     const pastLessonIds = new Set(pastLessons.map(l => l.id));
@@ -336,8 +346,9 @@ export default function AnalyticsPage() {
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-destructive" />
-              Alunos em Risco (abaixo de 75%)
+              Alunos em Risco
             </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">Aula: abaixo de 75% · Aula Especial: abaixo de 20%</p>
           </CardHeader>
           <CardContent>
             {atRiskStudents.length === 0 ? (
@@ -348,19 +359,24 @@ export default function AnalyticsPage() {
                   <thead>
                     <tr className="border-b border-border">
                       <th className="text-left py-2 text-muted-foreground font-medium">Nome</th>
-                      <th className="text-center py-2 text-muted-foreground font-medium">% Presença</th>
-                      <th className="text-center py-2 text-muted-foreground font-medium">Faltas</th>
+                      <th className="text-center py-2 text-muted-foreground font-medium">% Aula</th>
+                      <th className="text-center py-2 text-muted-foreground font-medium">Faltas Aula</th>
+                      <th className="text-center py-2 text-muted-foreground font-medium">% Especial</th>
+                      <th className="text-center py-2 text-muted-foreground font-medium">Faltas Esp.</th>
                     </tr>
                   </thead>
                   <tbody>
                     {atRiskStudents.map((s, i) => (
                       <tr key={i} className="border-b border-border/50">
                         <td className="py-2 flex items-center gap-2">
-                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0">!</Badge>
+                          {s.riscoAula && <Badge variant="destructive" className="text-[10px] px-1.5 py-0">A</Badge>}
+                          {s.riscoEsp && <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-destructive text-destructive">E</Badge>}
                           {s.name}
                         </td>
-                        <td className="text-center py-2">{s.pct}%</td>
-                        <td className="text-center py-2">{s.faltas}</td>
+                        <td className={`text-center py-2 ${s.riscoAula ? 'text-destructive font-semibold' : ''}`}>{s.pctAula}%</td>
+                        <td className="text-center py-2">{s.faltasAula}</td>
+                        <td className={`text-center py-2 ${s.riscoEsp ? 'text-destructive font-semibold' : ''}`}>{s.pctEsp}%</td>
+                        <td className="text-center py-2">{s.faltasEsp}</td>
                       </tr>
                     ))}
                   </tbody>
