@@ -34,37 +34,37 @@ const App = () => (
     <TooltipProvider>
       <AuthProvider>
         <CohortProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/dashboard" element={<DashboardLayout><DashboardHome /></DashboardLayout>} />
-            <Route path="/dashboard/aulas" element={<DashboardLayout><LessonsPage /></DashboardLayout>} />
-            <Route path="/dashboard/avisos" element={<DashboardLayout><AnnouncementsPage /></DashboardLayout>} />
-            <Route path="/dashboard/calendario" element={<DashboardLayout><CalendarPage /></DashboardLayout>} />
-            <Route path="/dashboard/questionarios" element={<DashboardLayout><QuizzesPage /></DashboardLayout>} />
-            <Route path="/dashboard/livros" element={<DashboardLayout><BooksPage /></DashboardLayout>} />
-            <Route path="/dashboard/presenca" element={<DashboardLayout><AttendancePage /></DashboardLayout>} />
-            <Route path="/dashboard/perfil" element={<DashboardLayout><ProfilePage /></DashboardLayout>} />
-            <Route path="/dashboard/professor" element={
-              <ProtectedRoute>
-                <ProfessorRoute>
-                  <AppLayout><ProfessorPage /></AppLayout>
-                </ProfessorRoute>
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/analises" element={
-              <ProtectedRoute>
-                <AdminRoute>
-                  <AppLayout><AnalyticsPage /></AppLayout>
-                </AdminRoute>
-              </ProtectedRoute>
-            } />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/dashboard" element={<DashboardLayout><DashboardHome /></DashboardLayout>} />
+              <Route path="/dashboard/aulas" element={<DashboardLayout><LessonsPage /></DashboardLayout>} />
+              <Route path="/dashboard/avisos" element={<DashboardLayout><AnnouncementsPage /></DashboardLayout>} />
+              <Route path="/dashboard/calendario" element={<DashboardLayout><CalendarPage /></DashboardLayout>} />
+              <Route path="/dashboard/questionarios" element={<DashboardLayout><QuizzesPage /></DashboardLayout>} />
+              <Route path="/dashboard/livros" element={<DashboardLayout><BooksPage /></DashboardLayout>} />
+              <Route path="/dashboard/presenca" element={<DashboardLayout><AttendancePage /></DashboardLayout>} />
+              <Route path="/dashboard/perfil" element={<DashboardLayout><ProfilePage /></DashboardLayout>} />
+              <Route path="/dashboard/professor" element={
+                <ProtectedRoute>
+                  <ProfessorRoute>
+                    <AppLayout><ProfessorPage /></AppLayout>
+                  </ProfessorRoute>
+                </ProtectedRoute>
+              } />
+              <Route path="/dashboard/analises" element={
+                <ProtectedRoute>
+                  <AdminRoute>
+                    <AppLayout><AnalyticsPage /></AppLayout>
+                  </AdminRoute>
+                </ProtectedRoute>
+              } />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
         </CohortProvider>
       </AuthProvider>
     </TooltipProvider>
