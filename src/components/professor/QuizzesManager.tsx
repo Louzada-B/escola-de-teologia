@@ -33,7 +33,7 @@ function defaultQuestionState() {
 }
 
 export default function QuizzesManager({ userId }: { userId: string }) {
-  const { selectedCohort, effectiveCutoffDate } = useCohort();
+  const { selectedCohort, selectedCohortId, selectedCohortStudentIds, effectiveCutoffDate } = useCohort();
   const [title, setTitle] = useState('');
   const [availableFrom, setAvailableFrom] = useState('');
   const [availableUntil, setAvailableUntil] = useState('');
