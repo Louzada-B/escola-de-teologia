@@ -194,6 +194,17 @@ export default function AnalyticsPage() {
 
   const progressPct = totalLessons ? Math.round((totalPastLessons / totalLessons) * 100) : 0;
 
+  const isDataLoading = cohortLoading || studentsLoading || lessonsLoading || attendanceLoading;
+
+  if (isDataLoading) {
+    return (
+      <div className="p-4 md:p-8 max-w-7xl mx-auto">
+        <h1 className="text-2xl font-heading font-bold text-foreground mb-6">Análises</h1>
+        <p className="text-muted-foreground">Carregando dados...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 md:p-8 space-y-8 max-w-7xl mx-auto">
       <h1 className="text-2xl font-heading font-bold text-foreground">Análises</h1>
