@@ -1,3 +1,9 @@
+/** Returns today's date as YYYY-MM-DD in the user's local timezone. */
+export function getLocalToday(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
 /**
  * Returns true if `date` is within the cohort's active period:
  *   date >= cohort.start_date AND date <= MIN(today, cohort.end_date)

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCohort } from "@/contexts/CohortContext";
-import { isDateWithinCohortPeriod } from "@/lib/cohortDateUtils";
+import { isDateWithinCohortPeriod, getLocalToday } from "@/lib/cohortDateUtils";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -124,7 +124,7 @@ export default function DashboardHome() {
 
     async function loadDashboardData() {
       if (!user) return;
-      const today = new Date().toISOString().split("T")[0];
+      const today = getLocalToday();
 
       // Fetch all raw data
       const [mRes, aRes, eRes, qRes] = await Promise.all([
