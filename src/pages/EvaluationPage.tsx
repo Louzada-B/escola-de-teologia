@@ -64,7 +64,7 @@ export default function EvaluationPage() {
     const endDate = new Date(selectedCohort.end_date);
     const now = new Date();
     const daysUntilEnd = (endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-    setIsNearEnd(daysUntilEnd <= 400);
+    setIsNearEnd(daysUntilEnd <= 7);
 
     // Check if already submitted
     supabase
