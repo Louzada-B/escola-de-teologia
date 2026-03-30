@@ -64,9 +64,11 @@ export default function QuizzesManager({ userId }: { userId: string }) {
   const [selectedStudent, setSelectedStudent] = useState<{ id: string; name: string } | null>(null);
 
   const load = async () => {
-    const [quizzesRes, lessonsRes] = await Promise.all([
+    const [quizzesRes, lessonsRes, responsesRes, profilesRes] = await Promise.all([
       supabase.from('quizzes').select('*, quiz_questions(id), lessons(title, scheduled_date)').order('created_at'),
       supabase.from('lessons').select('id, title, scheduled_date, module_id').order('scheduled_date'),
+      supabase.from('quiz_responses').select('quiz_id, user_id, score'),
+      supabase.from('profiles').select('id, full_name, email').eq('role', 'aluno'),
     ]);
     let quizData = quizzesRes.data || [];
     setAllLessons(lessonsRes.data || []);
@@ -80,6 +82,16 @@ export default function QuizzesManager({ userId }: { userId: string }) {
       });
     }
     setQuizzes(quizData);
+
+    if (responsesRes.data) setQuizResponses(responsesRes.data);
+    if (profilesRes.data) {
+      const filteredProfiles = selectedCohortId && selectedCohortStudentIds.length > 0
+        ? profilesRes.data.filter((p: any) => selectedCohortStudentIds.includes(p.id))
+        : selectedCohortId
+        ? []
+        : profilesRes.data;
+      setStudents(filteredProfiles.map((p: any) => ({ id: p.id, name: p.full_name || p.email })));
+    }
   };
 
   const loadQuestions = async (quizId: string) => {
