@@ -84,7 +84,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
       quizData = quizData.filter((q: any) => {
         const lessonDate = q.lessons?.scheduled_date;
         if (!lessonDate) return true;
-        return lessonDate >= selectedCohort.start_date && lessonDate <= effectiveCutoffDate;
+        return lessonDate >= selectedCohort.start_date && lessonDate <= selectedCohort.end_date;
       });
     }
     setQuizzes(quizData);
