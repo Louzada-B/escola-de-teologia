@@ -100,7 +100,7 @@ export default function AnnouncementsManager({ userId }: { userId: string }) {
           <DialogHeader><DialogTitle>Editar Aviso</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label>Título</Label><Input value={editTitle} onChange={e => setEditTitle(e.target.value)} /></div>
-            <div><Label>Conteúdo</Label><Textarea value={editContent} onChange={e => setEditContent(e.target.value)} rows={4} /></div>
+            <div><Label>Conteúdo</Label><SimpleEditor value={editContent} onChange={setEditContent} placeholder="Escreva o aviso aqui..." /></div>
             <Button onClick={update}>Salvar</Button>
           </div>
         </DialogContent>

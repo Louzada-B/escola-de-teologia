@@ -45,7 +45,7 @@ export default function AnnouncementsPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-foreground/80 whitespace-pre-wrap">{a.content}</p>
+                <div className="text-sm text-foreground/80 whitespace-pre-wrap prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: a.content }} />
               </CardContent>
             </Card>
           ))}
