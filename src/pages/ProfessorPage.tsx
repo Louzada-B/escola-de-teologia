@@ -8,6 +8,7 @@ import BooksManager from '@/components/professor/BooksManager';
 import AttendanceSettingsManager from '@/components/professor/AttendanceSettingsManager';
 import CohortsManager from '@/components/professor/CohortsManager';
 import ImportDataManager from '@/components/professor/ImportDataManager';
+import TestimonialsManager from '@/components/professor/TestimonialsManager';
 
 export default function ProfessorPage() {
   const { user } = useAuth();
@@ -25,6 +26,7 @@ export default function ProfessorPage() {
           <TabsTrigger value="attendance" className="text-xs sm:text-sm">Presença</TabsTrigger>
           <TabsTrigger value="cohorts" className="text-xs sm:text-sm">Turmas</TabsTrigger>
           <TabsTrigger value="import" className="text-xs sm:text-sm">Importar Dados</TabsTrigger>
+          <TabsTrigger value="testimonials" className="text-xs sm:text-sm">Testemunhos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="modules"><ModulesManager userId={user!.id} /></TabsContent>
@@ -35,6 +37,7 @@ export default function ProfessorPage() {
         <TabsContent value="attendance"><AttendanceSettingsManager userId={user!.id} /></TabsContent>
         <TabsContent value="cohorts"><CohortsManager userId={user!.id} /></TabsContent>
         <TabsContent value="import"><ImportDataManager userId={user!.id} /></TabsContent>
+        <TabsContent value="testimonials"><TestimonialsManager userId={user!.id} /></TabsContent>
       </Tabs>
     </div>
   );
