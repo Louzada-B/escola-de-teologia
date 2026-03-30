@@ -78,7 +78,7 @@ const ENTITIES: Record<EntityType, EntityConfig> = {
       { key: 'title', label: 'Título', required: true, example: 'Prova Final' },
       { key: 'event_date', label: 'Data (DD/MM/YYYY)', required: true, example: '20/06/2026' },
       { key: 'description', label: 'Descrição', required: false, example: 'Prova final do semestre' },
-      { key: 'event_type', label: 'Tipo (aula/evento/prova)', required: false, example: 'prova' },
+      { key: 'event_type', label: 'Tipo (aula/aula_especial/aula_sincrona/prova/evento)', required: false, example: 'prova' },
     ],
     transform: (row, userId) => ({
       title: String(row.title || '').trim(),
