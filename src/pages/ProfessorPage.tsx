@@ -37,6 +37,7 @@ export default function ProfessorPage() {
         <TabsContent value="attendance"><AttendanceSettingsManager userId={user!.id} /></TabsContent>
         <TabsContent value="cohorts"><CohortsManager userId={user!.id} /></TabsContent>
         <TabsContent value="import"><ImportDataManager userId={user!.id} /></TabsContent>
+        <TabsContent value="testimonials"><TestimonialsManager userId={user!.id} /></TabsContent>
       </Tabs>
     </div>
   );

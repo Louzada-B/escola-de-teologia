@@ -42,6 +42,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { to: "/dashboard/questionarios", label: "Questionários", icon: ClipboardList },
     { to: "/dashboard/livros", label: "Livros", icon: BookMarked },
     { to: "/dashboard/presenca", label: "Presença", icon: UserCheck },
+    { to: "/dashboard/testemunhos", label: "Testemunhos", icon: Heart },
     { to: "/dashboard/perfil", label: "Meu Perfil", icon: User },
     ...(isProfessor || isAdmin ? [{ to: "/dashboard/professor", label: "Gestão", icon: Upload }] : []),
     ...(isAdmin ? [{ to: "/dashboard/analises", label: "Análises", icon: BarChart2 }] : []),
