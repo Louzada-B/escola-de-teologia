@@ -6,6 +6,7 @@ import EventsManager from '@/components/professor/EventsManager';
 import QuizzesManager from '@/components/professor/QuizzesManager';
 import BooksManager from '@/components/professor/BooksManager';
 import AttendanceSettingsManager from '@/components/professor/AttendanceSettingsManager';
+import CohortsManager from '@/components/professor/CohortsManager';
 import ImportDataManager from '@/components/professor/ImportDataManager';
 
 export default function ProfessorPage() {
@@ -23,6 +24,7 @@ export default function ProfessorPage() {
           <TabsTrigger value="books" className="text-xs sm:text-sm">Livros</TabsTrigger>
           <TabsTrigger value="attendance" className="text-xs sm:text-sm">Presença</TabsTrigger>
           <TabsTrigger value="cohorts" className="text-xs sm:text-sm">Turmas</TabsTrigger>
+          <TabsTrigger value="import" className="text-xs sm:text-sm">Importar Dados</TabsTrigger>
         </TabsList>
 
         <TabsContent value="modules"><ModulesManager userId={user!.id} /></TabsContent>
@@ -32,6 +34,7 @@ export default function ProfessorPage() {
         <TabsContent value="books"><BooksManager userId={user!.id} /></TabsContent>
         <TabsContent value="attendance"><AttendanceSettingsManager userId={user!.id} /></TabsContent>
         <TabsContent value="cohorts"><CohortsManager userId={user!.id} /></TabsContent>
+        <TabsContent value="import"><ImportDataManager userId={user!.id} /></TabsContent>
       </Tabs>
     </div>
   );
