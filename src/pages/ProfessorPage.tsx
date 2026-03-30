@@ -26,6 +26,7 @@ export default function ProfessorPage() {
           <TabsTrigger value="attendance" className="text-xs sm:text-sm">Presença</TabsTrigger>
           <TabsTrigger value="cohorts" className="text-xs sm:text-sm">Turmas</TabsTrigger>
           <TabsTrigger value="import" className="text-xs sm:text-sm">Importar Dados</TabsTrigger>
+          <TabsTrigger value="testimonials" className="text-xs sm:text-sm">Testemunhos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="modules"><ModulesManager userId={user!.id} /></TabsContent>
