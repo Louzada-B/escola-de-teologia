@@ -375,7 +375,7 @@ export default function ImportDataManager({ userId }: { userId: string }) {
                       <TableCell>
                         {pr.errors.length > 0
                           ? <span className="text-destructive text-xs" title={pr.errors.join('\n')}><AlertCircle className="h-4 w-4 inline" /> Erro</span>
-                          : <span className="text-green-600 text-xs"><CheckCircle className="h-4 w-4 inline" /> OK</span>
+                          : <span className="text-xs"><CheckCircle className="h-4 w-4 inline text-primary" /> OK</span>
                         }
                       </TableCell>
                       {config!.columns.map(c => (
@@ -403,7 +403,7 @@ export default function ImportDataManager({ userId }: { userId: string }) {
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
+              <CheckCircle className="h-5 w-5 text-primary" />
               Resultado da Importação
             </CardTitle>
           </CardHeader>

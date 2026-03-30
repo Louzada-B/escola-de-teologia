@@ -6,7 +6,7 @@ import EventsManager from '@/components/professor/EventsManager';
 import QuizzesManager from '@/components/professor/QuizzesManager';
 import BooksManager from '@/components/professor/BooksManager';
 import AttendanceSettingsManager from '@/components/professor/AttendanceSettingsManager';
-import CohortsManager from '@/components/professor/CohortsManager';
+import ImportDataManager from '@/components/professor/ImportDataManager';
 
 export default function ProfessorPage() {
   const { user } = useAuth();
