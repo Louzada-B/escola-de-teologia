@@ -150,7 +150,7 @@ export default function TCCPage() {
       <h1 className="section-title">Trabalho de Conclusão de Curso (TCC)</h1>
 
       {/* Instructions & Template */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
