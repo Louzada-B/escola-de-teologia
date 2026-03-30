@@ -346,8 +346,9 @@ export default function AnalyticsPage() {
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-destructive" />
-              Alunos em Risco (abaixo de 75%)
+              Alunos em Risco
             </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">Aula: abaixo de 75% · Aula Especial: abaixo de 20%</p>
           </CardHeader>
           <CardContent>
             {atRiskStudents.length === 0 ? (
@@ -358,19 +359,24 @@ export default function AnalyticsPage() {
                   <thead>
                     <tr className="border-b border-border">
                       <th className="text-left py-2 text-muted-foreground font-medium">Nome</th>
-                      <th className="text-center py-2 text-muted-foreground font-medium">% Presença</th>
-                      <th className="text-center py-2 text-muted-foreground font-medium">Faltas</th>
+                      <th className="text-center py-2 text-muted-foreground font-medium">% Aula</th>
+                      <th className="text-center py-2 text-muted-foreground font-medium">Faltas Aula</th>
+                      <th className="text-center py-2 text-muted-foreground font-medium">% Especial</th>
+                      <th className="text-center py-2 text-muted-foreground font-medium">Faltas Esp.</th>
                     </tr>
                   </thead>
                   <tbody>
                     {atRiskStudents.map((s, i) => (
                       <tr key={i} className="border-b border-border/50">
                         <td className="py-2 flex items-center gap-2">
-                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0">!</Badge>
+                          {s.riscoAula && <Badge variant="destructive" className="text-[10px] px-1.5 py-0">A</Badge>}
+                          {s.riscoEsp && <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-destructive text-destructive">E</Badge>}
                           {s.name}
                         </td>
-                        <td className="text-center py-2">{s.pct}%</td>
-                        <td className="text-center py-2">{s.faltas}</td>
+                        <td className={`text-center py-2 ${s.riscoAula ? 'text-destructive font-semibold' : ''}`}>{s.pctAula}%</td>
+                        <td className="text-center py-2">{s.faltasAula}</td>
+                        <td className={`text-center py-2 ${s.riscoEsp ? 'text-destructive font-semibold' : ''}`}>{s.pctEsp}%</td>
+                        <td className="text-center py-2">{s.faltasEsp}</td>
                       </tr>
                     ))}
                   </tbody>
