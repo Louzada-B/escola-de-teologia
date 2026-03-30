@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCohort } from '@/contexts/CohortContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,8 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Trash2, Pencil, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2, Pencil, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 
 type QuestionType = 'objetiva' | 'dissertativa' | 'verdadeiro_falso' | 'ligar_colunas';
 
@@ -31,7 +33,7 @@ function defaultQuestionState() {
 }
 
 export default function QuizzesManager({ userId }: { userId: string }) {
-  const { selectedCohort, effectiveCutoffDate } = useCohort();
+  const { selectedCohort, selectedCohortId, selectedCohortStudentIds, effectiveCutoffDate } = useCohort();
   const [title, setTitle] = useState('');
   const [availableFrom, setAvailableFrom] = useState('');
   const [availableUntil, setAvailableUntil] = useState('');
@@ -56,10 +58,17 @@ export default function QuizzesManager({ userId }: { userId: string }) {
   const [editingQuestion, setEditingQuestion] = useState<any | null>(null);
   const [eqForm, setEqForm] = useState(defaultQuestionState());
 
+  // Student quiz stats
+  const [students, setStudents] = useState<{ id: string; name: string }[]>([]);
+  const [quizResponses, setQuizResponses] = useState<{ quiz_id: string; user_id: string; score: number | null }[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<{ id: string; name: string } | null>(null);
+
   const load = async () => {
-    const [quizzesRes, lessonsRes] = await Promise.all([
+    const [quizzesRes, lessonsRes, responsesRes, profilesRes] = await Promise.all([
       supabase.from('quizzes').select('*, quiz_questions(id), lessons(title, scheduled_date)').order('created_at'),
       supabase.from('lessons').select('id, title, scheduled_date, module_id').order('scheduled_date'),
+      supabase.from('quiz_responses').select('quiz_id, user_id, score'),
+      supabase.from('profiles').select('id, full_name, email').eq('role', 'aluno'),
     ]);
     let quizData = quizzesRes.data || [];
     setAllLessons(lessonsRes.data || []);
@@ -73,6 +82,16 @@ export default function QuizzesManager({ userId }: { userId: string }) {
       });
     }
     setQuizzes(quizData);
+
+    if (responsesRes.data) setQuizResponses(responsesRes.data);
+    if (profilesRes.data) {
+      const filteredProfiles = selectedCohortId && selectedCohortStudentIds.length > 0
+        ? profilesRes.data.filter((p: any) => selectedCohortStudentIds.includes(p.id))
+        : selectedCohortId
+        ? []
+        : profilesRes.data;
+      setStudents(filteredProfiles.map((p: any) => ({ id: p.id, name: p.full_name || p.email })));
+    }
   };
 
   const loadQuestions = async (quizId: string) => {
@@ -80,7 +99,33 @@ export default function QuizzesManager({ userId }: { userId: string }) {
     setQuizQuestions(prev => ({ ...prev, [quizId]: data || [] }));
   };
 
-  useEffect(() => { load(); }, [selectedCohort, effectiveCutoffDate]);
+  useEffect(() => { load(); }, [selectedCohort, effectiveCutoffDate, selectedCohortId, selectedCohortStudentIds]);
+
+  // Quiz response stats
+  const responseSet = useMemo(() => {
+    const set = new Set<string>();
+    quizResponses.forEach(r => set.add(`${r.user_id}::${r.quiz_id}`));
+    return set;
+  }, [quizResponses]);
+
+  const studentQuizStats = useMemo(() => {
+    return students.map(s => {
+      const answered = quizzes.filter(q => responseSet.has(`${s.id}::${q.id}`)).length;
+      return { id: s.id, name: s.name, total: quizzes.length, answered, pending: quizzes.length - answered };
+    });
+  }, [students, quizzes, responseSet]);
+
+  const modalQuizDetails = useMemo(() => {
+    if (!selectedStudent) return [];
+    return quizzes.map(q => ({
+      id: q.id,
+      title: q.title,
+      lessonTitle: q.lessons?.title || null,
+      answered: responseSet.has(`${selectedStudent.id}::${q.id}`),
+    }));
+  }, [selectedStudent, quizzes, responseSet]);
+
+  const pct = (n: number, total: number) => total === 0 ? '—' : `${Math.round((n / total) * 100)}%`;
 
   const createQuiz = async () => {
     if (!title.trim()) return;
@@ -373,6 +418,84 @@ export default function QuizzesManager({ userId }: { userId: string }) {
             <QuestionFormFields form={eqForm} setForm={setEqForm} />
             <Button onClick={saveEditQuestion}>Salvar Pergunta</Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Resumo de Respostas por Aluno */}
+      <Card className="card-academic">
+        <CardHeader>
+          <CardTitle className="font-heading text-lg">Resumo de Respostas por Aluno</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {students.length === 0 ? (
+            <p className="text-muted-foreground font-body">Nenhum aluno cadastrado{selectedCohortId ? ' nesta turma' : ''}.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome do Aluno</TableHead>
+                  <TableHead className="text-center">% Respondidos</TableHead>
+                  <TableHead className="text-center">Respondidos</TableHead>
+                  <TableHead className="text-center">Pendentes</TableHead>
+                  <TableHead className="text-center">Total</TableHead>
+                  <TableHead className="text-center">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {studentQuizStats.map(s => (
+                  <TableRow key={s.id}>
+                    <TableCell className="font-medium">{s.name}</TableCell>
+                    <TableCell className="text-center">{pct(s.answered, s.total)}</TableCell>
+                    <TableCell className="text-center">{s.answered}/{s.total}</TableCell>
+                    <TableCell className="text-center">{s.pending}</TableCell>
+                    <TableCell className="text-center">{s.total}</TableCell>
+                    <TableCell className="text-center">
+                      <Button size="sm" variant="outline" onClick={() => setSelectedStudent({ id: s.id, name: s.name })}>
+                        <Eye className="w-4 h-4 mr-1" /> Detalhes
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Modal detalhes do aluno */}
+      <Dialog open={!!selectedStudent} onOpenChange={(open) => { if (!open) setSelectedStudent(null); }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-heading">Questionários — {selectedStudent?.name}</DialogTitle>
+          </DialogHeader>
+          {modalQuizDetails.length === 0 ? (
+            <p className="text-muted-foreground font-body">Nenhum questionário disponível.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Questionário</TableHead>
+                  <TableHead>Aula Vinculada</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {modalQuizDetails.map(q => (
+                  <TableRow key={q.id}>
+                    <TableCell className="font-medium">{q.title}</TableCell>
+                    <TableCell>{q.lessonTitle || '—'}</TableCell>
+                    <TableCell className="text-center">
+                      {q.answered ? (
+                        <Badge className="bg-green-600 text-white">Respondido</Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-destructive/50 text-destructive">Pendente</Badge>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </DialogContent>
       </Dialog>
     </div>
