@@ -225,7 +225,10 @@ export default function ImportDataManager({ userId }: { userId: string }) {
         const { data } = await supabase.from('lessons').select('id, title');
         (data || []).forEach(l => { lessonsMap[l.title.toLowerCase().trim()] = l.id; });
       }
-      if (entity === 'cohort_students') {
+      if (entity === 'quiz_questions') {
+        const { data } = await supabase.from('quizzes').select('id, title');
+        (data || []).forEach(q => { quizzesMap[q.title.toLowerCase().trim()] = q.id; });
+      }
         const { data: cData } = await supabase.from('cohorts').select('id, name');
         (cData || []).forEach(c => { cohortsMap[c.name.toLowerCase().trim()] = c.id; });
         const { data: pData } = await supabase.from('profiles').select('id, email');
