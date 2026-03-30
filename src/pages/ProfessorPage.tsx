@@ -9,9 +9,11 @@ import AttendanceSettingsManager from "@/components/professor/AttendanceSettings
 import CohortsManager from "@/components/professor/CohortsManager";
 import ImportDataManager from "@/components/professor/ImportDataManager";
 import TestimonialsManager from "@/components/professor/TestimonialsManager";
+import EvaluationsManager from "@/components/professor/EvaluationsManager";
 
 export default function ProfessorPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const isAdmin = profile?.role === "admin";
 
   return (
     <div className="page-container">
@@ -42,6 +44,11 @@ export default function ProfessorPage() {
           <TabsTrigger value="testimonials" className="text-xs sm:text-sm">
             Testemunhos
           </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger value="evaluations" className="text-xs sm:text-sm">
+              Avaliações
+            </TabsTrigger>
+          )}
           <TabsTrigger value="import" className="text-xs sm:text-sm">
             Importar Dados
           </TabsTrigger>
@@ -71,6 +78,11 @@ export default function ProfessorPage() {
         <TabsContent value="testimonials">
           <TestimonialsManager userId={user!.id} />
         </TabsContent>
+        {isAdmin && (
+          <TabsContent value="evaluations">
+            <EvaluationsManager />
+          </TabsContent>
+        )}
         <TabsContent value="import">
           <ImportDataManager userId={user!.id} />
         </TabsContent>

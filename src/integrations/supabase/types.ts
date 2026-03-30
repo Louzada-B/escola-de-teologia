@@ -220,6 +220,53 @@ export type Database = {
         }
         Relationships: []
       }
+      course_evaluations: {
+        Row: {
+          additional_comments: string | null
+          cohort_id: string
+          created_at: string
+          id: string
+          improvements: string
+          liked_most: string
+          overall_rating: number
+          professors_rating: number
+          user_id: string
+          would_recommend: boolean
+        }
+        Insert: {
+          additional_comments?: string | null
+          cohort_id: string
+          created_at?: string
+          id?: string
+          improvements: string
+          liked_most: string
+          overall_rating: number
+          professors_rating: number
+          user_id: string
+          would_recommend: boolean
+        }
+        Update: {
+          additional_comments?: string | null
+          cohort_id?: string
+          created_at?: string
+          id?: string
+          improvements?: string
+          liked_most?: string
+          overall_rating?: number
+          professors_rating?: number
+          user_id?: string
+          would_recommend?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_evaluations_cohort_id_fkey"
+            columns: ["cohort_id"]
+            isOneToOne: false
+            referencedRelation: "cohorts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lesson_files: {
         Row: {
           created_at: string
