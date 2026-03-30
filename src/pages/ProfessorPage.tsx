@@ -10,6 +10,7 @@ import CohortsManager from "@/components/professor/CohortsManager";
 import ImportDataManager from "@/components/professor/ImportDataManager";
 import TestimonialsManager from "@/components/professor/TestimonialsManager";
 import EvaluationsManager from "@/components/professor/EvaluationsManager";
+import ExtraMaterialsManager from "@/components/professor/ExtraMaterialsManager";
 
 export default function ProfessorPage() {
   const { user, profile } = useAuth();
@@ -49,6 +50,9 @@ export default function ProfessorPage() {
               Avaliações
             </TabsTrigger>
           )}
+          <TabsTrigger value="extra-materials" className="text-xs sm:text-sm">
+            Materiais Extras
+          </TabsTrigger>
           <TabsTrigger value="import" className="text-xs sm:text-sm">
             Importar Dados
           </TabsTrigger>
@@ -83,6 +87,9 @@ export default function ProfessorPage() {
             <EvaluationsManager />
           </TabsContent>
         )}
+        <TabsContent value="extra-materials">
+          <ExtraMaterialsManager userId={user!.id} />
+        </TabsContent>
         <TabsContent value="import">
           <ImportDataManager userId={user!.id} />
         </TabsContent>
