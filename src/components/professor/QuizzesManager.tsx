@@ -296,8 +296,14 @@ export default function QuizzesManager({ userId }: { userId: string }) {
     }
   };
 
-  const formatDate = (d: string | null) => (d ? new Date(d).toLocaleString("pt-BR") : "—");
+  const formatDate = (d: string | null) => {
+    if (!d) return "—";
 
+    // Remove o 'Z' (se houver) para evitar que o JS converta para o fuso local
+    const localDate = d.endsWith("Z") ? d.slice(0, -1) : d;
+
+    return new Date(localDate).toLocaleString("pt-BR");
+  };
   const typeLabel = (t: string) => {
     const map: Record<string, string> = {
       objetiva: "Objetiva",
@@ -409,7 +415,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
                 <div className="flex-1">
                   <span className="font-body font-medium">{q.title}</span>
                   <p className="text-sm text-muted-foreground">
-                    {q.quiz_questions?.length || 0} perguntas · De {formatDate(q.available_from) + 3} até{" "}
+                    {q.quiz_questions?.length || 0} perguntas · De {formatDate(q.available_from)} até{" "}
                     {formatDate(q.available_until)}
                     {q.lessons?.title && <span className="ml-1">· Aula: {q.lessons.title}</span>}
                   </p>
