@@ -158,6 +158,36 @@ export type Database = {
         }
         Relationships: []
       }
+      certificate_templates: {
+        Row: {
+          background_url: string | null
+          body_text: string
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          background_url?: string | null
+          body_text?: string
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          background_url?: string | null
+          body_text?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cohort_students: {
         Row: {
           cohort_id: string
@@ -311,6 +341,48 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      issued_certificates: {
+        Row: {
+          cohort_id: string
+          id: string
+          issued_at: string
+          issued_by: string
+          template_id: string
+          user_id: string
+        }
+        Insert: {
+          cohort_id: string
+          id?: string
+          issued_at?: string
+          issued_by: string
+          template_id: string
+          user_id: string
+        }
+        Update: {
+          cohort_id?: string
+          id?: string
+          issued_at?: string
+          issued_by?: string
+          template_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issued_certificates_cohort_id_fkey"
+            columns: ["cohort_id"]
+            isOneToOne: false
+            referencedRelation: "cohorts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "issued_certificates_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "certificate_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lesson_files: {
         Row: {
