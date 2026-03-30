@@ -158,7 +158,7 @@ export default function DashboardHome() {
         quizzes: filteredQuizzes.length,
       });
 
-      // Today's lessons for attendance alert
+      // Today's lessons for attendance alert — filtered by cohort period
       const { data: todayLessons } = await supabase.from("lessons").select("*").eq("scheduled_date", today);
       const { data: userRecords } = await supabase
         .from("attendance_records")
@@ -167,7 +167,14 @@ export default function DashboardHome() {
 
       if (todayLessons && todayLessons.length > 0) {
         const checkedInIds = new Set(userRecords?.map((r) => r.lesson_id));
-        const pending = todayLessons.find((l) => !checkedInIds.has(l.id));
+        const pending = todayLessons.find((l) => {
+          if (checkedInIds.has(l.id)) return false;
+          // Only show alert if lesson date is within student's cohort period
+          if (cohortStart && cohortEnd) {
+            if (today < cohortStart || today > cohortEnd) return false;
+          }
+          return true;
+        });
         if (pending) setPendingLesson(pending);
       }
 
