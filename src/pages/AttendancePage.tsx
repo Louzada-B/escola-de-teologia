@@ -33,7 +33,7 @@ export default function AttendancePage() {
   useEffect(() => {
     const now = new Date();
     const hour = now.getHours();
-    setIsWithinTime(hour >= 19 && hour <= 23);
+    setIsWithinTime(hour >= 18 && hour <= 23);
 
     async function load() {
       const today = getLocalToday();
@@ -57,10 +57,7 @@ export default function AttendancePage() {
         setTodayLessons(lessonsRes.data.filter((l) => l.scheduled_date === today && inCohort(l.scheduled_date)));
         // Past lessons filtered by cohort period
         setPastLessons(
-          lessonsRes.data.filter(
-            (l) =>
-              l.scheduled_date && l.scheduled_date < today && inCohort(l.scheduled_date),
-          ),
+          lessonsRes.data.filter((l) => l.scheduled_date && l.scheduled_date < today && inCohort(l.scheduled_date)),
         );
       }
       if (settingsRes.data) setSettings(settingsRes.data);

@@ -120,7 +120,7 @@ export default function DashboardHome() {
 
   useEffect(() => {
     const hour = new Date().getHours();
-    setIsWithinTime(hour >= 19 && hour <= 23);
+    setIsWithinTime(hour >= 18 && hour <= 23);
 
     async function loadDashboardData() {
       if (!user) return;
