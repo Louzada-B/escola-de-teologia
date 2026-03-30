@@ -94,6 +94,9 @@ export default function ProfessorPage() {
         <TabsContent value="extra-materials">
           <ExtraMaterialsManager userId={user!.id} />
         </TabsContent>
+        <TabsContent value="tcc">
+          <TCCManager userId={user!.id} />
+        </TabsContent>
         <TabsContent value="import">
           <ImportDataManager userId={user!.id} />
         </TabsContent>
