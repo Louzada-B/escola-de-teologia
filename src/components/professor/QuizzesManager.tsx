@@ -58,6 +58,11 @@ export default function QuizzesManager({ userId }: { userId: string }) {
   const [editingQuestion, setEditingQuestion] = useState<any | null>(null);
   const [eqForm, setEqForm] = useState(defaultQuestionState());
 
+  // Student quiz stats
+  const [students, setStudents] = useState<{ id: string; name: string }[]>([]);
+  const [quizResponses, setQuizResponses] = useState<{ quiz_id: string; user_id: string; score: number | null }[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<{ id: string; name: string } | null>(null);
+
   const load = async () => {
     const [quizzesRes, lessonsRes] = await Promise.all([
       supabase.from('quizzes').select('*, quiz_questions(id), lessons(title, scheduled_date)').order('created_at'),
