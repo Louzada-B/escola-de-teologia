@@ -72,7 +72,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         className={cn(
           "w-64 bg-sidebar text-sidebar-foreground flex-shrink-0 flex flex-col border-r border-sidebar-border",
           "lg:flex",
-          mobileOpen ? "flex absolute z-50 inset-0 lg:relative" : "hidden",
+          mobileOpen ? "flex fixed z-50 inset-0 lg:relative lg:inset-auto" : "hidden",
         )}
       >
         <div className="p-6 border-b border-sidebar-border">
@@ -87,7 +87,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const active = location.pathname === item.to;
             return (
