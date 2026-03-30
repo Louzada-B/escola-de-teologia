@@ -80,7 +80,7 @@ export default function TestimonialsManager({ userId }: { userId: string }) {
   const rejected = testimonials.filter(t => t.status === 'rejected');
 
   const statusBadge = (status: string) => {
-    if (status === 'approved') return <Badge className="bg-green-600">Aprovado</Badge>;
+    if (status === 'approved') return <Badge className="bg-primary">Aprovado</Badge>;
     if (status === 'rejected') return <Badge variant="destructive">Rejeitado</Badge>;
     return <Badge variant="secondary">Pendente</Badge>;
   };
