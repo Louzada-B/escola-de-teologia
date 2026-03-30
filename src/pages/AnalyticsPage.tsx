@@ -15,16 +15,22 @@ import { ptBR } from 'date-fns/locale';
 import { useCohort } from '@/contexts/CohortContext';
 
 export default function AnalyticsPage() {
-  const { selectedCohortId, selectedCohortStudentIds, selectedCohort, effectiveCutoffDate } = useCohort();
+  const { selectedCohortId, selectedCohortStudentIds, selectedCohort, effectiveCutoffDate, isLoading: cohortLoading } = useCohort();
   const cohortStart = selectedCohort?.start_date;
   const cohortEnd = selectedCohort?.end_date;
 
-  const { data: allStudents = [] } = useQuery({
+  const { data: allStudents = [], isLoading: studentsLoading } = useQuery({
     queryKey: ['analytics-students'],
     queryFn: async () => {
       const { data } = await supabase.from('profiles').select('*').eq('role', 'aluno');
       return data || [];
     },
+  });
+
+  const { isLoading: lessonsLoading } = useQuery({
+    queryKey: ['analytics-lessons-loading-check'],
+    queryFn: async () => null,
+    enabled: false,
   });
 
   const students = useMemo(() => {
