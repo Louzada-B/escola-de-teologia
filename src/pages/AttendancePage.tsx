@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCohort } from "@/contexts/CohortContext";
-import { isDateWithinCohortPeriod } from "@/lib/cohortDateUtils";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
@@ -29,8 +29,6 @@ export default function AttendancePage() {
   const [loading, setLoading] = useState(true);
   const [gpsLoading, setGpsLoading] = useState<string | null>(null);
   const [isWithinTime, setIsWithinTime] = useState(false);
-
-  const cohortStart = selectedCohort?.start_date;
 
   useEffect(() => {
     const now = new Date();
