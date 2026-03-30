@@ -179,9 +179,9 @@ export default function TCCPage() {
           </CardHeader>
           <CardContent>
             {settings?.template_path ? (
-              <Button onClick={downloadTemplate} variant="outline" className="gap-2">
-                <Download className="w-4 h-4" />
-                {settings.template_name || "Baixar modelo"}
+              <Button onClick={downloadTemplate} variant="outline" className="gap-2 max-w-full">
+                <Download className="w-4 h-4 shrink-0" />
+                <span className="truncate">{settings.template_name || "Baixar modelo"}</span>
               </Button>
             ) : (
               <p className="text-muted-foreground text-sm">Nenhum modelo disponível ainda.</p>
