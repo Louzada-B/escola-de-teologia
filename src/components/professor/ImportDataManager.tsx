@@ -277,6 +277,22 @@ export default function ImportDataManager({ userId }: { userId: string }) {
             available_until: pr.data.available_until ? convertDateTime(pr.data.available_until) : null,
             created_by: userId,
           };
+        } else if (entity === 'quiz_questions') {
+          const quizKey = String(pr.data.quiz_title || '').toLowerCase().trim();
+          const quizId = quizzesMap[quizKey];
+          if (!quizId) { errors.push({ row: pr.index, msg: `Questionário "${pr.data.quiz_title}" não encontrado` }); continue; }
+          const qType = pr.data.question_type ? String(pr.data.question_type).trim() : 'objetiva';
+          const optionsStr = pr.data.options ? String(pr.data.options).trim() : '';
+          const optionsArr = optionsStr ? optionsStr.split(';').map((o: string) => o.trim()) : [];
+          record = {
+            quiz_id: quizId,
+            question: String(pr.data.question || '').trim(),
+            question_type: qType,
+            options: optionsArr,
+            correct_option: pr.data.correct_option !== '' && pr.data.correct_option != null ? Number(pr.data.correct_option) : null,
+            expected_text: pr.data.expected_text ? String(pr.data.expected_text).trim() : null,
+            order_index: pr.data.order_index ? Number(pr.data.order_index) : 0,
+          };
         } else if (entity === 'cohort_students') {
           const cohortKey = String(pr.data.cohort_name || '').toLowerCase().trim();
           const emailKey = String(pr.data.student_email || '').toLowerCase().trim();
