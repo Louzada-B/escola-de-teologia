@@ -11,6 +11,7 @@ import ImportDataManager from "@/components/professor/ImportDataManager";
 import TestimonialsManager from "@/components/professor/TestimonialsManager";
 import EvaluationsManager from "@/components/professor/EvaluationsManager";
 import ExtraMaterialsManager from "@/components/professor/ExtraMaterialsManager";
+import TCCManager from "@/components/professor/TCCManager";
 
 export default function ProfessorPage() {
   const { user, profile } = useAuth();
@@ -53,6 +54,9 @@ export default function ProfessorPage() {
           <TabsTrigger value="extra-materials" className="text-xs sm:text-sm">
             Materiais Extras
           </TabsTrigger>
+          <TabsTrigger value="tcc" className="text-xs sm:text-sm">
+            TCC
+          </TabsTrigger>
           <TabsTrigger value="import" className="text-xs sm:text-sm">
             Importar Dados
           </TabsTrigger>
@@ -89,6 +93,9 @@ export default function ProfessorPage() {
         )}
         <TabsContent value="extra-materials">
           <ExtraMaterialsManager userId={user!.id} />
+        </TabsContent>
+        <TabsContent value="tcc">
+          <TCCManager userId={user!.id} />
         </TabsContent>
         <TabsContent value="import">
           <ImportDataManager userId={user!.id} />
