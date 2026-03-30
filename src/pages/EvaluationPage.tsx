@@ -60,7 +60,7 @@ export default function EvaluationPage() {
       return;
     }
 
-    // Check if near end of course (30 days before end_date)
+    // Check if near end of course (7 days before end_date)
     const endDate = new Date(selectedCohort.end_date);
     const now = new Date();
     const daysUntilEnd = (endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
@@ -123,7 +123,7 @@ export default function EvaluationPage() {
           <Lock className="w-12 h-12 text-muted-foreground mx-auto" />
           <h1 className="text-2xl font-heading font-bold text-foreground">Avaliação do Curso</h1>
           <p className="text-muted-foreground">
-            A avaliação do curso estará disponível nos últimos 30 dias antes do encerramento da sua turma.
+            A avaliação do curso estará disponível nos últimos 7 dias antes do encerramento da sua turma.
           </p>
         </div>
       </div>
