@@ -296,14 +296,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
     }
   };
 
-  const formatDate = (d: string | null) => {
-    if (!d) return "—";
-
-    // Remove o 'Z' (se houver) para evitar que o JS converta para o fuso local
-    const localDate = d.endsWith("Z") ? d.slice(0, -1) : d;
-
-    return new Date(localDate).toLocaleString("pt-BR");
-  };
+  const formatDate = (d: string | null) => (d ? new Date(d).toLocaleString("pt-BR") : "—");
   const typeLabel = (t: string) => {
     const map: Record<string, string> = {
       objetiva: "Objetiva",
