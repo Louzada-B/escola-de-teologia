@@ -9,9 +9,11 @@ import AttendanceSettingsManager from "@/components/professor/AttendanceSettings
 import CohortsManager from "@/components/professor/CohortsManager";
 import ImportDataManager from "@/components/professor/ImportDataManager";
 import TestimonialsManager from "@/components/professor/TestimonialsManager";
+import EvaluationsManager from "@/components/professor/EvaluationsManager";
 
 export default function ProfessorPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const isAdmin = profile?.role === "admin";
 
   return (
     <div className="page-container">
