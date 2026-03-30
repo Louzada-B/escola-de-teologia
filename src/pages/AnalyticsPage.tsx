@@ -15,11 +15,11 @@ import { ptBR } from 'date-fns/locale';
 import { useCohort } from '@/contexts/CohortContext';
 
 export default function AnalyticsPage() {
-  const { selectedCohortId, selectedCohortStudentIds, selectedCohort, effectiveCutoffDate } = useCohort();
+  const { selectedCohortId, selectedCohortStudentIds, selectedCohort, effectiveCutoffDate, isLoading: cohortLoading } = useCohort();
   const cohortStart = selectedCohort?.start_date;
   const cohortEnd = selectedCohort?.end_date;
 
-  const { data: allStudents = [] } = useQuery({
+  const { data: allStudents = [], isLoading: studentsLoading } = useQuery({
     queryKey: ['analytics-students'],
     queryFn: async () => {
       const { data } = await supabase.from('profiles').select('*').eq('role', 'aluno');
@@ -32,7 +32,7 @@ export default function AnalyticsPage() {
     return allStudents.filter(s => selectedCohortStudentIds.includes(s.id));
   }, [allStudents, selectedCohortId, selectedCohortStudentIds]);
 
-  const { data: lessons = [] } = useQuery({
+  const { data: lessons = [], isLoading: lessonsLoading } = useQuery({
     queryKey: ['analytics-lessons'],
     queryFn: async () => {
       const { data } = await supabase.from('lessons').select('*');
@@ -40,7 +40,7 @@ export default function AnalyticsPage() {
     },
   });
 
-  const { data: allAttendanceRecords = [] } = useQuery({
+  const { data: allAttendanceRecords = [], isLoading: attendanceLoading } = useQuery({
     queryKey: ['analytics-attendance'],
     queryFn: async () => {
       const { data } = await supabase.from('attendance_records').select('*');
@@ -193,6 +193,17 @@ export default function AnalyticsPage() {
   }, [students, filteredQuizResponses]);
 
   const progressPct = totalLessons ? Math.round((totalPastLessons / totalLessons) * 100) : 0;
+
+  const isDataLoading = cohortLoading || studentsLoading || lessonsLoading || attendanceLoading;
+
+  if (isDataLoading) {
+    return (
+      <div className="p-4 md:p-8 max-w-7xl mx-auto">
+        <h1 className="text-2xl font-heading font-bold text-foreground mb-6">Análises</h1>
+        <p className="text-muted-foreground">Carregando dados...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-8 space-y-8 max-w-7xl mx-auto">
