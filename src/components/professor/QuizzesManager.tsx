@@ -84,7 +84,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
       quizData = quizData.filter((q: any) => {
         const lessonDate = q.lessons?.scheduled_date;
         if (!lessonDate) return true;
-        return lessonDate >= selectedCohort.start_date && lessonDate <= effectiveCutoffDate;
+        return lessonDate >= selectedCohort.start_date && lessonDate <= selectedCohort.end_date;
       });
     }
     setQuizzes(quizData);
@@ -136,13 +136,21 @@ export default function QuizzesManager({ userId }: { userId: string }) {
 
   const pct = (n: number, total: number) => (total === 0 ? "—" : `${Math.round((n / total) * 100)}%`);
 
+  // Convert datetime-local value to ISO string with local timezone offset
+  const toLocalISO = (dtLocal: string) => {
+    if (!dtLocal) return null;
+    const d = new Date(dtLocal);
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString();
+  };
+
   const createQuiz = async () => {
     if (!title.trim()) return;
     const { error } = await supabase.from("quizzes").insert({
       title,
       created_by: userId,
-      available_from: availableFrom || null,
-      available_until: availableUntil || null,
+      available_from: toLocalISO(availableFrom),
+      available_until: toLocalISO(availableUntil),
       lesson_id: lessonId || null,
     });
     if (error) {
@@ -163,8 +171,8 @@ export default function QuizzesManager({ userId }: { userId: string }) {
       .from("quizzes")
       .update({
         title: editTitle,
-        available_from: editFrom || null,
-        available_until: editUntil || null,
+        available_from: toLocalISO(editFrom),
+        available_until: toLocalISO(editUntil),
         lesson_id: editLessonId || null,
       })
       .eq("id", editing.id);
@@ -182,10 +190,19 @@ export default function QuizzesManager({ userId }: { userId: string }) {
     load();
   };
 
+  // Convert ISO/UTC date to datetime-local string in local timezone
+  const toDatetimeLocal = (isoStr: string | null) => {
+    if (!isoStr) return "";
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return "";
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
   const openEdit = (q: any) => {
     setEditTitle(q.title);
-    setEditFrom(q.available_from ? q.available_from.slice(0, 16) : "");
-    setEditUntil(q.available_until ? q.available_until.slice(0, 16) : "");
+    setEditFrom(toDatetimeLocal(q.available_from));
+    setEditUntil(toDatetimeLocal(q.available_until));
     setEditLessonId(q.lesson_id || "");
     setEditing(q);
   };
