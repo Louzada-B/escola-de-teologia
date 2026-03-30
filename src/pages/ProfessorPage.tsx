@@ -8,6 +8,7 @@ import BooksManager from '@/components/professor/BooksManager';
 import AttendanceSettingsManager from '@/components/professor/AttendanceSettingsManager';
 import CohortsManager from '@/components/professor/CohortsManager';
 import ImportDataManager from '@/components/professor/ImportDataManager';
+import TestimonialsManager from '@/components/professor/TestimonialsManager';
 
 export default function ProfessorPage() {
   const { user } = useAuth();
