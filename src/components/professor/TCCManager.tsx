@@ -63,12 +63,33 @@ export default function TCCManager({ userId }: { userId: string }) {
         });
       }
 
-      let query = supabase.from("tcc_submissions").select("*, profiles!tcc_submissions_user_id_fkey(full_name, email), cohorts!tcc_submissions_cohort_id_fkey(name)");
+      let query = supabase.from("tcc_submissions").select("*");
       if (selectedCohort) query = query.eq("cohort_id", selectedCohort.id);
       const { data: subs } = await query.order("created_at", { ascending: false });
-      setSubmissions((subs as any[]) || []);
+      
+      // Fetch profiles and cohorts separately
+      const userIds = [...new Set((subs || []).map((s: any) => s.user_id))];
+      const cohortIds = [...new Set((subs || []).map((s: any) => s.cohort_id))];
+      
+      const { data: profiles } = userIds.length > 0 
+        ? await supabase.from("profiles").select("id, full_name, email").in("id", userIds)
+        : { data: [] };
+      const { data: cohorts } = cohortIds.length > 0
+        ? await supabase.from("cohorts").select("id, name").in("id", cohortIds)
+        : { data: [] };
+      
+      const profileMap = Object.fromEntries((profiles || []).map(p => [p.id, p]));
+      const cohortMap = Object.fromEntries((cohorts || []).map(c => [c.id, c]));
+      
+      const enriched = (subs || []).map((s: any) => ({
+        ...s,
+        profiles: profileMap[s.user_id] || null,
+        cohorts: cohortMap[s.cohort_id] || null,
+      }));
+      
+      setSubmissions(enriched);
       const fbMap: Record<string, string> = {};
-      (subs || []).forEach((s: any) => { fbMap[s.id] = s.feedback || ""; });
+      enriched.forEach((s: any) => { fbMap[s.id] = s.feedback || ""; });
       setFeedbackMap(fbMap);
     } finally {
       setLoading(false);
