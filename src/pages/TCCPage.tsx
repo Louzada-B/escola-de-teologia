@@ -146,11 +146,11 @@ export default function TCCPage() {
   if (loading) return <div className="page-container"><p className="text-muted-foreground">Carregando...</p></div>;
 
   return (
-    <div className="page-container space-y-6">
-      <h1 className="section-title">Trabalho de Conclusão de Curso (TCC)</h1>
+    <div className="page-container space-y-4 sm:space-y-6 px-3 sm:px-6">
+      <h1 className="section-title text-xl sm:text-2xl">Trabalho de Conclusão de Curso (TCC)</h1>
 
       {/* Instructions & Template */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -194,7 +194,7 @@ export default function TCCPage() {
       {settings && (acceptFrom || deadline) && (
         <Card>
           <CardContent className="pt-6">
-            <div className="flex flex-wrap gap-6 text-sm">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-6 text-sm">
               {acceptFrom && (
                 <div>
                   <span className="text-muted-foreground">Aceita a partir de: </span>
@@ -230,12 +230,12 @@ export default function TCCPage() {
         <CardContent className="space-y-4">
           {submission && (
             <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{submission.file_name}</span>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span className="text-sm font-medium truncate">{submission.file_name}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   {statusBadge(submission.status)}
                   <Button size="sm" variant="ghost" onClick={downloadMyTcc}>
                     <Download className="w-4 h-4" />
@@ -261,7 +261,7 @@ export default function TCCPage() {
                 accept="application/pdf"
                 onChange={handleUpload}
                 disabled={uploading}
-                className="max-w-md"
+                className="max-w-full sm:max-w-md"
               />
               {uploading && <p className="text-sm text-muted-foreground mt-2">Enviando...</p>}
               {submission && (

@@ -7,7 +7,8 @@ import { LogOut, ShieldX } from "lucide-react";
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { session, loading, profile, hasActiveCohort, signOut } = useAuth();
 
-  if (loading) {
+  // Still loading auth OR student cohort check not finished yet
+  if (loading || (session && profile?.role === "aluno" && hasActiveCohort === null)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-muted-foreground font-body">Carregando...</div>
@@ -17,8 +18,8 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   if (!session) return <Navigate to="/auth" replace />;
 
-  // Block students without active cohort (block if not explicitly true)
-  if (profile?.role === "aluno" && hasActiveCohort !== true) {
+  // Block students without active cohort
+  if (profile?.role === "aluno" && hasActiveCohort === false) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="max-w-md w-full text-center space-y-6">
