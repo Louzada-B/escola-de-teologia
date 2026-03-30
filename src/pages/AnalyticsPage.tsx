@@ -27,18 +27,12 @@ export default function AnalyticsPage() {
     },
   });
 
-  const { isLoading: lessonsLoading } = useQuery({
-    queryKey: ['analytics-lessons-loading-check'],
-    queryFn: async () => null,
-    enabled: false,
-  });
-
   const students = useMemo(() => {
     if (!selectedCohortId) return allStudents;
     return allStudents.filter(s => selectedCohortStudentIds.includes(s.id));
   }, [allStudents, selectedCohortId, selectedCohortStudentIds]);
 
-  const { data: lessons = [] } = useQuery({
+  const { data: lessons = [], isLoading: lessonsLoading } = useQuery({
     queryKey: ['analytics-lessons'],
     queryFn: async () => {
       const { data } = await supabase.from('lessons').select('*');
@@ -46,7 +40,7 @@ export default function AnalyticsPage() {
     },
   });
 
-  const { data: allAttendanceRecords = [] } = useQuery({
+  const { data: allAttendanceRecords = [], isLoading: attendanceLoading } = useQuery({
     queryKey: ['analytics-attendance'],
     queryFn: async () => {
       const { data } = await supabase.from('attendance_records').select('*');
