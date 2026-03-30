@@ -155,19 +155,29 @@ export default function AnalyticsPage() {
     [lessonAttendance]
   );
 
+  const pastAulas = useMemo(() => pastLessons.filter(l => l.event_type !== 'aula_especial'), [pastLessons]);
+  const pastEspeciais = useMemo(() => pastLessons.filter(l => l.event_type === 'aula_especial'), [pastLessons]);
+
   const atRiskStudents = useMemo(() => {
     return students
       .map((s) => {
-        const presencas = pastLessons.filter((l) =>
+        const presAula = pastAulas.filter((l) =>
           attendanceRecords.some((a) => a.lesson_id === l.id && a.user_id === s.id)
         ).length;
-        const faltas = pastLessons.length - presencas;
-        const pct = pastLessons.length ? Math.round((presencas / pastLessons.length) * 100) : 0;
-        return { name: s.full_name || s.email, pct, faltas };
+        const presEsp = pastEspeciais.filter((l) =>
+          attendanceRecords.some((a) => a.lesson_id === l.id && a.user_id === s.id)
+        ).length;
+        const pctAula = pastAulas.length ? Math.round((presAula / pastAulas.length) * 100) : 100;
+        const pctEsp = pastEspeciais.length ? Math.round((presEsp / pastEspeciais.length) * 100) : 100;
+        const faltasAula = pastAulas.length - presAula;
+        const faltasEsp = pastEspeciais.length - presEsp;
+        const riscoAula = pctAula < 75;
+        const riscoEsp = pctEsp < 20;
+        return { name: s.full_name || s.email, pctAula, pctEsp, faltasAula, faltasEsp, riscoAula, riscoEsp };
       })
-      .filter((s) => s.pct < 75)
-      .sort((a, b) => a.pct - b.pct);
-  }, [students, pastLessons, attendanceRecords]);
+      .filter((s) => s.riscoAula || s.riscoEsp)
+      .sort((a, b) => a.pctAula - b.pctAula);
+  }, [students, pastAulas, pastEspeciais, attendanceRecords]);
 
   const zeroAttendanceStudents = useMemo(() => {
     const pastLessonIds = new Set(pastLessons.map(l => l.id));
