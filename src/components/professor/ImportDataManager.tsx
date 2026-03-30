@@ -273,7 +273,7 @@ export default function ImportDataManager({ userId }: { userId: string }) {
           record = { ...pr.data };
         }
 
-        const { error } = await supabase.from(config.table).insert(record);
+        const { error } = await supabase.from(config.table as any).insert(record as any);
         if (error) throw error;
         successes.push(pr.index);
       } catch (err: any) {
