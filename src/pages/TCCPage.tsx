@@ -194,7 +194,7 @@ export default function TCCPage() {
       {settings && (acceptFrom || deadline) && (
         <Card>
           <CardContent className="pt-6">
-            <div className="flex flex-wrap gap-6 text-sm">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-6 text-sm">
               {acceptFrom && (
                 <div>
                   <span className="text-muted-foreground">Aceita a partir de: </span>
