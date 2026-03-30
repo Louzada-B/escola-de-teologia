@@ -61,6 +61,11 @@ export default function ProfessorPage() {
           <TabsTrigger value="import" className="text-xs sm:text-sm">
             Importar Dados
           </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger value="certificates" className="text-xs sm:text-sm">
+              Certificados
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="modules">
