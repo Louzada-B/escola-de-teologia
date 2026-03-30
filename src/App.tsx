@@ -20,6 +20,7 @@ import AttendancePage from "./pages/AttendancePage";
 import ProfilePage from "./pages/ProfilePage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import TestimonialsPage from "./pages/TestimonialsPage";
+import EvaluationPage from "./pages/EvaluationPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
