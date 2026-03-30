@@ -142,6 +142,13 @@ export default function DashboardHome() {
         cohortStart && cohortEnd
           ? allEvents.filter((e) => e.event_date >= cohortStart && e.event_date <= cohortEnd)
           : allEvents;
+      const filteredAnnouncements =
+        cohortStart && cohortEnd
+          ? (aRes.data || []).filter((a) => {
+              const date = a.created_at.split("T")[0];
+              return date >= cohortStart && date <= cohortEnd;
+            })
+          : aRes.data || [];
       const filteredQuizzes =
         cohortStart && cohortEnd
           ? allQuizzes.filter((q) => {
@@ -153,12 +160,12 @@ export default function DashboardHome() {
 
       setStats({
         modules: mRes.data?.length || 0,
-        announcements: aRes.data?.length || 0,
+        announcements: filteredAnnouncements.length || 0,
         events: filteredEvents.length,
         quizzes: filteredQuizzes.length,
       });
 
-      // Today's lessons for attendance alert — filtered by cohort period
+      // Today's lessons for attendance alert
       const { data: todayLessons } = await supabase.from("lessons").select("*").eq("scheduled_date", today);
       const { data: userRecords } = await supabase
         .from("attendance_records")
@@ -167,14 +174,7 @@ export default function DashboardHome() {
 
       if (todayLessons && todayLessons.length > 0) {
         const checkedInIds = new Set(userRecords?.map((r) => r.lesson_id));
-        const pending = todayLessons.find((l) => {
-          if (checkedInIds.has(l.id)) return false;
-          // Only show alert if lesson date is within student's cohort period
-          if (cohortStart && cohortEnd) {
-            if (today < cohortStart || today > cohortEnd) return false;
-          }
-          return true;
-        });
+        const pending = todayLessons.find((l) => !checkedInIds.has(l.id));
         if (pending) setPendingLesson(pending);
       }
 
