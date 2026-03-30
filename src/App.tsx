@@ -22,6 +22,7 @@ import AnalyticsPage from "./pages/AnalyticsPage";
 import TestimonialsPage from "./pages/TestimonialsPage";
 import EvaluationPage from "./pages/EvaluationPage";
 import ExtraMaterialsPage from "./pages/ExtraMaterialsPage";
+import TCCPage from "./pages/TCCPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
