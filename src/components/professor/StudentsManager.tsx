@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { UserPlus, Upload, Download, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 
@@ -314,32 +314,35 @@ export default function StudentsManager() {
             <p className="text-sm text-muted-foreground">Nenhum aluno cadastrado.</p>
           ) : (
             <ScrollArea className="max-h-96">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>E-mail</TableHead>
-                    <TableHead>Turma(s)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {students.map((s) => (
-                    <TableRow key={s.id}>
-                      <TableCell className="text-sm">{s.full_name || "-"}</TableCell>
-                      <TableCell className="text-sm">{s.email}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {getStudentCohorts(s.id).map((name, i) => (
-                            <Badge key={i} variant="outline" className="text-[10px]">
-                              {name}
-                            </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
+              <div className="min-w-[500px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>E-mail</TableHead>
+                      <TableHead>Turma(s)</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {students.map((s) => (
+                      <TableRow key={s.id}>
+                        <TableCell className="text-sm whitespace-nowrap">{s.full_name || "-"}</TableCell>
+                        <TableCell className="text-sm whitespace-nowrap">{s.email}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {getStudentCohorts(s.id).map((name, i) => (
+                              <Badge key={i} variant="outline" className="text-[10px]">
+                                {name}
+                              </Badge>
+                            ))}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <ScrollBar orientation="horizontal" />
             </ScrollArea>
           )}
         </CardContent>
