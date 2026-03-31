@@ -36,8 +36,8 @@ Deno.serve(async (req) => {
       .eq("id", caller.id)
       .single();
 
-    if (!callerProfile || callerProfile.role !== "admin") {
-      return new Response(JSON.stringify({ error: "Apenas administradores podem convidar alunos" }), {
+    if (!callerProfile || (callerProfile.role !== "admin" && callerProfile.role !== "professor")) {
+      return new Response(JSON.stringify({ error: "Apenas administradores e professores podem convidar alunos" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
