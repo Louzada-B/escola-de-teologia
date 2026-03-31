@@ -13,6 +13,7 @@ import EvaluationsManager from "@/components/professor/EvaluationsManager";
 import ExtraMaterialsManager from "@/components/professor/ExtraMaterialsManager";
 import TCCManager from "@/components/professor/TCCManager";
 import CertificatesManager from "@/components/professor/CertificatesManager";
+import StudentsManager from "@/components/professor/StudentsManager";
 
 export default function ProfessorPage() {
   const { user, profile } = useAuth();
@@ -62,6 +63,11 @@ export default function ProfessorPage() {
             Importar Dados
           </TabsTrigger>
           {isAdmin && (
+            <TabsTrigger value="students" className="text-xs sm:text-sm">
+              Alunos
+            </TabsTrigger>
+          )}
+          {isAdmin && (
             <TabsTrigger value="certificates" className="text-xs sm:text-sm">
               Certificados
             </TabsTrigger>
@@ -106,6 +112,11 @@ export default function ProfessorPage() {
         <TabsContent value="import">
           <ImportDataManager userId={user!.id} />
         </TabsContent>
+        {isAdmin && (
+          <TabsContent value="students">
+            <StudentsManager />
+          </TabsContent>
+        )}
         {isAdmin && (
           <TabsContent value="certificates">
             <CertificatesManager />

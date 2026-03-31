@@ -1,0 +1,1 @@
+ALTER TABLE public.cohort_students ADD CONSTRAINT cohort_students_cohort_user_unique UNIQUE (cohort_id, user_id);
