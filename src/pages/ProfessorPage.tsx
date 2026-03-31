@@ -113,6 +113,11 @@ export default function ProfessorPage() {
           <ImportDataManager userId={user!.id} />
         </TabsContent>
         {isAdmin && (
+          <TabsContent value="students">
+            <StudentsManager />
+          </TabsContent>
+        )}
+        {isAdmin && (
           <TabsContent value="certificates">
             <CertificatesManager />
           </TabsContent>
