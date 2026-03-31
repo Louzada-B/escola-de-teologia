@@ -63,6 +63,11 @@ export default function ProfessorPage() {
             Importar Dados
           </TabsTrigger>
           {isAdmin && (
+            <TabsTrigger value="students" className="text-xs sm:text-sm">
+              Alunos
+            </TabsTrigger>
+          )}
+          {isAdmin && (
             <TabsTrigger value="certificates" className="text-xs sm:text-sm">
               Certificados
             </TabsTrigger>
