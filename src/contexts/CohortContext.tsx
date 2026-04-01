@@ -39,7 +39,7 @@ const CohortContext = createContext<CohortContextType>({
 export const useCohort = () => useContext(CohortContext);
 
 export function CohortProvider({ children }: { children: ReactNode }) {
-  const { profile, user } = useAuth();
+  const { profile, user, loading: authLoading } = useAuth();
   const isAdminOrProfessor = profile?.role === 'admin' || profile?.role === 'professor';
   const isStudent = profile?.role === 'aluno';
 
@@ -116,9 +116,9 @@ export function CohortProvider({ children }: { children: ReactNode }) {
   }, [isStudent, studentCohort, selectedCohortId]);
 
   const { data: selectedCohortStudentIds = [], isLoading: studentsLoading } = useQuery({
-    queryKey: ['cohort-students', selectedCohortId],
+    queryKey: ['cohort-students', selectedCohortId, user?.id],
     queryFn: async () => {
-      if (!selectedCohortId) return [];
+      if (!selectedCohortId || !user?.id) return [];
       const { data, error } = await supabase
         .from('cohort_students')
         .select('user_id')
@@ -126,7 +126,7 @@ export function CohortProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       return data.map(d => d.user_id);
     },
-    enabled: !!selectedCohortId,
+    enabled: !!selectedCohortId && !authLoading && !!user?.id,
   });
 
   // Resolve selected cohort object
@@ -154,7 +154,7 @@ export function CohortProvider({ children }: { children: ReactNode }) {
       selectedCohortStudentIds,
       selectedCohort,
       effectiveCutoffDate,
-      isLoading: cohortsLoading || studentsLoading || studentCohortLoading,
+      isLoading: authLoading || cohortsLoading || studentsLoading || studentCohortLoading,
     }}>
       {children}
     </CohortContext.Provider>
