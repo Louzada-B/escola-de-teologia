@@ -90,6 +90,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (nextProfile) {
         await checkCohortAccess(nextSession.user.id, nextProfile.role);
+        // Log portal access (one record per session init)
+        const today = new Date().toISOString().split('T')[0];
+        supabase.from('access_logs').insert({ user_id: nextSession.user.id, access_date: today } as any).then();
       }
 
       if (!isMounted) return;

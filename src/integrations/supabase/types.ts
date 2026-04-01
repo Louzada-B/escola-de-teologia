@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_logs: {
+        Row: {
+          access_date: string
+          accessed_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          access_date?: string
+          accessed_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          access_date?: string
+          accessed_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       announcements: {
         Row: {
           content: string
