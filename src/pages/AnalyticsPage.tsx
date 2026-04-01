@@ -10,6 +10,7 @@ import {
   ResponsiveContainer, Cell, Tooltip,
 } from 'recharts';
 import { Users, BookOpen, UserCheck, ClipboardList, AlertTriangle } from 'lucide-react';
+import AccessChart from '@/components/analytics/AccessChart';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useCohort } from '@/contexts/CohortContext';
