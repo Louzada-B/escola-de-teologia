@@ -41,6 +41,7 @@ export const useCohort = () => useContext(CohortContext);
 
 export function CohortProvider({ children }: { children: ReactNode }) {
   const { profile, user, loading: authLoading } = useAuth();
+  const { selectedCourseId } = useCourse();
   const isAdminOrProfessor = profile?.role === 'admin' || profile?.role === 'professor';
   const isStudent = profile?.role === 'aluno';
 
