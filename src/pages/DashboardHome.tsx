@@ -103,6 +103,7 @@ function DonutChart({
 export default function DashboardHome() {
   const { profile, user } = useAuth();
   const { selectedCohort, effectiveCutoffDate } = useCohort();
+  const { selectedCourseId } = useCourse();
   const navigate = useNavigate();
 
   const [stats, setStats] = useState({ modules: 0, announcements: 0, events: 0, quizzes: 0 });
