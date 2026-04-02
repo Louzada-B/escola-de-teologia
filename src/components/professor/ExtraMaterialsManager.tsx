@@ -142,7 +142,8 @@ export default function ExtraMaterialsManager({ userId }: { userId: string }) {
         external_url: materialType !== "file" ? externalUrl.trim() : null,
         category,
         created_by: userId,
-      });
+        course_id: selectedCourseId,
+      } as any);
 
       if (error) throw error;
 
