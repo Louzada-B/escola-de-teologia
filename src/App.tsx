@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { CourseProvider } from "@/contexts/CourseContext";
 import { CohortProvider } from "@/contexts/CohortContext";
 import { ProtectedRoute, ProfessorRoute, AdminRoute } from "@/components/ProtectedRoute";
 import AppLayout from "@/components/AppLayout";
