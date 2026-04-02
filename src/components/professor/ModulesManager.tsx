@@ -56,13 +56,15 @@ export default function ModulesManager({ userId }: { userId: string }) {
   const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const loadData = async () => {
-    const { data: mods } = await supabase.from('modules').select('*').order('order_index');
+    let modsQuery = supabase.from('modules').select('*').order('order_index');
+    if (selectedCourseId) modsQuery = modsQuery.eq('course_id', selectedCourseId);
+    const { data: mods } = await modsQuery;
     const { data: less } = await supabase.from('lessons').select('*, lesson_files(*)').order('order_index');
     setModules(mods || []);
     setLessons(less || []);
   };
 
-  useEffect(() => { loadData(); }, [selectedCohort, effectiveCutoffDate]);
+  useEffect(() => { loadData(); }, [selectedCohort, effectiveCutoffDate, selectedCourseId]);
 
   // Filter lessons by cohort dates for display
   const filteredLessons = useMemo(() => {
