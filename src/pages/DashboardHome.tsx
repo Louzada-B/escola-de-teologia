@@ -253,7 +253,7 @@ export default function DashboardHome() {
     }
 
     loadDashboardData();
-  }, [user, selectedCohort, effectiveCutoffDate]);
+  }, [user, selectedCohort, effectiveCutoffDate, selectedCourseId]);
 
   const summaryCards = [
     { label: "Módulos", value: stats.modules, icon: BookOpen },
