@@ -76,6 +76,7 @@ const App = () => (
             </Routes>
           </BrowserRouter>
         </CohortProvider>
+        </CourseProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
