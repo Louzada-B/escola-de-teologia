@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCohort } from "@/contexts/CohortContext";
+import { useCourse } from "@/contexts/CourseContext";
 import { isDateWithinCohortPeriod, getLocalToday } from "@/lib/cohortDateUtils";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -102,6 +103,7 @@ function DonutChart({
 export default function DashboardHome() {
   const { profile, user } = useAuth();
   const { selectedCohort, effectiveCutoffDate } = useCohort();
+  const { selectedCourseId } = useCourse();
   const navigate = useNavigate();
 
   const [stats, setStats] = useState({ modules: 0, announcements: 0, events: 0, quizzes: 0 });
@@ -127,11 +129,21 @@ export default function DashboardHome() {
       const today = getLocalToday();
 
       // Fetch all raw data
+      const modQuery = selectedCourseId
+        ? supabase.from("modules").select("id").eq("course_id", selectedCourseId)
+        : supabase.from("modules").select("id");
+      const annQuery = selectedCourseId
+        ? supabase.from("announcements").select("id, created_at").eq("course_id", selectedCourseId)
+        : supabase.from("announcements").select("id, created_at");
+      const evQuery = selectedCourseId
+        ? supabase.from("calendar_events").select("id, event_date").eq("course_id", selectedCourseId)
+        : supabase.from("calendar_events").select("id, event_date");
+      const quizQuery = selectedCourseId
+        ? supabase.from("quizzes").select("id, available_from, available_until").eq("course_id", selectedCourseId)
+        : supabase.from("quizzes").select("id, available_from, available_until");
+
       const [mRes, aRes, eRes, qRes] = await Promise.all([
-        supabase.from("modules").select("id"),
-        supabase.from("announcements").select("id, created_at"),
-        supabase.from("calendar_events").select("id, event_date"),
-        supabase.from("quizzes").select("id, available_from, available_until"),
+        modQuery, annQuery, evQuery, quizQuery,
       ]);
 
       const allEvents = eRes.data || [];
@@ -241,7 +253,7 @@ export default function DashboardHome() {
     }
 
     loadDashboardData();
-  }, [user, selectedCohort, effectiveCutoffDate]);
+  }, [user, selectedCohort, effectiveCutoffDate, selectedCourseId]);
 
   const summaryCards = [
     { label: "Módulos", value: stats.modules, icon: BookOpen },

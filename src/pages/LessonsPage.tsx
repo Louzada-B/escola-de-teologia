@@ -5,6 +5,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Button } from "@/components/ui/button";
 import { Download, Play, FileText } from "lucide-react";
 import { useCohort } from "@/contexts/CohortContext";
+import { useCourse } from "@/contexts/CourseContext";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -17,12 +18,15 @@ export default function LessonsPage() {
   const [modules, setModules] = useState<(Module & { lessons: Lesson[] })[]>([]);
   const [loading, setLoading] = useState(true);
   const { selectedCohort } = useCohort();
+  const { selectedCourseId } = useCourse();
   const { profile } = useAuth();
   const isStudent = profile?.role === 'aluno';
 
   useEffect(() => {
     async function load() {
-      const { data: mods } = await supabase.from("modules").select("*").order("order_index");
+      let modsQuery = supabase.from("modules").select("*").order("order_index");
+      if (selectedCourseId) modsQuery = modsQuery.eq('course_id', selectedCourseId);
+      const { data: mods } = await modsQuery;
 
       const { data: lessons } = await supabase
         .from("lessons")
@@ -53,7 +57,7 @@ export default function LessonsPage() {
       setLoading(false);
     }
     load();
-  }, [selectedCohort, isStudent]);
+  }, [selectedCohort, isStudent, selectedCourseId]);
 
   const getFileUrl = (path: string) => {
     const { data } = supabase.storage.from("course-files").getPublicUrl(path);

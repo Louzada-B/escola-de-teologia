@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useMemo, ReactNode } fr
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCourse } from '@/contexts/CourseContext';
 import { getLocalToday } from '@/lib/cohortDateUtils';
 
 interface Cohort {
@@ -40,6 +41,7 @@ export const useCohort = () => useContext(CohortContext);
 
 export function CohortProvider({ children }: { children: ReactNode }) {
   const { profile, user, loading: authLoading } = useAuth();
+  const { selectedCourseId } = useCourse();
   const isAdminOrProfessor = profile?.role === 'admin' || profile?.role === 'professor';
   const isStudent = profile?.role === 'aluno';
 
@@ -61,13 +63,17 @@ export function CohortProvider({ children }: { children: ReactNode }) {
 
   // Admin/professor: load all cohorts
   const { data: cohorts = [], isLoading: cohortsLoading } = useQuery({
-    queryKey: ['cohorts'],
+    queryKey: ['cohorts', selectedCourseId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('cohorts')
         .select('*')
         .order('year', { ascending: false })
         .order('semester', { ascending: false });
+      if (selectedCourseId) {
+        query = query.eq('course_id', selectedCourseId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data as Cohort[];
     },
@@ -98,15 +104,20 @@ export function CohortProvider({ children }: { children: ReactNode }) {
     enabled: isStudent && !!user?.id,
   });
 
-  // Auto-select for admin/professor
+  // Reset cohort selection when course changes
   useEffect(() => {
-    if (isAdminOrProfessor && cohorts.length > 0 && !selectedCohortId) {
+    if (isAdminOrProfessor) {
+      // When cohorts reload (new course), auto-select active cohort
       const activeCohort = cohorts.find(c => c.is_active);
       if (activeCohort) {
         setSelectedCohortId(activeCohort.id);
+      } else if (cohorts.length > 0) {
+        setSelectedCohortId(cohorts[0].id);
+      } else {
+        setSelectedCohortId(null);
       }
     }
-  }, [cohorts, selectedCohortId, isAdminOrProfessor]);
+  }, [cohorts, isAdminOrProfessor, selectedCourseId]);
 
   // Auto-set for student – always sync to their actual cohort
   useEffect(() => {

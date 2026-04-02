@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useCourse } from '@/contexts/CourseContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +11,7 @@ import { toast } from '@/hooks/use-toast';
 import { Plus, Trash2, Pencil } from 'lucide-react';
 
 export default function BooksManager({ userId }: { userId: string }) {
+  const { selectedCourseId } = useCourse();
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
@@ -24,18 +26,20 @@ export default function BooksManager({ userId }: { userId: string }) {
   const [editDesc, setEditDesc] = useState('');
 
   const load = async () => {
-    const { data } = await supabase.from('book_promotions').select('*').order('created_at', { ascending: false });
+    let query = supabase.from('book_promotions').select('*').order('created_at', { ascending: false });
+    if (selectedCourseId) query = query.eq('course_id', selectedCourseId);
+    const { data } = await query;
     setItems(data || []);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [selectedCourseId]);
 
   const add = async () => {
     if (!title.trim()) return;
     const { error } = await supabase.from('book_promotions').insert({
       title, author, cover_url: coverUrl || null, purchase_url: purchaseUrl || null,
-      description, created_by: userId,
-    });
+      description, created_by: userId, course_id: selectedCourseId,
+    } as any);
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
     setTitle(''); setAuthor(''); setCoverUrl(''); setPurchaseUrl(''); setDescription('');
     load();

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCohort } from '@/contexts/CohortContext';
+import { useCourse } from '@/contexts/CourseContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,7 @@ import { Plus, Trash2, Pencil } from 'lucide-react';
 
 export default function AnnouncementsManager({ userId }: { userId: string }) {
   const { selectedCohort, effectiveCutoffDate } = useCohort();
+  const { selectedCourseId } = useCourse();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [items, setItems] = useState<any[]>([]);
@@ -20,11 +22,13 @@ export default function AnnouncementsManager({ userId }: { userId: string }) {
   const [editContent, setEditContent] = useState('');
 
   const load = async () => {
-    const { data } = await supabase.from('announcements').select('*').order('created_at', { ascending: false });
+    let query = supabase.from('announcements').select('*').order('created_at', { ascending: false });
+    if (selectedCourseId) query = query.eq('course_id', selectedCourseId);
+    const { data } = await query;
     setItems(data || []);
   };
 
-  useEffect(() => { load(); }, [selectedCohort, effectiveCutoffDate]);
+  useEffect(() => { load(); }, [selectedCohort, effectiveCutoffDate, selectedCourseId]);
 
   const filteredItems = useMemo(() => {
     if (!selectedCohort) return items;
@@ -37,7 +41,7 @@ export default function AnnouncementsManager({ userId }: { userId: string }) {
 
   const add = async () => {
     if (!title.trim() || !content.trim()) return;
-    const { error } = await supabase.from('announcements').insert({ title, content, created_by: userId });
+    const { error } = await supabase.from('announcements').insert({ title, content, created_by: userId, course_id: selectedCourseId } as any);
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
     setTitle(''); setContent('');
     load();

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCohort } from '@/contexts/CohortContext';
+import { useCourse } from '@/contexts/CourseContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +22,7 @@ const EVENT_TYPES = [
 
 export default function ModulesManager({ userId }: { userId: string }) {
   const { selectedCohort, effectiveCutoffDate } = useCohort();
+  const { selectedCourseId } = useCourse();
   const [modules, setModules] = useState<any[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -54,13 +56,15 @@ export default function ModulesManager({ userId }: { userId: string }) {
   const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const loadData = async () => {
-    const { data: mods } = await supabase.from('modules').select('*').order('order_index');
+    let modsQuery = supabase.from('modules').select('*').order('order_index');
+    if (selectedCourseId) modsQuery = modsQuery.eq('course_id', selectedCourseId);
+    const { data: mods } = await modsQuery;
     const { data: less } = await supabase.from('lessons').select('*, lesson_files(*)').order('order_index');
     setModules(mods || []);
     setLessons(less || []);
   };
 
-  useEffect(() => { loadData(); }, [selectedCohort, effectiveCutoffDate]);
+  useEffect(() => { loadData(); }, [selectedCohort, effectiveCutoffDate, selectedCourseId]);
 
   // Filter lessons by cohort dates for display
   const filteredLessons = useMemo(() => {
@@ -74,8 +78,8 @@ export default function ModulesManager({ userId }: { userId: string }) {
   const addModule = async () => {
     if (!title.trim()) return;
     const { error } = await supabase.from('modules').insert({
-      title, description, created_by: userId, order_index: modules.length,
-    });
+      title, description, created_by: userId, order_index: modules.length, course_id: selectedCourseId,
+    } as any);
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
     setTitle(''); setDescription('');
     loadData();

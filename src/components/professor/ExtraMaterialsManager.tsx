@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCourse } from "@/contexts/CourseContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,6 +55,7 @@ function sanitizeFileName(name: string): string {
 }
 
 export default function ExtraMaterialsManager({ userId }: { userId: string }) {
+  const { selectedCourseId } = useCourse();
   const [materials, setMaterials] = useState<ExtraMaterial[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -70,13 +72,12 @@ export default function ExtraMaterialsManager({ userId }: { userId: string }) {
 
   useEffect(() => {
     fetchMaterials();
-  }, []);
+  }, [selectedCourseId]);
 
   const fetchMaterials = async () => {
-    const { data } = await supabase
-      .from("extra_materials")
-      .select("*")
-      .order("created_at", { ascending: false });
+    let query = supabase.from("extra_materials").select("*").order("created_at", { ascending: false });
+    if (selectedCourseId) query = query.eq('course_id', selectedCourseId);
+    const { data } = await query;
     setMaterials(data || []);
     setLoading(false);
   };
@@ -141,7 +142,8 @@ export default function ExtraMaterialsManager({ userId }: { userId: string }) {
         external_url: materialType !== "file" ? externalUrl.trim() : null,
         category,
         created_by: userId,
-      });
+        course_id: selectedCourseId,
+      } as any);
 
       if (error) throw error;
 

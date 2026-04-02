@@ -1,21 +1,21 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCohort } from '@/contexts/CohortContext';
+import { useCourse } from '@/contexts/CourseContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export default function AnnouncementsPage() {
   const { selectedCohort } = useCohort();
+  const { selectedCourseId } = useCourse();
   const [announcements, setAnnouncements] = useState<any[]>([]);
 
   useEffect(() => {
-    supabase
-      .from('announcements')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .then(({ data }) => setAnnouncements(data || []));
-  }, []);
+    let query = supabase.from('announcements').select('*').order('created_at', { ascending: false });
+    if (selectedCourseId) query = query.eq('course_id', selectedCourseId);
+    query.then(({ data }) => setAnnouncements(data || []));
+  }, [selectedCourseId]);
 
   const filtered = useMemo(() => {
     if (!selectedCohort) return announcements;
