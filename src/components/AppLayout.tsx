@@ -37,6 +37,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isStudent = profile?.role === "aluno";
 
   const { selectedCohort } = useCohort();
+  const { selectedCourse } = useCourse();
   const studentCohortName = isStudent && selectedCohort ? selectedCohort.name : null;
 
   const navItems = [
