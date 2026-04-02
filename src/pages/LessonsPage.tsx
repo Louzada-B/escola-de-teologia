@@ -24,7 +24,9 @@ export default function LessonsPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: mods } = await supabase.from("modules").select("*").order("order_index");
+      let modsQuery = supabase.from("modules").select("*").order("order_index");
+      if (selectedCourseId) modsQuery = modsQuery.eq('course_id', selectedCourseId);
+      const { data: mods } = await modsQuery;
 
       const { data: lessons } = await supabase
         .from("lessons")
