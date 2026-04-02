@@ -78,8 +78,8 @@ export default function ModulesManager({ userId }: { userId: string }) {
   const addModule = async () => {
     if (!title.trim()) return;
     const { error } = await supabase.from('modules').insert({
-      title, description, created_by: userId, order_index: modules.length,
-    });
+      title, description, created_by: userId, order_index: modules.length, course_id: selectedCourseId,
+    } as any);
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
     setTitle(''); setDescription('');
     loadData();
