@@ -22,11 +22,13 @@ export default function AnnouncementsManager({ userId }: { userId: string }) {
   const [editContent, setEditContent] = useState('');
 
   const load = async () => {
-    const { data } = await supabase.from('announcements').select('*').order('created_at', { ascending: false });
+    let query = supabase.from('announcements').select('*').order('created_at', { ascending: false });
+    if (selectedCourseId) query = query.eq('course_id', selectedCourseId);
+    const { data } = await query;
     setItems(data || []);
   };
 
-  useEffect(() => { load(); }, [selectedCohort, effectiveCutoffDate]);
+  useEffect(() => { load(); }, [selectedCohort, effectiveCutoffDate, selectedCourseId]);
 
   const filteredItems = useMemo(() => {
     if (!selectedCohort) return items;
