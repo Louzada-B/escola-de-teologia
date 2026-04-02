@@ -87,7 +87,7 @@ export default function CohortsManager({ userId }: { userId: string }) {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cohorts"] });
+      queryClient.invalidateQueries({ queryKey: ["manage-cohorts"] });
       toast.success("Turma criada com sucesso");
       setShowForm(false);
       setForm({ name: "", year: new Date().getFullYear(), semester: 1, start_date: "", end_date: "" });
