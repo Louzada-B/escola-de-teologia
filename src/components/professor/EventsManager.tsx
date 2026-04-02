@@ -13,6 +13,7 @@ import { Plus, Trash2, Pencil } from 'lucide-react';
 
 export default function EventsManager({ userId }: { userId: string }) {
   const { selectedCohort, effectiveCutoffDate } = useCohort();
+  const { selectedCourseId } = useCourse();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [eventDate, setEventDate] = useState('');
