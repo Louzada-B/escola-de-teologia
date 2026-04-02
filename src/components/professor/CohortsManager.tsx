@@ -38,13 +38,15 @@ export default function CohortsManager({ userId }: { userId: string }) {
   });
 
   const { data: cohorts = [], isLoading } = useQuery({
-    queryKey: ["cohorts"],
+    queryKey: ["manage-cohorts", selectedCourseId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("cohorts")
         .select("*")
         .order("year", { ascending: false })
         .order("semester", { ascending: false });
+      if (selectedCourseId) query = query.eq('course_id', selectedCourseId);
+      const { data, error } = await query;
       if (error) throw error;
       return data as Cohort[];
     },
