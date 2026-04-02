@@ -55,6 +55,7 @@ function sanitizeFileName(name: string): string {
 }
 
 export default function ExtraMaterialsManager({ userId }: { userId: string }) {
+  const { selectedCourseId } = useCourse();
   const [materials, setMaterials] = useState<ExtraMaterial[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
