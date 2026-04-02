@@ -26,11 +26,13 @@ export default function BooksManager({ userId }: { userId: string }) {
   const [editDesc, setEditDesc] = useState('');
 
   const load = async () => {
-    const { data } = await supabase.from('book_promotions').select('*').order('created_at', { ascending: false });
+    let query = supabase.from('book_promotions').select('*').order('created_at', { ascending: false });
+    if (selectedCourseId) query = query.eq('course_id', selectedCourseId);
+    const { data } = await query;
     setItems(data || []);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [selectedCourseId]);
 
   const add = async () => {
     if (!title.trim()) return;
