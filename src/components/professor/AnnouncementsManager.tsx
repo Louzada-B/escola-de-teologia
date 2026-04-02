@@ -13,6 +13,7 @@ import { Plus, Trash2, Pencil } from 'lucide-react';
 
 export default function AnnouncementsManager({ userId }: { userId: string }) {
   const { selectedCohort, effectiveCutoffDate } = useCohort();
+  const { selectedCourseId } = useCourse();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [items, setItems] = useState<any[]>([]);
