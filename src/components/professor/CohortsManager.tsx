@@ -24,6 +24,7 @@ interface Cohort {
 }
 
 export default function CohortsManager({ userId }: { userId: string }) {
+  const { selectedCourseId } = useCourse();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [expandedCohort, setExpandedCohort] = useState<string | null>(null);
