@@ -63,13 +63,17 @@ export function CohortProvider({ children }: { children: ReactNode }) {
 
   // Admin/professor: load all cohorts
   const { data: cohorts = [], isLoading: cohortsLoading } = useQuery({
-    queryKey: ['cohorts'],
+    queryKey: ['cohorts', selectedCourseId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('cohorts')
         .select('*')
         .order('year', { ascending: false })
         .order('semester', { ascending: false });
+      if (selectedCourseId) {
+        query = query.eq('course_id', selectedCourseId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data as Cohort[];
     },
