@@ -84,7 +84,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <BookOpen className="w-5 h-5 text-sidebar-primary-foreground" />
             </div>
             <div>
-              <h1 className="font-heading font-semibold text-sm">Escola de Teologia</h1>
+              <h1 className="font-heading font-semibold text-sm">{selectedCourse?.name || 'Portal Acadêmico'}</h1>
               <p className="text-xs text-sidebar-foreground/60 capitalize">{profile?.role || "aluno"}</p>
             </div>
           </div>
