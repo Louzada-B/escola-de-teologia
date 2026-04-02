@@ -57,7 +57,7 @@ export default function LessonsPage() {
       setLoading(false);
     }
     load();
-  }, [selectedCohort, isStudent]);
+  }, [selectedCohort, isStudent, selectedCourseId]);
 
   const getFileUrl = (path: string) => {
     const { data } = supabase.storage.from("course-files").getPublicUrl(path);
