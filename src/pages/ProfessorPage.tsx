@@ -19,7 +19,16 @@ import { useCourse } from "@/contexts/CourseContext";
 
 export default function ProfessorPage() {
   const { user, profile } = useAuth();
+  const { selectedCourseId } = useCourse();
   const isAdmin = profile?.role === "admin";
+
+  if (!selectedCourseId && !isAdmin) {
+    return (
+      <div className="page-container">
+        <p className="text-muted-foreground">Selecione um curso para gerenciar.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="page-container">
