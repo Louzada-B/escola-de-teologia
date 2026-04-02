@@ -14,6 +14,8 @@ import ExtraMaterialsManager from "@/components/professor/ExtraMaterialsManager"
 import TCCManager from "@/components/professor/TCCManager";
 import CertificatesManager from "@/components/professor/CertificatesManager";
 import StudentsManager from "@/components/professor/StudentsManager";
+import CoursesManager from "@/components/professor/CoursesManager";
+import { useCourse } from "@/contexts/CourseContext";
 
 export default function ProfessorPage() {
   const { user, profile } = useAuth();
