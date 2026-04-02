@@ -82,7 +82,8 @@ export default function CohortsManager({ userId }: { userId: string }) {
         semester: form.semester,
         start_date: form.start_date,
         end_date: form.end_date,
-      });
+        course_id: selectedCourseId,
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
