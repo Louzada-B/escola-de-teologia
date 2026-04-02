@@ -41,7 +41,7 @@ export default function AnnouncementsManager({ userId }: { userId: string }) {
 
   const add = async () => {
     if (!title.trim() || !content.trim()) return;
-    const { error } = await supabase.from('announcements').insert({ title, content, created_by: userId });
+    const { error } = await supabase.from('announcements').insert({ title, content, created_by: userId, course_id: selectedCourseId } as any);
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
     setTitle(''); setContent('');
     load();
