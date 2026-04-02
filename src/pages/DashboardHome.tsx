@@ -129,11 +129,21 @@ export default function DashboardHome() {
       const today = getLocalToday();
 
       // Fetch all raw data
+      const modQuery = selectedCourseId
+        ? supabase.from("modules").select("id").eq("course_id", selectedCourseId)
+        : supabase.from("modules").select("id");
+      const annQuery = selectedCourseId
+        ? supabase.from("announcements").select("id, created_at").eq("course_id", selectedCourseId)
+        : supabase.from("announcements").select("id, created_at");
+      const evQuery = selectedCourseId
+        ? supabase.from("calendar_events").select("id, event_date").eq("course_id", selectedCourseId)
+        : supabase.from("calendar_events").select("id, event_date");
+      const quizQuery = selectedCourseId
+        ? supabase.from("quizzes").select("id, available_from, available_until").eq("course_id", selectedCourseId)
+        : supabase.from("quizzes").select("id, available_from, available_until");
+
       const [mRes, aRes, eRes, qRes] = await Promise.all([
-        supabase.from("modules").select("id"),
-        supabase.from("announcements").select("id, created_at"),
-        supabase.from("calendar_events").select("id, event_date"),
-        supabase.from("quizzes").select("id, available_from, available_until"),
+        modQuery, annQuery, evQuery, quizQuery,
       ]);
 
       const allEvents = eRes.data || [];
