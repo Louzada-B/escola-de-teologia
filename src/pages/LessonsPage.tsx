@@ -5,6 +5,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Button } from "@/components/ui/button";
 import { Download, Play, FileText } from "lucide-react";
 import { useCohort } from "@/contexts/CohortContext";
+import { useCourse } from "@/contexts/CourseContext";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Database } from "@/integrations/supabase/types";
 
