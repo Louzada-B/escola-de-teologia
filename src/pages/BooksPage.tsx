@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useCourse } from '@/contexts/CourseContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ExternalLink, BookMarked } from 'lucide-react';
 
 export default function BooksPage() {
+  const { selectedCourseId } = useCourse();
   const [books, setBooks] = useState<any[]>([]);
 
   useEffect(() => {
-    supabase
-      .from('book_promotions')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .then(({ data }) => setBooks(data || []));
-  }, []);
+    let query = supabase.from('book_promotions').select('*').order('created_at', { ascending: false });
+    if (selectedCourseId) query = query.eq('course_id', selectedCourseId);
+    query.then(({ data }) => setBooks(data || []));
+  }, [selectedCourseId]);
 
   return (
     <div className="page-container">

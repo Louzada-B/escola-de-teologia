@@ -53,6 +53,7 @@ function formatFileSize(bytes: number | null) {
 }
 
 export default function ExtraMaterialsPage() {
+  const { selectedCourseId } = useCourse();
   const [materials, setMaterials] = useState<ExtraMaterial[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -60,13 +61,12 @@ export default function ExtraMaterialsPage() {
 
   useEffect(() => {
     fetchMaterials();
-  }, []);
+  }, [selectedCourseId]);
 
   const fetchMaterials = async () => {
-    const { data } = await supabase
-      .from("extra_materials")
-      .select("*")
-      .order("created_at", { ascending: false });
+    let query = supabase.from("extra_materials").select("*").order("created_at", { ascending: false });
+    if (selectedCourseId) query = query.eq('course_id', selectedCourseId);
+    const { data } = await query;
     setMaterials(data || []);
     setLoading(false);
   };
