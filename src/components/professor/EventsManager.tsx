@@ -45,8 +45,8 @@ export default function EventsManager({ userId }: { userId: string }) {
   const add = async () => {
     if (!title.trim() || !eventDate) return;
     const { error } = await supabase.from('calendar_events').insert({
-      title, description, event_date: eventDate, event_type: eventType, created_by: userId,
-    });
+      title, description, event_date: eventDate, event_type: eventType, created_by: userId, course_id: selectedCourseId,
+    } as any);
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
     setTitle(''); setDescription(''); setEventDate(''); setEventType('aula');
     load();
