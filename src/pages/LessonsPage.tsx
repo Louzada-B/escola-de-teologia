@@ -18,6 +18,7 @@ export default function LessonsPage() {
   const [modules, setModules] = useState<(Module & { lessons: Lesson[] })[]>([]);
   const [loading, setLoading] = useState(true);
   const { selectedCohort } = useCohort();
+  const { selectedCourseId } = useCourse();
   const { profile } = useAuth();
   const isStudent = profile?.role === 'aluno';
 
