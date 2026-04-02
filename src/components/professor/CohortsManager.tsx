@@ -100,7 +100,7 @@ export default function CohortsManager({ userId }: { userId: string }) {
       const { error } = await supabase.from("cohorts").update({ is_active }).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cohorts"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["manage-cohorts"] }),
     onError: (e: any) => toast.error("Erro: " + e.message),
   });
 
