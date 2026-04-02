@@ -22,6 +22,7 @@ const EVENT_TYPES = [
 
 export default function ModulesManager({ userId }: { userId: string }) {
   const { selectedCohort, effectiveCutoffDate } = useCohort();
+  const { selectedCourseId } = useCourse();
   const [modules, setModules] = useState<any[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
