@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCohort } from "@/contexts/CohortContext";
-import { useCourse } from "@/contexts/CourseContext";
 import { isDateWithinCohortFullPeriod } from "@/lib/cohortDateUtils";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,15 +23,16 @@ const typeConfig: Record<string, { label: string; className: string }> = {
 
 export default function CalendarPage() {
   const { selectedCohort } = useCohort();
-  const { selectedCourseId } = useCourse();
   const [allEvents, setAllEvents] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
 
   useEffect(() => {
-    let query = supabase.from("calendar_events").select("*").order("event_date");
-    if (selectedCourseId) query = query.eq('course_id', selectedCourseId);
-    query.then(({ data }) => setAllEvents(data || []));
-  }, [selectedCourseId]);
+    supabase
+      .from("calendar_events")
+      .select("*")
+      .order("event_date")
+      .then(({ data }) => setAllEvents(data || []));
+  }, []);
 
   const events = selectedCohort
     ? allEvents.filter(e => isDateWithinCohortFullPeriod(e.event_date, selectedCohort.start_date, selectedCohort.end_date))

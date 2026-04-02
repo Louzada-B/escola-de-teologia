@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useCourse } from "@/contexts/CourseContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +23,6 @@ interface Cohort {
 }
 
 export default function CohortsManager({ userId }: { userId: string }) {
-  const { selectedCourseId } = useCourse();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [expandedCohort, setExpandedCohort] = useState<string | null>(null);
@@ -38,15 +36,13 @@ export default function CohortsManager({ userId }: { userId: string }) {
   });
 
   const { data: cohorts = [], isLoading } = useQuery({
-    queryKey: ["manage-cohorts", selectedCourseId],
+    queryKey: ["cohorts"],
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from("cohorts")
         .select("*")
         .order("year", { ascending: false })
         .order("semester", { ascending: false });
-      if (selectedCourseId) query = query.eq('course_id', selectedCourseId);
-      const { data, error } = await query;
       if (error) throw error;
       return data as Cohort[];
     },
@@ -82,12 +78,11 @@ export default function CohortsManager({ userId }: { userId: string }) {
         semester: form.semester,
         start_date: form.start_date,
         end_date: form.end_date,
-        course_id: selectedCourseId,
-      } as any);
+      });
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["manage-cohorts"] });
+      queryClient.invalidateQueries({ queryKey: ["cohorts"] });
       toast.success("Turma criada com sucesso");
       setShowForm(false);
       setForm({ name: "", year: new Date().getFullYear(), semester: 1, start_date: "", end_date: "" });
@@ -100,7 +95,7 @@ export default function CohortsManager({ userId }: { userId: string }) {
       const { error } = await supabase.from("cohorts").update({ is_active }).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["manage-cohorts"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cohorts"] }),
     onError: (e: any) => toast.error("Erro: " + e.message),
   });
 
@@ -110,7 +105,7 @@ export default function CohortsManager({ userId }: { userId: string }) {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["manage-cohorts"] });
+      queryClient.invalidateQueries({ queryKey: ["cohorts"] });
       toast.success("Turma removida");
     },
     onError: (e: any) => toast.error("Erro: " + e.message),

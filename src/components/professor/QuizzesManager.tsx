@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCohort } from "@/contexts/CohortContext";
-import { useCourse } from "@/contexts/CourseContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,7 +40,6 @@ function defaultQuestionState() {
 
 export default function QuizzesManager({ userId }: { userId: string }) {
   const { selectedCohort, selectedCohortId, selectedCohortStudentIds, effectiveCutoffDate } = useCohort();
-  const { selectedCourseId } = useCourse();
   const [title, setTitle] = useState("");
   const [availableFrom, setAvailableFrom] = useState("");
   const [availableUntil, setAvailableUntil] = useState("");
@@ -154,8 +152,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
       available_from: toLocalISO(availableFrom),
       available_until: toLocalISO(availableUntil),
       lesson_id: lessonId || null,
-      course_id: selectedCourseId,
-    } as any);
+    });
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
       return;

@@ -24,9 +24,7 @@ import {
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import CohortSelector from "@/components/CohortSelector";
-import CourseSelector from "@/components/CourseSelector";
 import { useCohort } from "@/contexts/CohortContext";
-import { useCourse } from "@/contexts/CourseContext";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { profile, signOut } = useAuth();
@@ -37,7 +35,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isStudent = profile?.role === "aluno";
 
   const { selectedCohort } = useCohort();
-  const { selectedCourse } = useCourse();
   const studentCohortName = isStudent && selectedCohort ? selectedCohort.name : null;
 
   const navItems = [
@@ -84,7 +81,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <BookOpen className="w-5 h-5 text-sidebar-primary-foreground" />
             </div>
             <div>
-              <h1 className="font-heading font-semibold text-sm">{selectedCourse?.name || 'Portal Acadêmico'}</h1>
+              <h1 className="font-heading font-semibold text-sm">Escola de Teologia</h1>
               <p className="text-xs text-sidebar-foreground/60 capitalize">{profile?.role || "aluno"}</p>
             </div>
           </div>
@@ -153,8 +150,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <main className="flex-1 overflow-auto">
         {(isProfessor || isAdmin) && (
-          <div className="px-4 pt-3 md:px-8 md:pt-4 flex flex-wrap items-center justify-end gap-3">
-            <CourseSelector />
+          <div className="px-4 pt-3 md:px-8 md:pt-4 flex justify-end">
             <CohortSelector />
           </div>
         )}

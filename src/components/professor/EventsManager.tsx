@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCohort } from '@/contexts/CohortContext';
-import { useCourse } from '@/contexts/CourseContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +12,6 @@ import { Plus, Trash2, Pencil } from 'lucide-react';
 
 export default function EventsManager({ userId }: { userId: string }) {
   const { selectedCohort, effectiveCutoffDate } = useCohort();
-  const { selectedCourseId } = useCourse();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [eventDate, setEventDate] = useState('');
@@ -26,13 +24,11 @@ export default function EventsManager({ userId }: { userId: string }) {
   const [editType, setEditType] = useState('aula');
 
   const load = async () => {
-    let query = supabase.from('calendar_events').select('*').order('event_date', { ascending: false });
-    if (selectedCourseId) query = query.eq('course_id', selectedCourseId);
-    const { data } = await query;
+    const { data } = await supabase.from('calendar_events').select('*').order('event_date', { ascending: false });
     setItems(data || []);
   };
 
-  useEffect(() => { load(); }, [selectedCohort, effectiveCutoffDate, selectedCourseId]);
+  useEffect(() => { load(); }, [selectedCohort, effectiveCutoffDate]);
 
   const filteredItems = useMemo(() => {
     if (!selectedCohort) return items;
@@ -45,8 +41,8 @@ export default function EventsManager({ userId }: { userId: string }) {
   const add = async () => {
     if (!title.trim() || !eventDate) return;
     const { error } = await supabase.from('calendar_events').insert({
-      title, description, event_date: eventDate, event_type: eventType, created_by: userId, course_id: selectedCourseId,
-    } as any);
+      title, description, event_date: eventDate, event_type: eventType, created_by: userId,
+    });
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
     setTitle(''); setDescription(''); setEventDate(''); setEventType('aula');
     load();

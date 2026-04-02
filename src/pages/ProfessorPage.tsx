@@ -14,21 +14,10 @@ import ExtraMaterialsManager from "@/components/professor/ExtraMaterialsManager"
 import TCCManager from "@/components/professor/TCCManager";
 import CertificatesManager from "@/components/professor/CertificatesManager";
 import StudentsManager from "@/components/professor/StudentsManager";
-import CoursesManager from "@/components/professor/CoursesManager";
-import { useCourse } from "@/contexts/CourseContext";
 
 export default function ProfessorPage() {
   const { user, profile } = useAuth();
-  const { selectedCourseId } = useCourse();
   const isAdmin = profile?.role === "admin";
-
-  if (!selectedCourseId && !isAdmin) {
-    return (
-      <div className="page-container">
-        <p className="text-muted-foreground">Selecione um curso para gerenciar.</p>
-      </div>
-    );
-  }
 
   return (
     <div className="page-container">
@@ -83,11 +72,6 @@ export default function ProfessorPage() {
               Certificados
             </TabsTrigger>
           )}
-          {isAdmin && (
-            <TabsTrigger value="courses" className="text-xs sm:text-sm">
-              Cursos
-            </TabsTrigger>
-          )}
         </TabsList>
 
         <TabsContent value="modules">
@@ -136,11 +120,6 @@ export default function ProfessorPage() {
         {isAdmin && (
           <TabsContent value="certificates">
             <CertificatesManager />
-          </TabsContent>
-        )}
-        {isAdmin && (
-          <TabsContent value="courses">
-            <CoursesManager />
           </TabsContent>
         )}
       </Tabs>
