@@ -83,6 +83,11 @@ export default function ProfessorPage() {
               Certificados
             </TabsTrigger>
           )}
+          {isAdmin && (
+            <TabsTrigger value="courses" className="text-xs sm:text-sm">
+              Cursos
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="modules">
