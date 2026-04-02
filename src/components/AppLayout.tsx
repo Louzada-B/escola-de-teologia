@@ -24,7 +24,9 @@ import {
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import CohortSelector from "@/components/CohortSelector";
+import CourseSelector from "@/components/CourseSelector";
 import { useCohort } from "@/contexts/CohortContext";
+import { useCourse } from "@/contexts/CourseContext";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { profile, signOut } = useAuth();
