@@ -38,8 +38,8 @@ export default function BooksManager({ userId }: { userId: string }) {
     if (!title.trim()) return;
     const { error } = await supabase.from('book_promotions').insert({
       title, author, cover_url: coverUrl || null, purchase_url: purchaseUrl || null,
-      description, created_by: userId,
-    });
+      description, created_by: userId, course_id: selectedCourseId,
+    } as any);
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
     setTitle(''); setAuthor(''); setCoverUrl(''); setPurchaseUrl(''); setDescription('');
     load();
