@@ -26,11 +26,13 @@ export default function EventsManager({ userId }: { userId: string }) {
   const [editType, setEditType] = useState('aula');
 
   const load = async () => {
-    const { data } = await supabase.from('calendar_events').select('*').order('event_date', { ascending: false });
+    let query = supabase.from('calendar_events').select('*').order('event_date', { ascending: false });
+    if (selectedCourseId) query = query.eq('course_id', selectedCourseId);
+    const { data } = await query;
     setItems(data || []);
   };
 
-  useEffect(() => { load(); }, [selectedCohort, effectiveCutoffDate]);
+  useEffect(() => { load(); }, [selectedCohort, effectiveCutoffDate, selectedCourseId]);
 
   const filteredItems = useMemo(() => {
     if (!selectedCohort) return items;
