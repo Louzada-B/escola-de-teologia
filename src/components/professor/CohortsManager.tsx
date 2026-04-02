@@ -110,7 +110,7 @@ export default function CohortsManager({ userId }: { userId: string }) {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cohorts"] });
+      queryClient.invalidateQueries({ queryKey: ["manage-cohorts"] });
       toast.success("Turma removida");
     },
     onError: (e: any) => toast.error("Erro: " + e.message),
