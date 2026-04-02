@@ -153,7 +153,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <main className="flex-1 overflow-auto">
         {(isProfessor || isAdmin) && (
-          <div className="px-4 pt-3 md:px-8 md:pt-4 flex justify-end">
+          <div className="px-4 pt-3 md:px-8 md:pt-4 flex flex-wrap items-center justify-end gap-3">
+            <CourseSelector />
             <CohortSelector />
           </div>
         )}
