@@ -11,6 +11,7 @@ import { toast } from '@/hooks/use-toast';
 import { Plus, Trash2, Pencil } from 'lucide-react';
 
 export default function BooksManager({ userId }: { userId: string }) {
+  const { selectedCourseId } = useCourse();
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
