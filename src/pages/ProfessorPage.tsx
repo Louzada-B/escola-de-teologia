@@ -138,6 +138,11 @@ export default function ProfessorPage() {
             <CertificatesManager />
           </TabsContent>
         )}
+        {isAdmin && (
+          <TabsContent value="courses">
+            <CoursesManager />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
