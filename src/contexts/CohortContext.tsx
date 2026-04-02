@@ -104,15 +104,20 @@ export function CohortProvider({ children }: { children: ReactNode }) {
     enabled: isStudent && !!user?.id,
   });
 
-  // Auto-select for admin/professor
+  // Reset cohort selection when course changes
   useEffect(() => {
-    if (isAdminOrProfessor && cohorts.length > 0 && !selectedCohortId) {
+    if (isAdminOrProfessor) {
+      // When cohorts reload (new course), auto-select active cohort
       const activeCohort = cohorts.find(c => c.is_active);
       if (activeCohort) {
         setSelectedCohortId(activeCohort.id);
+      } else if (cohorts.length > 0) {
+        setSelectedCohortId(cohorts[0].id);
+      } else {
+        setSelectedCohortId(null);
       }
     }
-  }, [cohorts, selectedCohortId, isAdminOrProfessor]);
+  }, [cohorts, isAdminOrProfessor, selectedCourseId]);
 
   // Auto-set for student – always sync to their actual cohort
   useEffect(() => {
