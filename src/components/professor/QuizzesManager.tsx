@@ -154,7 +154,8 @@ export default function QuizzesManager({ userId }: { userId: string }) {
       available_from: toLocalISO(availableFrom),
       available_until: toLocalISO(availableUntil),
       lesson_id: lessonId || null,
-    });
+      course_id: selectedCourseId,
+    } as any);
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
       return;
