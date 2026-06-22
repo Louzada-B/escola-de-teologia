@@ -1,8 +1,27 @@
-import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { BookOpen, GraduationCap, Users, ArrowRight } from 'lucide-react';
 
 export default function Index() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    const search = window.location.search;
+
+    // Fluxo implícito: token de convite ou recuperação no hash
+    if (hash.includes('type=invite') || hash.includes('type=recovery')) {
+      navigate('/definir-senha' + hash, { replace: true });
+      return;
+    }
+
+    // Fluxo PKCE: código na query string (veio de redirect do Supabase)
+    if (new URLSearchParams(search).has('code')) {
+      navigate('/definir-senha' + search, { replace: true });
+    }
+  }, [navigate]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}

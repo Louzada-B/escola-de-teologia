@@ -67,10 +67,11 @@ export default function StudentsManager() {
     }
     setInviting(true);
     try {
+      const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
       const { data, error } = await supabase.functions.invoke("invite-student", {
         body: {
           students: [{ email: email.trim(), full_name: fullName.trim(), cohort_id: cohortId }],
-          redirectTo: `${window.location.origin}/definir-senha`,
+          redirectTo: `${appUrl}/definir-senha`,
         },
       });
       if (error) throw error;
@@ -134,10 +135,11 @@ export default function StudentsManager() {
     }
     setBulkImporting(true);
     try {
+      const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
       const { data, error } = await supabase.functions.invoke("invite-student", {
         body: {
           students: validRows.map((r) => ({ email: r.email, full_name: r.full_name, cohort_id: bulkCohortId })),
-          redirectTo: `${window.location.origin}/definir-senha`,
+          redirectTo: `${appUrl}/definir-senha`,
         },
       });
       if (error) throw error;
