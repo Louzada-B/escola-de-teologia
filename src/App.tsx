@@ -9,6 +9,7 @@ import { ProtectedRoute, ProfessorRoute, AdminRoute } from "@/components/Protect
 import AppLayout from "@/components/AppLayout";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
+import DefinirSenhaPage from "./pages/DefinirSenhaPage";
 import DashboardHome from "./pages/DashboardHome";
 import LessonsPage from "./pages/LessonsPage";
 import AnnouncementsPage from "./pages/AnnouncementsPage";
@@ -44,6 +45,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<AuthPage />} />
+              <Route path="/definir-senha" element={<DefinirSenhaPage />} />
               <Route path="/dashboard" element={<DashboardLayout><DashboardHome /></DashboardLayout>} />
               <Route path="/dashboard/aulas" element={<DashboardLayout><LessonsPage /></DashboardLayout>} />
               <Route path="/dashboard/avisos" element={<DashboardLayout><AnnouncementsPage /></DashboardLayout>} />

@@ -43,8 +43,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { students } = await req.json();
+    const { students, redirectTo } = await req.json();
     // students: Array<{ email: string, full_name: string, cohort_id: string }>
+    // redirectTo: URL para onde o link do convite deve levar (tela de definir senha)
 
     if (!students || !Array.isArray(students) || students.length === 0) {
       return new Response(JSON.stringify({ error: "Lista de alunos vazia" }), {
@@ -83,6 +84,7 @@ Deno.serve(async (req) => {
           // Create user with invite (sends magic link email)
           const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
             data: { full_name: fullName, role: "aluno" },
+            redirectTo,
           });
 
           if (inviteError) {
