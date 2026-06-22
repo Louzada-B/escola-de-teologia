@@ -11,16 +11,21 @@ export default function AnnouncementsPage() {
   const { selectedCohort } = useCohort();
   const { profile } = useAuth();
   const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [cohorts, setCohorts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const isStaff = profile?.role === 'admin' || profile?.role === 'professor';
+
+  useEffect(() => {
+    supabase.from('cohorts').select('id, name').then(({ data }) => setCohorts(data || []));
+  }, []);
 
   useEffect(() => {
     const now = new Date().toISOString();
 
     let query = supabase
       .from('announcements')
-      .select('*, cohorts(name)')
+      .select('*')
       .order('scheduled_at', { ascending: false });
 
     // Alunos só veem avisos já publicados
@@ -70,7 +75,7 @@ export default function AnnouncementsPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <CardTitle className="text-lg font-heading">{a.title}</CardTitle>
                       {a.cohort_id
-                        ? <Badge variant="outline" className="text-xs">{a.cohorts?.name}</Badge>
+                        ? <Badge variant="outline" className="text-xs">{cohorts.find(c => c.id === a.cohort_id)?.name}</Badge>
                         : <Badge variant="secondary" className="text-xs">Geral</Badge>
                       }
                       {isStaff && isScheduled && (

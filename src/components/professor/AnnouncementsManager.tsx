@@ -37,7 +37,7 @@ export default function AnnouncementsManager({ userId }: { userId: string }) {
   const load = async () => {
     const { data: ann } = await supabase
       .from('announcements')
-      .select('*, cohorts(name)')
+      .select('*')
       .order('scheduled_at', { ascending: false });
     setItems(ann || []);
   };
@@ -138,7 +138,7 @@ export default function AnnouncementsManager({ userId }: { userId: string }) {
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-body font-medium">{item.title}</span>
                 {item.cohort_id
-                  ? <Badge variant="outline" className="text-xs">{item.cohorts?.name}</Badge>
+                  ? <Badge variant="outline" className="text-xs">{cohorts.find(c => c.id === item.cohort_id)?.name}</Badge>
                   : <Badge variant="secondary" className="text-xs">Todas as turmas</Badge>
                 }
                 {isScheduled(item) && (
