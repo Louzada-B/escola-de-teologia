@@ -24,14 +24,14 @@ const nowLocalInput = () => toLocalDatetimeInput(new Date().toISOString());
 export default function AnnouncementsManager({ userId }: { userId: string }) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [cohortId, setCohortId] = useState<string>('');
+  const [cohortId, setCohortId] = useState<string>("__all__");
   const [scheduledAt, setScheduledAt] = useState(nowLocalInput());
   const [cohorts, setCohorts] = useState<any[]>([]);
   const [items, setItems] = useState<any[]>([]);
   const [editing, setEditing] = useState<any | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
-  const [editCohortId, setEditCohortId] = useState<string>('');
+  const [editCohortId, setEditCohortId] = useState<string>("__all__");
   const [editScheduledAt, setEditScheduledAt] = useState('');
 
   const load = async () => {
@@ -56,11 +56,11 @@ export default function AnnouncementsManager({ userId }: { userId: string }) {
       title,
       content,
       created_by: userId,
-      cohort_id: cohortId || null,
+      cohort_id: (cohortId && cohortId !== "__all__") ? cohortId : null,
       scheduled_at: new Date(scheduledAt).toISOString(),
     } as any);
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
-    setTitle(''); setContent(''); setCohortId(''); setScheduledAt(nowLocalInput());
+    setTitle(""); setContent(""); setCohortId("__all__"); setScheduledAt(nowLocalInput());
     load();
     toast({ title: 'Aviso salvo!' });
   };
@@ -70,7 +70,7 @@ export default function AnnouncementsManager({ userId }: { userId: string }) {
     const { error } = await supabase.from('announcements').update({
       title: editTitle,
       content: editContent,
-      cohort_id: editCohortId || null,
+      cohort_id: (editCohortId && editCohortId !== "__all__") ? editCohortId : null,
       scheduled_at: new Date(editScheduledAt).toISOString(),
     } as any).eq('id', editing.id);
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
@@ -87,7 +87,7 @@ export default function AnnouncementsManager({ userId }: { userId: string }) {
   const openEdit = (item: any) => {
     setEditTitle(item.title);
     setEditContent(item.content);
-    setEditCohortId(item.cohort_id || '');
+    setEditCohortId(item.cohort_id || "__all__");
     setEditScheduledAt(toLocalDatetimeInput(item.scheduled_at));
     setEditing(item);
   };
@@ -109,7 +109,7 @@ export default function AnnouncementsManager({ userId }: { userId: string }) {
                   <SelectValue placeholder="Todas as turmas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas as turmas</SelectItem>
+                  <SelectItem value="__all__">Todas as turmas</SelectItem>
                   {cohorts.map(c => (
                     <SelectItem key={c.id} value={c.id}>{c.name}{!c.is_active ? ' (inativa)' : ''}</SelectItem>
                   ))}
@@ -177,7 +177,7 @@ export default function AnnouncementsManager({ userId }: { userId: string }) {
                     <SelectValue placeholder="Todas as turmas" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas as turmas</SelectItem>
+                    <SelectItem value="__all__">Todas as turmas</SelectItem>
                     {cohorts.map(c => (
                       <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                     ))}
