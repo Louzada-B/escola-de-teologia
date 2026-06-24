@@ -60,7 +60,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <header className="lg:hidden flex items-center justify-between p-4 border-b bg-card">
         <div className="flex items-center gap-2">
           <BookOpen className="w-5 h-5 text-primary" />
-          <span className="font-heading font-semibold text-foreground">Escola de Teologia</span>
+          <span className="font-heading font-semibold text-foreground">Formação Teológica</span>
         </div>
         <Button variant="ghost" size="icon" onClick={() => setMobileOpen(!mobileOpen)}>
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -81,7 +81,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <BookOpen className="w-5 h-5 text-sidebar-primary-foreground" />
             </div>
             <div>
-              <h1 className="font-heading font-semibold text-sm">Escola de Teologia</h1>
+              <h1 className="font-heading font-semibold text-sm">Formação Teológica</h1>
               <p className="text-xs text-sidebar-foreground/60 capitalize">{profile?.role || "aluno"}</p>
             </div>
           </div>
