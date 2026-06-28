@@ -53,13 +53,21 @@ serve(async (req: Request) => {
 </div>`;
 
     // Build raw MIME message with PDF attachment
+    // btoa seguro para strings com caracteres fora do Latin1
+    const btoaSafe = (str: string) => {
+      const bytes = new TextEncoder().encode(str);
+      let binary = "";
+      bytes.forEach(b => binary += String.fromCharCode(b));
+      return btoa(binary);
+    };
+
     const boundary = `----=_Part_${Date.now()}`;
     const pdfFilename = `Certificado_${studentName.replace(/\s+/g, "_")}.pdf`;
 
     const rawMessage = [
       `From: Escola de Teologia Brasa Church <${smtpUser}>`,
       `To: ${studentEmail}`,
-      `Subject: =?UTF-8?B?${btoa(`Certificado de Conclusão — Escola de Teologia Brasa Church`)}?=`,
+      `Subject: =?UTF-8?B?${btoaSafe("Certificado de Conclus\u00e3o \u2014 Escola de Teologia Brasa Church")}?=`,
       `MIME-Version: 1.0`,
       `Content-Type: multipart/mixed; boundary="${boundary}"`,
       ``,
