@@ -82,10 +82,13 @@ async function generateCertificatePdf(
   doc.line(W - 7 - cSize, H - 6, W - 7, H - 6); doc.line(W - 7, H - 6, W - 7, H - 6 - cSize);
 
   // Ornament (dots)
-  doc.setFont("times", "normal");
-  doc.setFontSize(10);
-  doc.setTextColor(...gold);
-  doc.text("✦  ✦  ✦", W / 2, 22, { align: "center" });
+  doc.setDrawColor(...gold);
+  doc.setLineWidth(0.4);
+  doc.line(W / 2 - 30, 20, W / 2 + 30, 20);
+  doc.setFillColor(...gold);
+  doc.circle(W / 2, 20, 0.8, "F");
+  doc.circle(W / 2 - 8, 20, 0.5, "F");
+  doc.circle(W / 2 + 8, 20, 0.5, "F");
 
   // Institution name
   doc.setFont("times", "bold");
@@ -123,10 +126,9 @@ async function generateCertificatePdf(
   doc.text(student.fullName, W / 2, 85, { align: "center" });
 
   // Name ornament
-  doc.setFont("times", "normal");
-  doc.setFontSize(10);
-  doc.setTextColor(...gold);
-  doc.text("—  ✦  —", W / 2, 92, { align: "center" });
+  doc.setDrawColor(...gold);
+  doc.setLineWidth(0.6);
+  doc.line(W / 2 - 30, 92, W / 2 + 30, 92);
 
   // Body
   const cohortName = cohort.name;
