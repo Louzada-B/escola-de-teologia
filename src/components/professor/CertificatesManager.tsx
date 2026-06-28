@@ -111,7 +111,7 @@ async function generateCertificatePdf(
   doc.setFont("times", "normal");
   doc.setFontSize(18);
   doc.setTextColor(...dark);
-  doc.text("CERTIFICADO DE CONCLUSÃO", W / 2, 57, { align: "center", charSpace: 1.5 });
+  doc.text("CERTIFICADO DE CONCLUSÃO", W / 2, 57, { align: "center" });
 
   // "Certificamos que"
   doc.setFont("times", "italic");
@@ -174,7 +174,7 @@ async function generateCertificatePdf(
   doc.setFont("times", "normal");
   doc.setFontSize(8);
   doc.setTextColor(...navy);
-  doc.text("ESCOLA DE TEOLOGIA BRASA CHURCH", W / 2, 164, { align: "center", charSpace: 0.5 });
+  doc.text("ESCOLA DE TEOLOGIA BRASA CHURCH", W / 2, 164, { align: "center" });
 
   return doc;
 }
