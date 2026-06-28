@@ -147,7 +147,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
         <div className="px-4 pb-3">
           <p
-            className="text-[10px] text-sidebar-background select-none transition-all duration-500 hover:text-sidebar-foreground/30 cursor-default"
+            className="text-[10px] text-sidebar-foreground select-none opacity-0 transition-opacity duration-500 hover:opacity-40 cursor-default"
             title=""
           >
             Desenvolvido por Bruno Louzada
