@@ -180,6 +180,7 @@ async function generateCertificatePdf(
 }
 
 // ─── HTML preview component ─────────────────────────────────────────────────
+// Fiel ao PDF gerado: mesmas proporções, fontes e layout
 
 function CertificatePreview({
   student,
@@ -191,53 +192,119 @@ function CertificatePreview({
   const startDate = fmtDateBR(cohort.start_date);
   const endDate   = fmtDateBR(cohort.end_date);
   const today     = todayBR();
-  const f: React.CSSProperties = { fontFamily: "Georgia,'Times New Roman',serif", textAlign: "center" };
+
+  // Escala: 960px representa 297mm → 1mm = 3.23px
+  // Fontes em pt → px: 1pt = 0.353mm × 3.23 = 1.14px
+  const s = (mm: number) => mm * 3.23;
+  const pt = (p: number) => Math.round(p * 1.14);
+  const f: React.CSSProperties = { fontFamily: "Georgia,'Times New Roman',serif", textAlign: "center", lineHeight: 1.2 };
+
+  useEffect(() => {
+    const outer = document.getElementById("cert-preview-outer2");
+    const native = document.getElementById("cert-preview-native2");
+    if (!outer || !native) return;
+    const apply = () => {
+      const w = outer.offsetWidth;
+      const sc = w / 960;
+      (native as HTMLElement).style.transform = `scale(${sc})`;
+      (outer as HTMLElement).style.height = `${679 * sc}px`;
+    };
+    apply();
+    window.addEventListener("resize", apply);
+    return () => window.removeEventListener("resize", apply);
+  }, []);
 
   return (
-    <div style={{ width:"100%", position:"relative", overflow:"hidden", boxShadow:"0 4px 24px rgba(0,0,0,.15)", borderRadius:4 }}>
-      {/* Native size container scaled to fit */}
-      <div id="cert-preview-outer" style={{ width:"100%", overflow:"hidden" }}>
+    <div style={{ width:"100%", overflow:"hidden", boxShadow:"0 4px 24px rgba(0,0,0,.15)", borderRadius:4 }}>
+      <div id="cert-preview-outer2" style={{ width:"100%", overflow:"hidden" }}>
         <div
-          id="cert-preview-native"
-          style={{
-            width: 960, height: 679,
-            background: "#faf8f4",
-            position: "relative",
-            transformOrigin: "top left",
-          }}
+          id="cert-preview-native2"
+          style={{ width:960, height:679, background:"#faf8f4", position:"relative", transformOrigin:"top left" }}
         >
           {/* Outer gold border */}
-          <div style={{ position:"absolute", inset:"2.8%", border:"2px solid #c9a84c" }} />
+          <div style={{ position:"absolute", top:s(6), left:s(8), right:s(8), bottom:s(6), border:"2px solid #c9a84c", pointerEvents:"none" }} />
           {/* Inner gold border */}
-          <div style={{ position:"absolute", inset:"4.2%", border:"0.5px solid #c9a84c", opacity:.4 }} />
-          {/* Corner navy accents */}
-          {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+          <div style={{ position:"absolute", top:s(9), left:s(12), right:s(12), bottom:s(9), border:"0.5px solid #c9a84c", opacity:.4, pointerEvents:"none" }} />
+          {/* Corner navy L-shapes */}
+          {([["top","left"],["top","right"],["bottom","left"],["bottom","right"]] as const).map(([v,h]) => (
             <div key={v+h} style={{
-              position:"absolute",
-              [v]: 23, [h]: 23,
-              width:36, height:36,
-              borderTop: v==="top" ? "2.5px solid #1a2e52" : undefined,
+              position:"absolute", [v]:s(6)-1, [h]:s(8)-1,
+              width:s(8), height:s(8),
+              borderTop:    v==="top"    ? "2.5px solid #1a2e52" : undefined,
               borderBottom: v==="bottom" ? "2.5px solid #1a2e52" : undefined,
-              borderLeft: h==="left" ? "2.5px solid #1a2e52" : undefined,
-              borderRight: h==="right" ? "2.5px solid #1a2e52" : undefined,
+              borderLeft:   h==="left"   ? "2.5px solid #1a2e52" : undefined,
+              borderRight:  h==="right"  ? "2.5px solid #1a2e52" : undefined,
+              pointerEvents:"none",
             }} />
           ))}
-          {/* Content */}
-          <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
-            <div style={{ ...f, fontSize:22, color:"#c9a84c", letterSpacing:14, marginBottom:8 }}>✦ &nbsp; ✦ &nbsp; ✦</div>
-            <div style={{ ...f, fontSize:28, fontWeight:"bold", color:"#1a2e52", letterSpacing:5, textTransform:"uppercase" }}>Escola de Teologia Brasa Church</div>
-            <div style={{ ...f, fontSize:14, color:"#c9a84c", letterSpacing:9, margin:"5px 0 8px" }}>FORMAÇÃO &nbsp; TEOLÓGICA</div>
-            <div style={{ width:300, height:1, background:"linear-gradient(90deg,transparent,#c9a84c,transparent)", margin:"6px 0" }} />
-            <div style={{ ...f, fontSize:32, fontWeight:500, color:"#2c2c2c", letterSpacing:7, margin:"8px 0 18px", textTransform:"uppercase" }}>Certificado de Conclusão</div>
-            <div style={{ ...f, fontSize:20, fontStyle:"italic", color:"#888", marginBottom:10 }}>Certificamos que</div>
-            <div style={{ ...f, fontSize:42, fontWeight:"bold", color:"#1a2e52", lineHeight:1.1 }}>{student.fullName}</div>
-            <div style={{ ...f, fontSize:18, color:"#c9a84c", margin:"4px 0 10px", letterSpacing:8 }}>— ✦ —</div>
-            <div style={{ ...f, fontSize:18, color:"#555" }}>concluiu com êxito o curso de formação teológica — {cohort.name}</div>
-            <div style={{ ...f, fontSize:18, color:"#666", marginTop:3 }}>no período de {startDate} a {endDate}</div>
-            <div style={{ ...f, fontSize:14, fontStyle:"italic", color:"#bbb", margin:"5px 0 14px" }}>tendo cumprido todos os requisitos estabelecidos pela instituição.</div>
-            <div style={{ ...f, fontSize:14, fontStyle:"italic", color:"#999", marginBottom:18 }}>Porto Alegre, {today}</div>
-            <div style={{ width:220, height:1, background:"#1a2e52", opacity:.4, marginBottom:5 }} />
-            <div style={{ ...f, fontSize:13, letterSpacing:2.5, color:"#1a2e52", textTransform:"uppercase" }}>Escola de Teologia Brasa Church</div>
+
+          {/* Content — posições fiéis ao PDF (y em mm × 3.23) */}
+          {/* Ornamento topo: linha gold com pontos em y=20mm */}
+          <div style={{ position:"absolute", top:s(20)-1, left:"50%", transform:"translateX(-50%)", width:s(60), height:1, background:"linear-gradient(90deg,transparent,#c9a84c,transparent)" }} />
+          <div style={{ position:"absolute", top:s(20)-3, left:"50%", transform:"translateX(-50%)", width:6, height:6, borderRadius:"50%", background:"#c9a84c" }} />
+          <div style={{ position:"absolute", top:s(20)-2, left:`calc(50% - ${s(8)}px)`, width:4, height:4, borderRadius:"50%", background:"#c9a84c" }} />
+          <div style={{ position:"absolute", top:s(20)-2, left:`calc(50% + ${s(8)-4}px)`, width:4, height:4, borderRadius:"50%", background:"#c9a84c" }} />
+
+          {/* Instituição: baseline y=33mm */}
+          <div style={{ ...f, position:"absolute", width:"100%", top:s(33)-pt(16), fontSize:pt(16), fontWeight:"bold", color:"#1a2e52", letterSpacing:5, textTransform:"uppercase" }}>
+            ESCOLA DE TEOLOGIA BRASA CHURCH
+          </div>
+
+          {/* Subtítulo: baseline y=40mm */}
+          <div style={{ ...f, position:"absolute", width:"100%", top:s(40)-pt(8), fontSize:pt(8)+2, color:"#c9a84c", letterSpacing:8 }}>
+            F O R M A Ç Ã O &nbsp; T E O L Ó G I C A
+          </div>
+
+          {/* Divisor 1: y=44mm */}
+          <div style={{ position:"absolute", top:s(44), left:"50%", transform:"translateX(-50%)", width:s(110), height:0.5, background:"linear-gradient(90deg,transparent,#c9a84c,transparent)" }} />
+
+          {/* Título: baseline y=57mm */}
+          <div style={{ ...f, position:"absolute", width:"100%", top:s(57)-pt(18), fontSize:pt(18), fontWeight:500, color:"#2c2c2c", letterSpacing:4 }}>
+            CERTIFICADO DE CONCLUSÃO
+          </div>
+
+          {/* "Certificamos que": baseline y=71mm */}
+          <div style={{ ...f, position:"absolute", width:"100%", top:s(71)-pt(12), fontSize:pt(12), fontStyle:"italic", color:"#888" }}>
+            Certificamos que
+          </div>
+
+          {/* Nome: baseline y=85mm */}
+          <div style={{ ...f, position:"absolute", width:"100%", top:s(85)-pt(26), fontSize:pt(26), fontWeight:"bold", color:"#1a2e52" }}>
+            {student.fullName}
+          </div>
+
+          {/* Linha gold abaixo do nome: y=92mm */}
+          <div style={{ position:"absolute", top:s(92), left:"50%", transform:"translateX(-50%)", width:s(60), height:1, background:"#c9a84c" }} />
+
+          {/* Corpo 1: baseline y=103mm */}
+          <div style={{ ...f, position:"absolute", width:"100%", top:s(103)-pt(12), fontSize:pt(12), color:"#444" }}>
+            concluiu com êxito o curso de formação teológica — {cohort.name}
+          </div>
+
+          {/* Corpo 2: baseline y=112mm */}
+          <div style={{ ...f, position:"absolute", width:"100%", top:s(112)-pt(12), fontSize:pt(12), color:"#555" }}>
+            no período de {startDate} a {endDate}
+          </div>
+
+          {/* Requisitos: baseline y=121mm */}
+          <div style={{ ...f, position:"absolute", width:"100%", top:s(121)-pt(9), fontSize:pt(9), fontStyle:"italic", color:"#bbb" }}>
+            tendo cumprido todos os requisitos estabelecidos pela instituição.
+          </div>
+
+          {/* Divisor 2: y=131mm */}
+          <div style={{ position:"absolute", top:s(131), left:"50%", transform:"translateX(-50%)", width:s(140), height:0.5, background:"linear-gradient(90deg,transparent,#c9a84c,transparent)" }} />
+
+          {/* Data: baseline y=141mm */}
+          <div style={{ ...f, position:"absolute", width:"100%", top:s(141)-pt(9), fontSize:pt(9), fontStyle:"italic", color:"#999" }}>
+            Porto Alegre, {today}
+          </div>
+
+          {/* Linha assinatura: y=158mm */}
+          <div style={{ position:"absolute", top:s(158), left:"50%", transform:"translateX(-50%)", width:s(76), height:0.5, background:"#1a2e52", opacity:.4 }} />
+
+          {/* Assinatura: baseline y=164mm */}
+          <div style={{ ...f, position:"absolute", width:"100%", top:s(164)-pt(8), fontSize:pt(8)+1, color:"#1a2e52", letterSpacing:2, textTransform:"uppercase" }}>
+            Escola de Teologia Brasa Church
           </div>
         </div>
       </div>
