@@ -47,116 +47,132 @@ async function generateCertificatePdf(
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const W = 297, H = 210;
 
-  const navy   = [26,  46,  82]  as [number,number,number];
-  const gold   = [201, 168, 76]  as [number,number,number];
-  const dark   = [60,  60,  60]  as [number,number,number];
-  const mid    = [100, 100, 100] as [number,number,number];
-  const light  = [150, 150, 150] as [number,number,number];
+  const navy  = [26,  46,  82]  as [number,number,number];
+  const gold  = [201, 168, 76]  as [number,number,number];
+  const dark  = [44,  44,  44]  as [number,number,number];
+  const mid   = [136, 136, 136] as [number,number,number];
+  const light = [187, 187, 187] as [number,number,number];
+  const cream = [250, 248, 244] as [number,number,number];
 
-  // White background
-  doc.setFillColor(255, 255, 255);
+  // Cream background
+  doc.setFillColor(...cream);
   doc.rect(0, 0, W, H, "F");
 
-  // Top/bottom navy borders
-  doc.setFillColor(...navy);
-  doc.rect(0, 0, W, 8, "F");
-  doc.rect(0, H - 8, W, 8, "F");
+  // Outer gold border
+  doc.setDrawColor(...gold);
+  doc.setLineWidth(0.7);
+  doc.rect(8, 6, W - 16, H - 12);
 
-  // Left/right gold lines
-  doc.setFillColor(...gold);
-  doc.rect(12, 8, 1.5, H - 16, "F");
-  doc.rect(W - 13.5, 8, 1.5, H - 16, "F");
+  // Inner gold border (thinner)
+  doc.setLineWidth(0.25);
+  doc.setDrawColor(gold[0], gold[1], gold[2]);
+  doc.rect(12, 9, W - 24, H - 18);
 
-  // Gold cross
-  doc.setFillColor(...gold);
-  doc.rect(W / 2 - 1.5, 17, 3, 16, "F");
-  doc.rect(W / 2 - 7.5, 22.5, 15, 3, "F");
+  // Corner navy accents (L-shapes)
+  const cSize = 8;
+  doc.setDrawColor(...navy);
+  doc.setLineWidth(0.8);
+  // TL
+  doc.line(7, 6 + cSize, 7, 6); doc.line(7, 6, 7 + cSize, 6);
+  // TR
+  doc.line(W - 7 - cSize, 6, W - 7, 6); doc.line(W - 7, 6, W - 7, 6 + cSize);
+  // BL
+  doc.line(7, H - 6 - cSize, 7, H - 6); doc.line(7, H - 6, 7 + cSize, H - 6);
+  // BR
+  doc.line(W - 7 - cSize, H - 6, W - 7, H - 6); doc.line(W - 7, H - 6, W - 7, H - 6 - cSize);
+
+  // Ornament (dots)
+  doc.setFont("times", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(...gold);
+  doc.text("✦  ✦  ✦", W / 2, 22, { align: "center" });
 
   // Institution name
   doc.setFont("times", "bold");
-  doc.setFontSize(15);
+  doc.setFontSize(16);
   doc.setTextColor(...navy);
-  doc.text("ESCOLA DE TEOLOGIA", W / 2, 42, { align: "center" });
+  doc.text("ESCOLA DE TEOLOGIA BRASA CHURCH", W / 2, 33, { align: "center" });
 
+  // Subtitle
   doc.setFont("times", "normal");
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setTextColor(...gold);
-  doc.text("B  R  A  S  A     C  H  U  R  C  H", W / 2, 49, { align: "center" });
+  doc.text("F O R M A Ç Ã O   T E O L Ó G I C A", W / 2, 40, { align: "center" });
 
   // Gold divider 1
   doc.setDrawColor(...gold);
-  doc.setLineWidth(0.5);
-  doc.line(W / 2 - 50, 53, W / 2 + 50, 53);
+  doc.setLineWidth(0.4);
+  doc.line(W / 2 - 55, 44, W / 2 + 55, 44);
 
   // Certificate title
-  doc.setFont("times", "bold");
-  doc.setFontSize(20);
-  doc.setTextColor(...navy);
-  doc.text("CERTIFICADO DE CONCLUS\u00C3O", W / 2, 67, { align: "center" });
+  doc.setFont("times", "normal");
+  doc.setFontSize(18);
+  doc.setTextColor(...dark);
+  doc.text("CERTIFICADO DE CONCLUSÃO", W / 2, 57, { align: "center", charSpace: 1.5 });
 
   // "Certificamos que"
   doc.setFont("times", "italic");
   doc.setFontSize(12);
   doc.setTextColor(...mid);
-  doc.text("Certificamos que", W / 2, 81, { align: "center" });
+  doc.text("Certificamos que", W / 2, 71, { align: "center" });
 
   // Student name
-  const nameUpper = student.fullName.toUpperCase();
   doc.setFont("times", "bold");
-  doc.setFontSize(24);
+  doc.setFontSize(26);
   doc.setTextColor(...navy);
-  doc.text(nameUpper, W / 2, 95, { align: "center" });
+  doc.text(student.fullName, W / 2, 85, { align: "center" });
 
-  // Gold underline below name
-  const nameW = Math.min(doc.getTextWidth(nameUpper), W - 60);
-  doc.setDrawColor(...gold);
-  doc.setLineWidth(0.8);
-  doc.line(W / 2 - nameW / 2, 99, W / 2 + nameW / 2, 99);
+  // Name ornament
+  doc.setFont("times", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(...gold);
+  doc.text("—  ✦  —", W / 2, 92, { align: "center" });
 
-  // Body text
+  // Body
   const cohortName = cohort.name;
   const startDate  = fmtDateBR(cohort.start_date);
   const endDate    = fmtDateBR(cohort.end_date);
 
   doc.setFont("times", "normal");
-  doc.setFontSize(11);
+  doc.setFontSize(12);
   doc.setTextColor(...dark);
   doc.text(
-    `concluiu com \u00eaxito o curso de forma\u00e7\u00e3o teol\u00f3gica \u2014 ${cohortName}`,
-    W / 2, 112, { align: "center" }
+    `concluiu com êxito o curso de formação teológica — ${cohortName}`,
+    W / 2, 103, { align: "center" }
   );
   doc.text(
-    `no per\u00edodo de ${startDate} a ${endDate}`,
-    W / 2, 120, { align: "center" }
+    `no período de ${startDate} a ${endDate}`,
+    W / 2, 112, { align: "center" }
   );
 
   doc.setFontSize(9);
+  doc.setFont("times", "italic");
   doc.setTextColor(...light);
   doc.text(
-    "tendo cumprido os requisitos de frequ\u00eancia e avalia\u00e7\u00e3o estabelecidos pela institui\u00e7\u00e3o.",
-    W / 2, 128, { align: "center" }
+    "tendo cumprido todos os requisitos estabelecidos pela instituição.",
+    W / 2, 121, { align: "center" }
   );
 
   // Gold divider 2
   doc.setDrawColor(...gold);
-  doc.setLineWidth(0.3);
-  doc.line(W / 2 - 80, 138, W / 2 + 80, 138);
+  doc.setLineWidth(0.25);
+  doc.line(W / 2 - 70, 131, W / 2 + 70, 131);
 
-  // Issue date
+  // Date
   doc.setFont("times", "italic");
   doc.setFontSize(9);
   doc.setTextColor(...mid);
-  doc.text(`Porto Alegre, ${todayBR()}`, W / 2, 148, { align: "center" });
+  doc.text(`Porto Alegre, ${todayBR()}`, W / 2, 141, { align: "center" });
 
-  // Signature line + institution
+  // Signature
   doc.setDrawColor(...navy);
-  doc.setLineWidth(0.5);
-  doc.line(W / 2 - 42, 169, W / 2 + 42, 169);
+  doc.setLineWidth(0.4);
+  doc.line(W / 2 - 38, 158, W / 2 + 38, 158);
 
-  doc.setFont("times", "bold");
-  doc.setFontSize(9);
+  doc.setFont("times", "normal");
+  doc.setFontSize(8);
   doc.setTextColor(...navy);
-  doc.text("Escola de Teologia Brasa Church", W / 2, 175, { align: "center" });
+  doc.text("ESCOLA DE TEOLOGIA BRASA CHURCH", W / 2, 164, { align: "center", charSpace: 0.5 });
 
   return doc;
 }
@@ -173,89 +189,54 @@ function CertificatePreview({
   const startDate = fmtDateBR(cohort.start_date);
   const endDate   = fmtDateBR(cohort.end_date);
   const today     = todayBR();
+  const f: React.CSSProperties = { fontFamily: "Georgia,'Times New Roman',serif", textAlign: "center" };
 
   return (
-    <div
-      style={{
-        width: "100%",
-        aspectRatio: "297/210",
-        background: "#fff",
-        position: "relative",
-        fontFamily: "Georgia,'Times New Roman',serif",
-        overflow: "hidden",
-        boxShadow: "0 4px 24px rgba(0,0,0,.15)",
-        borderRadius: 4,
-      }}
-    >
-      {/* Borders */}
-      <div style={{ position:"absolute", top:0, left:0, right:0, height:"3.8%", background:"#1a2e52" }} />
-      <div style={{ position:"absolute", bottom:0, left:0, right:0, height:"3.8%", background:"#1a2e52" }} />
-      <div style={{ position:"absolute", top:"3.8%", bottom:"3.8%", left:"4%", width:"0.5%", background:"#c9a84c" }} />
-      <div style={{ position:"absolute", top:"3.8%", bottom:"3.8%", right:"4%", width:"0.5%", background:"#c9a84c" }} />
-
-      {/* Inner content */}
-      <div style={{
-        position:"absolute", inset:0,
-        display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-        padding:"8% 10%",
-        gap:0,
-      }}>
-        {/* Cross */}
-        <div style={{ position:"relative", width:"2.8%", aspectRatio:"2/3", marginBottom:"1.2%" }}>
-          <div style={{ position:"absolute", left:"38%", top:0, bottom:0, width:"24%", background:"#c9a84c", borderRadius:1 }} />
-          <div style={{ position:"absolute", top:"28%", left:0, right:0, height:"18%", background:"#c9a84c", borderRadius:1 }} />
-        </div>
-
-        {/* Name */}
-        <div style={{ fontSize:"2%", fontWeight:"bold", color:"#1a2e52", letterSpacing:".08em", marginBottom:".2%" }}>
-          ESCOLA DE TEOLOGIA
-        </div>
-        <div style={{ fontSize:"1.2%", color:"#c9a84c", letterSpacing:".35em", marginBottom:".8%" }}>
-          BRASA CHURCH
-        </div>
-
-        {/* Gold line */}
-        <div style={{ width:"35%", height:1, background:"#c9a84c", marginBottom:"1.6%" }} />
-
-        {/* Title */}
-        <div style={{ fontSize:"2.6%", fontWeight:"bold", color:"#1a2e52", letterSpacing:".04em", marginBottom:"2%" }}>
-          CERTIFICADO DE CONCLUSÃO
-        </div>
-
-        {/* Certif text */}
-        <div style={{ fontSize:"1.4%", fontStyle:"italic", color:"#777", marginBottom:"1.2%" }}>
-          Certificamos que
-        </div>
-
-        {/* Student name */}
-        <div style={{ fontSize:"2.9%", fontWeight:"bold", color:"#1a2e52", textAlign:"center", marginBottom:".4%" }}>
-          {student.fullName.toUpperCase()}
-        </div>
-        <div style={{ width:"42%", height:1, background:"#c9a84c", marginBottom:"1.8%" }} />
-
-        {/* Body */}
-        <div style={{ fontSize:"1.4%", color:"#3c3c3c", textAlign:"center", lineHeight:1.6, marginBottom:".4%" }}>
-          concluiu com êxito o curso de formação teológica — {cohort.name}
-        </div>
-        <div style={{ fontSize:"1.4%", color:"#3c3c3c", textAlign:"center", marginBottom:".4%" }}>
-          no período de {startDate} a {endDate}
-        </div>
-        <div style={{ fontSize:"1.1%", color:"#aaa", textAlign:"center", marginBottom:"1.8%" }}>
-          tendo cumprido os requisitos de frequência e avaliação estabelecidos pela instituição.
-        </div>
-
-        {/* Gold divider 2 */}
-        <div style={{ width:"55%", height:.5, background:"#c9a84c", marginBottom:"1.2%" }} />
-
-        {/* Date */}
-        <div style={{ fontSize:"1.1%", fontStyle:"italic", color:"#999", marginBottom:"1.8%" }}>
-          Porto Alegre, {today}
-        </div>
-
-        {/* Signature */}
-        <div style={{ width:"22%", height:.5, background:"#1a2e52", marginBottom:".4%" }} />
-        <div style={{ fontSize:"1.1%", fontWeight:"bold", color:"#1a2e52" }}>
-          Escola de Teologia Brasa Church
+    <div style={{ width:"100%", position:"relative", overflow:"hidden", boxShadow:"0 4px 24px rgba(0,0,0,.15)", borderRadius:4 }}>
+      {/* Native size container scaled to fit */}
+      <div id="cert-preview-outer" style={{ width:"100%", overflow:"hidden" }}>
+        <div
+          id="cert-preview-native"
+          style={{
+            width: 960, height: 679,
+            background: "#faf8f4",
+            position: "relative",
+            transformOrigin: "top left",
+          }}
+        >
+          {/* Outer gold border */}
+          <div style={{ position:"absolute", inset:"2.8%", border:"2px solid #c9a84c" }} />
+          {/* Inner gold border */}
+          <div style={{ position:"absolute", inset:"4.2%", border:"0.5px solid #c9a84c", opacity:.4 }} />
+          {/* Corner navy accents */}
+          {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h]) => (
+            <div key={v+h} style={{
+              position:"absolute",
+              [v]: 23, [h]: 23,
+              width:36, height:36,
+              borderTop: v==="top" ? "2.5px solid #1a2e52" : undefined,
+              borderBottom: v==="bottom" ? "2.5px solid #1a2e52" : undefined,
+              borderLeft: h==="left" ? "2.5px solid #1a2e52" : undefined,
+              borderRight: h==="right" ? "2.5px solid #1a2e52" : undefined,
+            }} />
+          ))}
+          {/* Content */}
+          <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+            <div style={{ ...f, fontSize:22, color:"#c9a84c", letterSpacing:14, marginBottom:8 }}>✦ &nbsp; ✦ &nbsp; ✦</div>
+            <div style={{ ...f, fontSize:28, fontWeight:"bold", color:"#1a2e52", letterSpacing:5, textTransform:"uppercase" }}>Escola de Teologia Brasa Church</div>
+            <div style={{ ...f, fontSize:14, color:"#c9a84c", letterSpacing:9, margin:"5px 0 8px" }}>FORMAÇÃO &nbsp; TEOLÓGICA</div>
+            <div style={{ width:300, height:1, background:"linear-gradient(90deg,transparent,#c9a84c,transparent)", margin:"6px 0" }} />
+            <div style={{ ...f, fontSize:32, fontWeight:500, color:"#2c2c2c", letterSpacing:7, margin:"8px 0 18px", textTransform:"uppercase" }}>Certificado de Conclusão</div>
+            <div style={{ ...f, fontSize:20, fontStyle:"italic", color:"#888", marginBottom:10 }}>Certificamos que</div>
+            <div style={{ ...f, fontSize:42, fontWeight:"bold", color:"#1a2e52", lineHeight:1.1 }}>{student.fullName}</div>
+            <div style={{ ...f, fontSize:18, color:"#c9a84c", margin:"4px 0 10px", letterSpacing:8 }}>— ✦ —</div>
+            <div style={{ ...f, fontSize:18, color:"#555" }}>concluiu com êxito o curso de formação teológica — {cohort.name}</div>
+            <div style={{ ...f, fontSize:18, color:"#666", marginTop:3 }}>no período de {startDate} a {endDate}</div>
+            <div style={{ ...f, fontSize:14, fontStyle:"italic", color:"#bbb", margin:"5px 0 14px" }}>tendo cumprido todos os requisitos estabelecidos pela instituição.</div>
+            <div style={{ ...f, fontSize:14, fontStyle:"italic", color:"#999", marginBottom:18 }}>Porto Alegre, {today}</div>
+            <div style={{ width:220, height:1, background:"#1a2e52", opacity:.4, marginBottom:5 }} />
+            <div style={{ ...f, fontSize:13, letterSpacing:2.5, color:"#1a2e52", textTransform:"uppercase" }}>Escola de Teologia Brasa Church</div>
+          </div>
         </div>
       </div>
     </div>
