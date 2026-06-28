@@ -145,6 +145,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             Sair
           </Button>
         </div>
+        <div className="px-4 pb-3">
+          <p
+            className="text-[10px] text-sidebar-background select-none transition-all duration-500 hover:text-sidebar-foreground/30 cursor-default"
+            title=""
+          >
+            Desenvolvido por Bruno Louzada
+          </p>
+        </div>
       </aside>
 
       {/* Main content */}
