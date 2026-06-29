@@ -24,6 +24,7 @@ import {
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import CohortSelector from "@/components/CohortSelector";
+import NotificationBell from "@/components/NotificationBell";
 import { useCohort } from "@/contexts/CohortContext";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -157,11 +158,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main content */}
       <main className="flex-1 overflow-auto">
-        {(isProfessor || isAdmin) && (
-          <div className="px-4 pt-3 md:px-8 md:pt-4 flex justify-end">
-            <CohortSelector />
-          </div>
-        )}
+        <div className="px-4 pt-3 md:px-8 md:pt-4 flex items-center justify-end gap-3">
+          {(isProfessor || isAdmin) && <CohortSelector />}
+          <NotificationBell />
+        </div>
         {children}
       </main>
     </div>

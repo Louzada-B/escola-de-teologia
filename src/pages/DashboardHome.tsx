@@ -119,8 +119,8 @@ export default function DashboardHome() {
   const cohortEnd = selectedCohort?.end_date;
 
   useEffect(() => {
-    const hour = new Date().getHours();
-    setIsWithinTime(hour >= 18 && hour <= 23);
+    // isWithinTime será calculado por aula individualmente abaixo
+    setIsWithinTime(true); // sempre permitir — filtragem ocorre por aula
 
     async function loadDashboardData() {
       if (!user) return;
@@ -129,7 +129,7 @@ export default function DashboardHome() {
       // Fetch all raw data
       const [mRes, aRes, eRes, qRes] = await Promise.all([
         supabase.from("modules").select("id"),
-        supabase.from("announcements").select("id, created_at"),
+        supabase.from("announcements").select("id, scheduled_at, cohort_id"),
         supabase.from("calendar_events").select("id, event_date"),
         supabase.from("quizzes").select("id, available_from, available_until"),
       ]);
@@ -142,13 +142,20 @@ export default function DashboardHome() {
         cohortStart && cohortEnd
           ? allEvents.filter((e) => e.event_date >= cohortStart && e.event_date <= cohortEnd)
           : allEvents;
-      const filteredAnnouncements =
-        cohortStart && cohortEnd
-          ? (aRes.data || []).filter((a) => {
-              const date = a.created_at.split("T")[0];
-              return date >= cohortStart && date <= cohortEnd;
-            })
-          : aRes.data || [];
+      const nowIso = new Date().toISOString();
+      const filteredAnnouncements = (aRes.data || []).filter((a: any) => {
+        // Só conta avisos já publicados
+        if (a.scheduled_at > nowIso) return false;
+        // Filtra por turma: nulo = geral (todos veem), específico = só a turma
+        if (a.cohort_id && selectedCohort && a.cohort_id !== selectedCohort.id) return false;
+        if (a.cohort_id && !selectedCohort) return false;
+        // Filtra por período da turma
+        if (cohortStart && cohortEnd) {
+          const date = a.scheduled_at.split("T")[0];
+          return date >= cohortStart && date <= cohortEnd;
+        }
+        return true;
+      });
       const filteredQuizzes =
         cohortStart && cohortEnd
           ? allQuizzes.filter((q) => {
@@ -166,7 +173,7 @@ export default function DashboardHome() {
       });
 
       // Today's lessons for attendance alert
-      const { data: todayLessons } = await supabase.from("lessons").select("*").eq("scheduled_date", today);
+      const { data: todayLessons } = await supabase.from("lessons").select("*, start_time, end_time").eq("scheduled_date", today);
       const { data: userRecords } = await supabase
         .from("attendance_records")
         .select("lesson_id")
@@ -174,7 +181,23 @@ export default function DashboardHome() {
 
       if (todayLessons && todayLessons.length > 0) {
         const checkedInIds = new Set(userRecords?.map((r) => r.lesson_id));
-        const pending = todayLessons.find((l) => !checkedInIds.has(l.id));
+        const nowTime = new Date();
+        const nowStr = nowTime.toTimeString().slice(0,5); // "HH:MM"
+        const pending = todayLessons.find((l: any) => {
+          if (checkedInIds.has(l.id)) return false;
+          // Se a aula tem horário definido, só mostra dentro da janela (start - 15min até end + 30min)
+          if (l.start_time && l.end_time) {
+            const [sh, sm] = l.start_time.split(':').map(Number);
+            const [eh, em] = l.end_time.split(':').map(Number);
+            const startMins = sh * 60 + sm - 15;
+            const endMins = eh * 60 + em + 30;
+            const [ch, cm] = nowStr.split(':').map(Number);
+            const nowMins = ch * 60 + cm;
+            return nowMins >= startMins && nowMins <= endMins;
+          }
+          // Sem horário definido: mostra o dia todo
+          return true;
+        });
         if (pending) setPendingLesson(pending);
       }
 

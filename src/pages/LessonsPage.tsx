@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Download, Play, FileText } from "lucide-react";
 import { useCohort } from "@/contexts/CohortContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { BookOpen } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type Module = Database["public"]["Tables"]["modules"]["Row"];
@@ -16,8 +17,9 @@ type Lesson = Database["public"]["Tables"]["lessons"]["Row"] & {
 export default function LessonsPage() {
   const [modules, setModules] = useState<(Module & { lessons: Lesson[] })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [attendedIds, setAttendedIds] = useState<Set<string>>(new Set());
   const { selectedCohort } = useCohort();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const isStudent = profile?.role === 'aluno';
 
   useEffect(() => {
@@ -28,6 +30,15 @@ export default function LessonsPage() {
         .from("lessons")
         .select("*, lesson_files(*)")
         .order("scheduled_date", { ascending: true, nullsFirst: false });
+
+      // Fetch attendance for progress
+      if (user) {
+        const { data: recs } = await supabase
+          .from('attendance_records')
+          .select('lesson_id')
+          .eq('user_id', user.id);
+        setAttendedIds(new Set((recs || []).map((r: any) => r.lesson_id)));
+      }
 
       if (mods && lessons) {
         const allLessons = lessons as Lesson[];
@@ -80,6 +91,36 @@ export default function LessonsPage() {
     return (
       <div className="page-container">
         <h1 className="section-title mb-4">Aulas</h1>
+
+      {/* Progresso geral — só para alunos */}
+      {(() => {
+        const allML = modules.flatMap(m => m.lessons.filter(l => l.mandatory_attendance && (l as any).event_type === 'aula'));
+        const att = allML.filter(l => attendedIds.has(l.id)).length;
+        const tot = allML.length;
+        if (!isStudent || tot === 0) return null;
+        return (
+        <div className="flex items-center gap-3 mb-6 p-4 rounded-lg bg-card border border-border">
+          <div className="p-2 rounded-md bg-primary/10">
+            <BookOpen className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium font-body">Progresso geral</p>
+            <div className="flex items-center gap-3 mt-1">
+              <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-primary transition-all"
+                  style={{ width: `${tot > 0 ? Math.round((att / tot) * 100) : 0}%` }}
+                />
+              </div>
+              <span className="text-xs text-muted-foreground whitespace-nowrap font-body">
+                {att} de {tot} aulas assistidas
+              </span>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
+
         <p className="text-muted-foreground">Nenhum módulo disponível ainda.</p>
       </div>
     );

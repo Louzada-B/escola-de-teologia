@@ -31,6 +31,10 @@ export default function ModulesManager({ userId }: { userId: string }) {
   const [professorName, setProfessorName] = useState('');
   const [eventType, setEventType] = useState('aula');
   const [mandatoryAttendance, setMandatoryAttendance] = useState(true);
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [editStartTime, setEditStartTime] = useState('');
+  const [editEndTime, setEditEndTime] = useState('');
   const [selectedModule, setSelectedModule] = useState('');
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [lessons, setLessons] = useState<any[]>([]);
@@ -148,7 +152,9 @@ export default function ModulesManager({ userId }: { userId: string }) {
       professor_name: professorName || null,
       event_type: eventType,
       mandatory_attendance: mandatoryAttendance,
-    }).select().single();
+      start_time: startTime || null,
+      end_time: endTime || null,
+    } as any).select().single();
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
 
     let fileError: string | null = null;
@@ -217,7 +223,9 @@ export default function ModulesManager({ userId }: { userId: string }) {
       professor_name: editProfessorName || null,
       event_type: editEventType,
       mandatory_attendance: editMandatoryAttendance,
-    }).eq('id', editingLesson.id);
+      start_time: editStartTime || null,
+      end_time: editEndTime || null,
+    } as any).eq('id', editingLesson.id);
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
 
     // Delete removed files
@@ -289,6 +297,8 @@ export default function ModulesManager({ userId }: { userId: string }) {
     setEditProfessorName(l.professor_name || '');
     setEditEventType(l.event_type || 'aula');
     setEditMandatoryAttendance(l.mandatory_attendance ?? true);
+    setEditStartTime((l as any).start_time || '');
+    setEditEndTime((l as any).end_time || '');
     setEditExistingFiles(l.lesson_files || []);
     setEditPendingFiles([]);
     setFilesToDelete([]);
@@ -333,6 +343,10 @@ export default function ModulesManager({ userId }: { userId: string }) {
             <Label htmlFor="mandatory" className="cursor-pointer">Presença obrigatória</Label>
           </div>
           <div><Label>Data da Aula</Label><Input type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)} /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label>Horário de Início</Label><Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} /></div>
+            <div><Label>Horário de Encerramento</Label><Input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} /></div>
+          </div>
           <div><Label>Link do Vídeo (YouTube)</Label><Input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..." /></div>
           <div>
             <Label>Arquivos (PDF, Word, PPT)</Label>
@@ -436,6 +450,10 @@ export default function ModulesManager({ userId }: { userId: string }) {
               <Label htmlFor="edit-mandatory" className="cursor-pointer">Presença obrigatória</Label>
             </div>
             <div><Label>Data da Aula</Label><Input type="date" value={editLessonDate} onChange={e => setEditLessonDate(e.target.value)} /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label>Horário de Início</Label><Input type="time" value={editStartTime} onChange={e => setEditStartTime(e.target.value)} /></div>
+            <div><Label>Horário de Encerramento</Label><Input type="time" value={editEndTime} onChange={e => setEditEndTime(e.target.value)} /></div>
+          </div>
             <div><Label>Link do Vídeo</Label><Input value={editLessonVideo} onChange={e => setEditLessonVideo(e.target.value)} /></div>
 
             <div>
