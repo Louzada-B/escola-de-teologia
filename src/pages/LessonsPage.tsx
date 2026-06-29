@@ -92,35 +92,6 @@ export default function LessonsPage() {
       <div className="page-container">
         <h1 className="section-title mb-4">Aulas</h1>
 
-      {/* Progresso geral — só para alunos */}
-      {(() => {
-        const allML = modules.flatMap(m => m.lessons.filter(l => l.mandatory_attendance && (l as any).event_type === 'aula'));
-        const att = allML.filter(l => attendedIds.has(l.id)).length;
-        const tot = allML.length;
-        if (!isStudent || tot === 0) return null;
-        return (
-        <div className="flex items-center gap-3 mb-6 p-4 rounded-lg bg-card border border-border">
-          <div className="p-2 rounded-md bg-primary/10">
-            <BookOpen className="w-5 h-5 text-primary" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium font-body">Progresso geral</p>
-            <div className="flex items-center gap-3 mt-1">
-              <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-primary transition-all"
-                  style={{ width: `${tot > 0 ? Math.round((att / tot) * 100) : 0}%` }}
-                />
-              </div>
-              <span className="text-xs text-muted-foreground whitespace-nowrap font-body">
-                {att} de {tot} aulas assistidas
-              </span>
-            </div>
-          </div>
-        </div>
-        );
-      })()}
-
         <p className="text-muted-foreground">Nenhum módulo disponível ainda.</p>
       </div>
     );
@@ -128,6 +99,35 @@ export default function LessonsPage() {
 
   return (
     <div className="page-container">
+
+      {/* Progresso geral — só para alunos */}
+      {(() => {
+        const allML = modules.flatMap(m => m.lessons.filter(l => l.mandatory_attendance && (l as any).event_type === 'aula'));
+        const att = allML.filter(l => attendedIds.has(l.id)).length;
+        const tot = allML.length;
+        if (!isStudent || tot === 0) return null;
+        return (
+          <div className="flex items-center gap-3 mb-6 p-4 rounded-lg bg-card border border-border">
+            <div className="p-2 rounded-md bg-primary/10">
+              <BookOpen className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium font-body">Progresso geral</p>
+              <div className="flex items-center gap-3 mt-1">
+                <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all"
+                    style={{ width: `${Math.round((att / tot) * 100)}%` }}
+                  />
+                </div>
+                <span className="text-xs text-muted-foreground whitespace-nowrap font-body">
+                  {att} de {tot} aulas assistidas
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       <h1 className="section-title mb-6">Aulas</h1>
 
       <Accordion type="multiple" className="space-y-3">

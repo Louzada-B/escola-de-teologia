@@ -33,7 +33,8 @@ export default function AttendancePage() {
   useEffect(() => {
     const now = new Date();
     const hour = now.getHours();
-    setIsWithinTime(hour >= 18 && hour <= 23);
+    // isWithinTime agora é calculado por aula (ver lógica abaixo)
+    setIsWithinTime(true); // estado global desativado — cada aula tem sua própria janela
 
     async function load() {
       const today = getLocalToday();
@@ -69,16 +70,39 @@ export default function AttendancePage() {
     load();
   }, [user, selectedCohort, effectiveCutoffDate]);
 
-  const handleCheckIn = async (lessonId: string) => {
+
+  // Verifica se o horário atual está na janela de presença de uma aula
+  // 30min antes do início até 2h após o encerramento
+  const isLessonOpen = (lesson: any): boolean => {
+    const st = lesson.start_time;
+    const et = lesson.end_time;
+    if (!st || !et) {
+      // Sem horário definido: disponível o dia todo
+      return true;
+    }
+    const now = new Date();
+    const [sh, sm] = st.split(':').map(Number);
+    const [eh, em] = et.split(':').map(Number);
+    const openMins  = sh * 60 + sm - 30;       // 30min antes
+    const closeMins = eh * 60 + em + 120;       // 2h depois
+    const nowMins   = now.getHours() * 60 + now.getMinutes();
+    return nowMins >= openMins && nowMins <= closeMins;
+  };
+
+  const handleCheckIn = async (lessonId: string, lesson?: any) => {
     if (!settings) {
       toast({ title: "Erro", description: "Local da aula não configurado pelo professor.", variant: "destructive" });
       return;
     }
 
-    if (!isWithinTime) {
+    if (lesson && !isLessonOpen(lesson)) {
+      const st = lesson.start_time ? lesson.start_time.slice(0, 5) : null;
+      const et = lesson.end_time   ? lesson.end_time.slice(0, 5)   : null;
       toast({
         title: "Fora do horário",
-        description: "O registro de presença está disponível apenas das 19:00 às 23:59.",
+        description: st && et
+          ? `Presença disponível das ${st} (30min antes) até 2h após ${et}.`
+          : "O registro de presença não está disponível agora.",
         variant: "destructive",
       });
       return;
@@ -148,15 +172,15 @@ export default function AttendancePage() {
     <div className="page-container">
       <h1 className="section-title mb-2">Registro de Presença</h1>
       <p className="text-muted-foreground font-body mb-6">
-        Registre sua presença nas aulas do dia. Disponível das 19:00 às 23:59.
+        Registre sua presença nas aulas do dia dentro do horário definido pelo professor.
       </p>
 
-      {!isWithinTime && (
+      {false && (
         <Card className="card-academic mb-6 border-yellow-500/30 bg-yellow-500/5">
           <CardContent className="flex items-center gap-3 py-4">
             <Clock className="w-5 h-5 text-yellow-600" />
             <p className="text-sm font-body text-yellow-700 dark:text-yellow-400">
-              O registro de presença está disponível apenas das 19:00 às 23:59.
+              O registro de presença está disponível 30 minutos antes do início até 2 horas após o encerramento.
             </p>
           </CardContent>
         </Card>
@@ -201,8 +225,8 @@ export default function AttendancePage() {
                   <p className="text-sm text-muted-foreground font-body">Presença já registrada para esta aula.</p>
                 ) : (
                   <Button
-                    onClick={() => handleCheckIn(lesson.id)}
-                    disabled={!isWithinTime || !settings || gpsLoading === lesson.id}
+                    onClick={() => handleCheckIn(lesson.id, lesson)}
+                    disabled={!isLessonOpen(lesson) || !settings || gpsLoading === lesson.id}
                   >
                     <MapPin className="w-4 h-4 mr-2" />
                     {gpsLoading === lesson.id ? "Verificando localização..." : "Registrar Presença"}
