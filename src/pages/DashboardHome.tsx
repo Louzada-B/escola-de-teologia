@@ -113,7 +113,7 @@ export default function DashboardHome() {
   const [mainQuizPerc, setMainQuizPerc] = useState(0);
   const [pendingLesson, setPendingLesson] = useState<any>(null);
   const [pendingQuizCount, setPendingQuizCount] = useState(0);
-  const [isWithinTime, setIsWithinTime] = useState(false);
+  const [isWithinTime, setIsWithinTime] = useState(true);
 
   const cohortStart = selectedCohort?.start_date;
   const cohortEnd = selectedCohort?.end_date;
@@ -189,8 +189,8 @@ export default function DashboardHome() {
           if (l.start_time && l.end_time) {
             const [sh, sm] = l.start_time.split(':').map(Number);
             const [eh, em] = l.end_time.split(':').map(Number);
-            const startMins = sh * 60 + sm - 15;
-            const endMins = eh * 60 + em + 30;
+            const startMins = sh * 60 + sm - 30;
+            const endMins = eh * 60 + em + 120;
             const [ch, cm] = nowStr.split(':').map(Number);
             const nowMins = ch * 60 + cm;
             return nowMins >= startMins && nowMins <= endMins;
@@ -279,7 +279,7 @@ export default function DashboardHome() {
   return (
     <div className="page-container pb-10">
       {/* ALERTA DE PRESENÇA PENDENTE */}
-      {isWithinTime && pendingLesson && profile?.role === "aluno" && (
+      {pendingLesson && profile?.role === "aluno" && (
         <Card className="mb-8 border-accent/40 bg-accent/5 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-700">
           <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-5">
             <div className="flex items-center gap-4 text-center sm:text-left">
