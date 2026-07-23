@@ -60,11 +60,25 @@ export default function EvaluationPage() {
       return;
     }
 
-    // Check if near end of course (7 days before end_date)
-    const endDate = new Date(selectedCohort.end_date);
-    const now = new Date();
-    const daysUntilEnd = (endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-    setIsNearEnd(daysUntilEnd <= 7);
+    // Abre a avaliação no dia da última aula cadastrada na turma
+    supabase
+      .from("lessons")
+      .select("scheduled_date")
+      .gte("scheduled_date", selectedCohort.start_date)
+      .lte("scheduled_date", selectedCohort.end_date)
+      .order("scheduled_date", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data: lastLesson }) => {
+        if (lastLesson?.scheduled_date) {
+          const lastLessonDate = new Date(lastLesson.scheduled_date + "T00:00:00");
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          setIsNearEnd(today >= lastLessonDate);
+        } else {
+          setIsNearEnd(false);
+        }
+      });
 
     // Check if already submitted
     supabase
