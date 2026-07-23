@@ -18,10 +18,10 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Verify caller is admin
     const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
+
     const { data: { user: caller } } = await userClient.auth.getUser();
     if (!caller) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
@@ -44,8 +44,6 @@ Deno.serve(async (req) => {
     }
 
     const { students, redirectTo } = await req.json();
-    // students: Array<{ email: string, full_name: string, cohort_id: string }>
-    // redirectTo: URL para onde o link do convite deve levar (tela de definir senha)
 
     if (!students || !Array.isArray(students) || students.length === 0) {
       return new Response(JSON.stringify({ error: "Lista de alunos vazia" }), {
@@ -68,57 +66,73 @@ Deno.serve(async (req) => {
       }
 
       try {
-        // Check if user already exists
-        const { data: existingProfiles } = await adminClient
-          .from("profiles")
-          .select("id")
-          .eq("email", email)
-          .maybeSingle();
+        // Busca o usuário pelo e-mail diretamente em auth.users via admin API
+        const { data: { users: existingUsers }, error: listError } = await adminClient.auth.admin.listUsers();
+        
+        if (listError) {
+          console.error("[invite-student] Erro ao listar usuários:", listError.message);
+          results.push({ email, success: false, error: "Erro ao verificar usuário existente: " + listError.message });
+          continue;
+        }
 
+        const existingUser = existingUsers?.find((u) => u.email?.toLowerCase() === email);
         let userId: string;
 
-        if (existingProfiles) {
-          // User already exists, just link to cohort
-          userId = existingProfiles.id;
+        if (existingUser) {
+          // Usuário já existe — só vincula à turma
+          console.log("[invite-student] Usuário já existe:", email);
+          userId = existingUser.id;
         } else {
-          // Create user with invite (sends magic link email)
+          // Cria usuário via convite
+          console.log("[invite-student] Convidando novo usuário:", email);
           const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
             data: { full_name: fullName, role: "aluno" },
             redirectTo,
           });
 
           if (inviteError) {
-            results.push({ email, success: false, error: inviteError.message });
+            const msg = inviteError.message || JSON.stringify(inviteError);
+            console.error("[invite-student] Erro no convite:", msg);
+            results.push({ email, success: false, error: msg });
             continue;
           }
+
           userId = inviteData.user.id;
         }
 
-        // Link student to cohort (ignore if already linked)
+        // Vincula aluno à turma
         const { error: cohortError } = await adminClient
           .from("cohort_students")
           .upsert({ cohort_id: cohortId, user_id: userId }, { onConflict: "cohort_id,user_id", ignoreDuplicates: true });
 
         if (cohortError) {
+          console.error("[invite-student] Erro ao vincular turma:", cohortError.message);
           results.push({ email, success: false, error: cohortError.message });
           continue;
         }
 
         results.push({ email, success: true });
+        console.log("[invite-student] Sucesso:", email);
       } catch (err: any) {
-        results.push({ email, success: false, error: err.message });
+        const msg = err?.message || JSON.stringify(err) || "Erro desconhecido";
+        console.error("[invite-student] Exceção para", email, ":", msg);
+        results.push({ email, success: false, error: msg });
       }
     }
 
     const successCount = results.filter((r) => r.success).length;
     const errorCount = results.filter((r) => !r.success).length;
 
+    console.log("[invite-student] Resultado:", successCount, "sucesso(s),", errorCount, "erro(s)");
+
     return new Response(
       JSON.stringify({ results, successCount, errorCount }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    const msg = err?.message || JSON.stringify(err) || "Erro fatal desconhecido";
+    console.error("[invite-student] Erro fatal:", msg);
+    return new Response(JSON.stringify({ error: msg }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
