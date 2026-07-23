@@ -137,7 +137,7 @@ export default function EvaluationPage() {
           <Lock className="w-12 h-12 text-muted-foreground mx-auto" />
           <h1 className="text-2xl font-heading font-bold text-foreground">Avaliação do Curso</h1>
           <p className="text-muted-foreground">
-            A avaliação do curso estará disponível nos últimos 7 dias antes do encerramento da sua turma.
+            A avaliação do curso será liberada a partir da última aula. Volte nessa data para compartilhar sua opinião.
           </p>
         </div>
       </div>
