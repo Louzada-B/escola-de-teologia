@@ -435,8 +435,8 @@ export default function DashboardHome() {
               </TooltipProvider>
             </CardHeader>
             <CardContent>
-              {quizData.length === 0 ? (
-                <p className="text-center py-10 text-muted-foreground font-body">Nenhum questionário encontrado.</p>
+              {quizData.length === 0 || (quizData[0].qty === 0 && quizData[1].qty === 0) ? (
+                <p className="text-center py-10 text-muted-foreground font-body">Sem dados de questionários.</p>
               ) : (
                 <DonutChart
                   data={quizData}
