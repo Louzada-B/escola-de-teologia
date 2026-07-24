@@ -130,6 +130,15 @@ export default function ExtraMaterialsManager({ userId }: { userId: string }) {
         fileType = selectedFile.type;
       }
 
+      // Calcula o próximo order_index automaticamente
+      const { data: lastItem } = await supabase
+        .from("extra_materials")
+        .select("order_index")
+        .order("order_index", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const nextOrder = ((lastItem as any)?.order_index ?? 0) + 1;
+
       const { error } = await supabase.from("extra_materials").insert({
         title: title.trim(),
         description: description.trim() || null,
@@ -141,7 +150,8 @@ export default function ExtraMaterialsManager({ userId }: { userId: string }) {
         external_url: materialType !== "file" ? externalUrl.trim() : null,
         category,
         created_by: userId,
-      });
+        order_index: nextOrder,
+      } as any);
 
       if (error) throw error;
 

@@ -65,7 +65,7 @@ export default function ExtraMaterialsPage() {
     const { data } = await supabase
       .from("extra_materials")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("order_index", { ascending: true });
     setMaterials(data || []);
     setLoading(false);
   };
