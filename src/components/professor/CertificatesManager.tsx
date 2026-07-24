@@ -375,8 +375,17 @@ export default function CertificatesManager() {
       .in("user_id", ids)
       .in("lesson_id", allIds.length ? allIds : ["none"]);
 
-    const { data: quizzes }   = await supabase.from("quizzes").select("id");
-    const totalQuiz = (quizzes || []).length;
+    const now = new Date().toISOString();
+    const { data: quizzes }   = await supabase
+      .from("quizzes")
+      .select("id, available_from")
+      .gte("available_from", "1900-01-01"); // busca todos
+    // Denominador: só quizzes já abertos (mesma lógica do dashboard e analytics)
+    const openedQuizzes = (quizzes || []).filter(
+      (q: any) => !q.available_from || q.available_from <= now
+    );
+    const totalQuiz = openedQuizzes.length;
+    const openedQuizIds = new Set(openedQuizzes.map((q: any) => q.id));
     const { data: responses } = await supabase
       .from("quiz_responses").select("user_id, quiz_id").in("user_id", ids);
 
@@ -388,7 +397,11 @@ export default function CertificatesManager() {
       const speDone = att.filter((a: any) => special.some((l: any) => l.id === a.lesson_id)).length;
       const attReg  = regular.length  > 0 ? (regDone / regular.length)  * 100 : 100;
       const attSpe  = special.length  > 0 ? (speDone / special.length)  * 100 : 100;
-      const quizSet = new Set((responses || []).filter((r: any) => r.user_id === uid).map((r: any) => r.quiz_id));
+      const quizSet = new Set(
+        (responses || [])
+          .filter((r: any) => r.user_id === uid && openedQuizIds.has(r.quiz_id))
+          .map((r: any) => r.quiz_id)
+      );
       const quizPct = totalQuiz > 0 ? (quizSet.size / totalQuiz) * 100 : 100;
       const eligible = attReg >= 75 && attSpe >= 20 && quizPct >= 75;
 

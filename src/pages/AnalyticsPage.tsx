@@ -85,11 +85,18 @@ export default function AnalyticsPage() {
     return allQuizResponses.filter(r => studentIds.has(r.user_id));
   }, [allQuizResponses, selectedCohortId, studentIds]);
 
-  // Filter quizResponses further to only count responses for cohort-period quizzes
+  // Quizzes já abertos (available_from <= now ou sem data) — denominador correto
+  const now = new Date().toISOString();
+  const openedQuizzes = useMemo(() =>
+    quizzes.filter((q: any) => !q.available_from || q.available_from <= now),
+    [quizzes]
+  );
+  const openedQuizIds = useMemo(() => new Set(openedQuizzes.map((q: any) => q.id)), [openedQuizzes]);
+  // Filter quizResponses further to only count responses for opened cohort-period quizzes
   const cohortQuizIds = useMemo(() => new Set(quizzes.map(q => q.id)), [quizzes]);
   const filteredQuizResponses = useMemo(() => {
-    return quizResponses.filter(r => cohortQuizIds.has(r.quiz_id));
-  }, [quizResponses, cohortQuizIds]);
+    return quizResponses.filter(r => openedQuizIds.has(r.quiz_id));
+  }, [quizResponses, openedQuizIds]);
 
   const pastLessons = useMemo(() => {
     return lessons.filter((l) => {
@@ -245,7 +252,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold text-foreground">
-              {filteredQuizResponses.length} <span className="text-lg text-muted-foreground">/ {quizzes.length}</span>
+              {filteredQuizResponses.length} <span className="text-lg text-muted-foreground">/ {openedQuizzes.length}</span>
             </p>
             <p className="text-xs text-muted-foreground mt-1">respostas / questionários</p>
           </CardContent>

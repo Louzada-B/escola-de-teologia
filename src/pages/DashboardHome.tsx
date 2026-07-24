@@ -247,19 +247,22 @@ export default function DashboardHome() {
       const now = new Date().toISOString();
       const { data: quizResponses } = await supabase.from("quiz_responses").select("quiz_id").eq("user_id", user.id);
       const answeredIds = new Set((quizResponses || []).map((r) => r.quiz_id));
-      const answered = filteredQuizzes.filter((q) => answeredIds.has(q.id)).length;
-      const available = filteredQuizzes.length - answered;
+      // Denominador: só quizzes já abertos (available_from <= now ou sem data)
+      const openedQuizzes = filteredQuizzes.filter((q: any) =>
+        !q.available_from || q.available_from <= now
+      );
+      const answered = openedQuizzes.filter((q: any) => answeredIds.has(q.id)).length;
+      const available = openedQuizzes.length - answered;
 
-      // Pending open quizzes
-      const openUnanswered = filteredQuizzes.filter((q) => {
+      // Pending open quizzes (abertos, não respondidos, dentro do prazo)
+      const openUnanswered = openedQuizzes.filter((q: any) => {
         if (answeredIds.has(q.id)) return false;
-        if (q.available_from && q.available_from > now) return false;
         if (q.available_until && q.available_until < now) return false;
         return true;
       });
       setPendingQuizCount(openUnanswered.length);
-      const ansPerc = filteredQuizzes.length > 0 ? Math.round((answered / filteredQuizzes.length) * 100) : 0;
-      const availPerc = filteredQuizzes.length > 0 ? 100 - ansPerc : 0;
+      const ansPerc = openedQuizzes.length > 0 ? Math.round((answered / openedQuizzes.length) * 100) : 0;
+      const availPerc = openedQuizzes.length > 0 ? 100 - ansPerc : 0;
       setMainQuizPerc(ansPerc);
       setQuizData([
         { name: "Respondidos", value: ansPerc, qty: answered },
