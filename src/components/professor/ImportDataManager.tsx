@@ -76,7 +76,7 @@ const convertDateTime = (val: any): string | null => {
   if (!val) return null;
   const dateStr = convertDate(val);
   if (!dateStr) return null;
-  return `${dateStr}T00:00:00`;
+  return `${dateStr}T00:00:00-03:00`;
 };
 
 const ENTITIES: Record<EntityType, EntityConfig> = {
@@ -333,10 +333,10 @@ export default function ImportDataManager({ userId }: { userId: string }) {
             title: String(pr.data.title || '').trim(),
             lesson_id: lessonId,
             available_from: pr.data.available_from
-              ? `${convertDate(pr.data.available_from)}T${convertTimeFromExcel(pr.data.available_from_time) || '00:00'}:00`
+              ? `${convertDate(pr.data.available_from)}T${convertTimeFromExcel(pr.data.available_from_time) || '00:00'}:00-03:00`
               : null,
             available_until: pr.data.available_until
-              ? `${convertDate(pr.data.available_until)}T${convertTimeFromExcel(pr.data.available_until_time) || '23:59'}:00`
+              ? `${convertDate(pr.data.available_until)}T${convertTimeFromExcel(pr.data.available_until_time) || '23:59'}:00-03:00`
               : null,
             created_by: userId,
           };
