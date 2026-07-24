@@ -97,6 +97,29 @@ export default function LessonsPage() {
     );
   }
 
+
+  // Verifica se a aula já ocorreu (após end_time ou após o dia se sem horário)
+  const lessonHasPassed = (lesson: any): boolean => {
+    if (!lesson.scheduled_date) return false;
+    const now = new Date();
+    const lessonDate = lesson.scheduled_date;
+    const today = now.toISOString().split('T')[0];
+
+    if (lessonDate > today) return false;
+    if (lessonDate < today) return true;
+
+    // Mesmo dia: verifica end_time
+    if ((lesson as any).end_time) {
+      const [h, m] = ((lesson as any).end_time as string).split(':').map(Number);
+      const endMins = h * 60 + m;
+      const nowMins = now.getHours() * 60 + now.getMinutes();
+      return nowMins > endMins;
+    }
+
+    // Sem end_time: considera passada após o dia
+    return lessonDate < today;
+  };
+
   return (
     <div className="page-container">
 
@@ -140,12 +163,21 @@ export default function LessonsPage() {
                 {mod.lessons.map((lesson) => (
                   <Card key={lesson.id} className="card-academic">
                     <CardHeader className="pb-2">
-                      <div className="flex items-center gap-3">
-                        <CardTitle className="text-base font-body font-semibold">{lesson.title}</CardTitle>
-                        {lesson.scheduled_date && (
-                          <span className="text-xs text-muted-foreground">
-                            ({new Date(lesson.scheduled_date + "T12:00:00").toLocaleDateString("pt-BR")})
-                          </span>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <CardTitle className="text-base font-body font-semibold">{lesson.title}</CardTitle>
+                          {lesson.scheduled_date && (
+                            <span className="text-xs text-muted-foreground">
+                              ({new Date(lesson.scheduled_date + "T12:00:00").toLocaleDateString("pt-BR")})
+                            </span>
+                          )}
+                        </div>
+                        {lessonHasPassed(lesson) && (
+                          isStudent
+                            ? attendedIds.has(lesson.id)
+                              ? <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" title="Você estava presente" />
+                              : <Circle className="w-5 h-5 text-muted-foreground/40 shrink-0" title="Aula realizada — sem registro de presença" />
+                            : <CheckCircle2 className="w-5 h-5 text-muted-foreground/50 shrink-0" title="Aula realizada" />
                         )}
                       </div>
                       <div className="flex items-center gap-3">
