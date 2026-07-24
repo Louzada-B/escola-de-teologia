@@ -19,6 +19,22 @@ interface EntityConfig {
   transform?: (row: Record<string, any>, userId: string) => Record<string, any>;
 }
 
+const convertTimeFromExcel = (val: any): string | null => {
+  if (!val && val !== 0) return null;
+  const s = String(val).trim();
+  // Já está no formato HH:MM
+  if (/^\d{1,2}:\d{2}/.test(s)) return s.slice(0, 5);
+  // Número fracionário do Excel (ex: 0.9166... = 22:00)
+  const n = Number(val);
+  if (!isNaN(n) && n >= 0 && n < 1) {
+    const totalMinutes = Math.round(n * 24 * 60);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+  return s;
+};
+
 const excelSerialToDateStr = (serial: number): string => {
   // Usa 12h (meio-dia) UTC para evitar problema de timezone: meia-noite UTC
   // seria dia anterior em fusos negativos (Brasil, etc.)
@@ -29,10 +45,16 @@ const excelSerialToDateStr = (serial: number): string => {
 const formatDateBRPreview = (val: any): string => {
   if (!val) return '';
   const s = String(val).trim();
+  // Serial de data Excel (> 30000)
   if (!isNaN(Number(val)) && Number(val) > 30000) {
     const iso = excelSerialToDateStr(Number(val));
     const [y, m, d] = iso.split('-');
     return `${d}/${m}/${y}`;
+  }
+  // Fração de horário Excel (0 a 1)
+  const n = Number(val);
+  if (!isNaN(n) && n > 0 && n < 1) {
+    return convertTimeFromExcel(val) || s;
   }
   return s;
 };
@@ -311,10 +333,10 @@ export default function ImportDataManager({ userId }: { userId: string }) {
             title: String(pr.data.title || '').trim(),
             lesson_id: lessonId,
             available_from: pr.data.available_from
-              ? `${convertDate(pr.data.available_from)}T${pr.data.available_from_time ? String(pr.data.available_from_time).slice(0,5) : '00:00'}:00`
+              ? `${convertDate(pr.data.available_from)}T${convertTimeFromExcel(pr.data.available_from_time) || '00:00'}:00`
               : null,
             available_until: pr.data.available_until
-              ? `${convertDate(pr.data.available_until)}T${pr.data.available_until_time ? String(pr.data.available_until_time).slice(0,5) : '23:59'}:00`
+              ? `${convertDate(pr.data.available_until)}T${convertTimeFromExcel(pr.data.available_until_time) || '23:59'}:00`
               : null,
             created_by: userId,
           };
@@ -455,7 +477,7 @@ export default function ImportDataManager({ userId }: { userId: string }) {
                       </TableCell>
                       {config!.columns.map(c => (
                         <TableCell key={c.key} className="text-xs max-w-[200px] truncate">
-                          {pr.data[c.key] != null ? (c.key.includes('date') || c.key.includes('from') || c.key.includes('until') ? formatDateBRPreview(pr.data[c.key]) : String(pr.data[c.key])) : '—'}
+                          {pr.data[c.key] != null ? (c.key.includes('date') || c.key.includes('from') || c.key.includes('until') || c.key.includes('time') ? formatDateBRPreview(pr.data[c.key]) : String(pr.data[c.key])) : '—'}
                         </TableCell>
                       ))}
                     </TableRow>
