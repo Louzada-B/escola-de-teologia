@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { CheckCircle, Lock, Clock, FileText } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import QuizGabarito from '@/components/quiz/QuizGabarito';
 import QuizAnswerDialog from '@/components/quiz/QuizAnswerDialog';
 
@@ -23,6 +24,7 @@ export default function QuizzesPage() {
   const [loading, setLoading] = useState(true);
   const [activeQuizId, setActiveQuizId] = useState<string | null>(null);
   const [showGabaritoId, setShowGabaritoId] = useState<string | null>(null);
+  const [gabaritoDialogId, setGabaritoDialogId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -155,26 +157,35 @@ export default function QuizzesPage() {
                   {status === 'answered' && gabaritoData[quiz.id] && (
                     <Button
                       variant="outline"
-                      onClick={() => setShowGabaritoId(showGabaritoId === quiz.id ? null : quiz.id)}
+                      onClick={() => setGabaritoDialogId(quiz.id)}
                       className="w-full"
                     >
-                      {showGabaritoId === quiz.id ? 'Ocultar Gabarito' : 'Ver Gabarito'}
+                      Ver Gabarito
                     </Button>
                   )}
                 </CardContent>
 
-                {showGabaritoId === quiz.id && gabaritoData[quiz.id] && (
-                  <div className="px-6 pb-6">
-                    <QuizGabarito
-                      questions={gabaritoData[quiz.id].questions}
-                      studentAnswers={gabaritoData[quiz.id].studentAnswers}
-                    />
-                  </div>
-                )}
+
               </Card>
             );
           })}
         </div>
+      )}
+
+      {gabaritoDialogId && gabaritoData[gabaritoDialogId] && (
+        <Dialog open={!!gabaritoDialogId} onOpenChange={(open) => { if (!open) setGabaritoDialogId(null); }}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="font-heading">
+                {quizzes.find(q => q.id === gabaritoDialogId)?.title}
+              </DialogTitle>
+            </DialogHeader>
+            <QuizGabarito
+              questions={gabaritoData[gabaritoDialogId].questions}
+              studentAnswers={gabaritoData[gabaritoDialogId].studentAnswers}
+            />
+          </DialogContent>
+        </Dialog>
       )}
 
       {activeQuiz && (
