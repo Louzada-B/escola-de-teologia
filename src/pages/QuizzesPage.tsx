@@ -35,7 +35,7 @@ export default function QuizzesPage() {
       const { data: qData } = await supabase.from('quiz_questions').select('*').order('order_index');
       const { data: responses } = await supabase
         .from('quiz_responses')
-        .select('quiz_id')
+        .select('quiz_id, question_id, answer')
         .eq('user_id', user?.id || '');
 
       if (quizData) {
@@ -70,7 +70,31 @@ export default function QuizzesPage() {
         setQuestions(grouped);
       }
       if (responses) {
-        setSubmitted(new Set(responses.map((r) => r.quiz_id)));
+        setSubmitted(new Set(responses.map((r: any) => r.quiz_id)));
+
+        // Monta gabaritoData para todos os quizzes já respondidos
+        const grouped: Record<string, Record<string, any>> = {};
+        responses.forEach((r: any) => {
+          if (!grouped[r.quiz_id]) grouped[r.quiz_id] = {};
+          grouped[r.quiz_id][r.question_id] = r.answer;
+        });
+
+        if (qData) {
+          const questionsByQuiz: Record<string, any[]> = {};
+          qData.forEach((q: any) => {
+            if (!questionsByQuiz[q.quiz_id]) questionsByQuiz[q.quiz_id] = [];
+            questionsByQuiz[q.quiz_id].push(q);
+          });
+
+          const gabarito: Record<string, { questions: any[]; studentAnswers: Record<string, any> }> = {};
+          Object.keys(grouped).forEach((quizId) => {
+            gabarito[quizId] = {
+              questions: questionsByQuiz[quizId] || [],
+              studentAnswers: grouped[quizId],
+            };
+          });
+          setGabaritoData(gabarito);
+        }
       }
       setLoading(false);
     }
@@ -154,7 +178,7 @@ export default function QuizzesPage() {
                     </Button>
                   )}
 
-                  {status === 'answered' && gabaritoData[quiz.id] && (
+                  {status === 'answered' && (
                     <Button
                       variant="outline"
                       onClick={() => setGabaritoDialogId(quiz.id)}
@@ -172,7 +196,7 @@ export default function QuizzesPage() {
         </div>
       )}
 
-      {gabaritoDialogId && gabaritoData[gabaritoDialogId] && (
+      {gabaritoDialogId && (
         <Dialog open={!!gabaritoDialogId} onOpenChange={(open) => { if (!open) setGabaritoDialogId(null); }}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
@@ -181,8 +205,8 @@ export default function QuizzesPage() {
               </DialogTitle>
             </DialogHeader>
             <QuizGabarito
-              questions={gabaritoData[gabaritoDialogId].questions}
-              studentAnswers={gabaritoData[gabaritoDialogId].studentAnswers}
+              questions={gabaritoData[gabaritoDialogId]?.questions || []}
+              studentAnswers={gabaritoData[gabaritoDialogId]?.studentAnswers || {}}
             />
           </DialogContent>
         </Dialog>
