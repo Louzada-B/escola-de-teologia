@@ -56,7 +56,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-background">
+    <div className="h-screen flex flex-col lg:flex-row bg-background overflow-hidden">
       {/* Mobile header */}
       <header className="lg:hidden flex items-center justify-between p-4 border-b bg-card">
         <div className="flex items-center gap-2">
@@ -71,7 +71,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "w-64 bg-sidebar text-sidebar-foreground flex-shrink-0 flex flex-col border-r border-sidebar-border",
+          "w-64 bg-sidebar text-sidebar-foreground flex-shrink-0 flex flex-col border-r border-sidebar-border h-full",
           "lg:flex",
           mobileOpen ? "flex fixed z-50 inset-0 lg:relative lg:inset-auto" : "hidden",
         )}
@@ -157,7 +157,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-y-auto h-full">
         <div className="px-4 pt-3 md:px-8 md:pt-4 flex items-center justify-end gap-3">
           {(isProfessor || isAdmin) && <CohortSelector />}
           <NotificationBell />
