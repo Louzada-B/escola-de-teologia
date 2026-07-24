@@ -131,7 +131,7 @@ export default function DashboardHome() {
         supabase.from("modules").select("id"),
         supabase.from("announcements").select("id, scheduled_at, cohort_id"),
         supabase.from("calendar_events").select("id, event_date"),
-        supabase.from("quizzes").select("id, available_from, available_until"),
+        supabase.from("quizzes").select("id, available_from, available_until, lessons(scheduled_date)"),
       ]);
 
       const allEvents = eRes.data || [];
@@ -158,9 +158,13 @@ export default function DashboardHome() {
       });
       const filteredQuizzes =
         cohortStart && cohortEnd
-          ? allQuizzes.filter((q) => {
+          ? allQuizzes.filter((q: any) => {
+              // Prioriza a data da aula vinculada (igual QuizzesPage)
+              const lessonDate = q.lessons?.scheduled_date;
+              if (lessonDate) return lessonDate >= cohortStart && lessonDate <= cohortEnd;
+              // Fallback: available_from
               const qDate = q.available_from ? q.available_from.split("T")[0] : null;
-              if (!qDate) return true; // no date = always show
+              if (!qDate) return true;
               return qDate >= cohortStart && qDate <= cohortEnd;
             })
           : allQuizzes;
