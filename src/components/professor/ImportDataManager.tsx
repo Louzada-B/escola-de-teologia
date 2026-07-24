@@ -19,16 +19,33 @@ interface EntityConfig {
   transform?: (row: Record<string, any>, userId: string) => Record<string, any>;
 }
 
+const excelSerialToDateStr = (serial: number): string => {
+  // Usa 12h (meio-dia) UTC para evitar problema de timezone: meia-noite UTC
+  // seria dia anterior em fusos negativos (Brasil, etc.)
+  const d = new Date((serial - 25569) * 86400000 + 12 * 3600000);
+  return d.toISOString().slice(0, 10);
+};
+
+const formatDateBRPreview = (val: any): string => {
+  if (!val) return '';
+  const s = String(val).trim();
+  if (!isNaN(Number(val)) && Number(val) > 30000) {
+    const iso = excelSerialToDateStr(Number(val));
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  return s;
+};
+
 const convertDate = (val: any): string | null => {
   if (!val) return null;
   const s = String(val).trim();
   const ddmm = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
   if (ddmm) return `${ddmm[3]}-${ddmm[2].padStart(2, '0')}-${ddmm[1].padStart(2, '0')}`;
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
-  // Excel serial number
+  // Número serial do Excel — usa meio-dia UTC para evitar problema de timezone
   if (!isNaN(Number(val)) && Number(val) > 30000) {
-    const d = new Date((Number(val) - 25569) * 86400000);
-    return d.toISOString().slice(0, 10);
+    return excelSerialToDateStr(Number(val));
   }
   return s;
 };
