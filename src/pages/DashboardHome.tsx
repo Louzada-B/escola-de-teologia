@@ -5,6 +5,8 @@ import { useCohort } from "@/contexts/CohortContext";
 import { isDateWithinCohortPeriod, getLocalToday } from "@/lib/cohortDateUtils";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   BookOpen,
@@ -363,6 +365,16 @@ export default function DashboardHome() {
             <CardHeader className="flex flex-row items-center gap-2">
               <UserCheck className="w-5 h-5 text-accent" />
               <CardTitle className="font-heading text-lg">Presença — Aula</CardTitle>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help ml-auto" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs text-xs">
+                    Percentual de aulas obrigatórias em que você registrou presença, em relação ao total de aulas já realizadas no período.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </CardHeader>
             <CardContent>
               {aulaData.length === 0 || (aulaData[0].qty === 0 && aulaData[1].qty === 0) ? (
@@ -382,6 +394,16 @@ export default function DashboardHome() {
             <CardHeader className="flex flex-row items-center gap-2">
               <Star className="w-5 h-5 text-accent" />
               <CardTitle className="font-heading text-lg">Presença — Aula Especial</CardTitle>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help ml-auto" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs text-xs">
+                    Percentual de aulas especiais obrigatórias em que você registrou presença, em relação ao total de aulas especiais já realizadas no período.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </CardHeader>
             <CardContent>
               {aulaEspecialData.length === 0 || (aulaEspecialData[0].qty === 0 && aulaEspecialData[1].qty === 0) ? (
@@ -401,6 +423,16 @@ export default function DashboardHome() {
             <CardHeader className="flex flex-row items-center gap-2">
               <TrendingUp className="w-5 h-5 text-accent" />
               <CardTitle className="font-heading text-lg">Status dos Questionários</CardTitle>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help ml-auto" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs text-xs">
+                    Percentual de questionários respondidos em relação aos já disponíveis (abertos ou encerrados). Questionários futuros não são contabilizados.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </CardHeader>
             <CardContent>
               {quizData.length === 0 ? (
