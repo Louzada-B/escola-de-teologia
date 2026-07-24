@@ -3,10 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { Download, Play, FileText } from "lucide-react";
+import { Download, Play, FileText, CheckCircle2, Circle, BookOpen } from "lucide-react";
 import { useCohort } from "@/contexts/CohortContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { BookOpen } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type Module = Database["public"]["Tables"]["modules"]["Row"];
@@ -172,13 +171,15 @@ export default function LessonsPage() {
                             </span>
                           )}
                         </div>
-                        {lessonHasPassed(lesson) && (
-                          isStudent
-                            ? attendedIds.has(lesson.id)
-                              ? <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" title="Você estava presente" />
-                              : <Circle className="w-5 h-5 text-muted-foreground/40 shrink-0" title="Aula realizada — sem registro de presença" />
-                            : <CheckCircle2 className="w-5 h-5 text-muted-foreground/50 shrink-0" title="Aula realizada" />
-                        )}
+                        {(() => {
+                          if (!lessonHasPassed(lesson)) return null;
+                          if (isStudent) {
+                            return attendedIds.has(lesson.id)
+                              ? <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+                              : <Circle className="w-5 h-5 text-muted-foreground/40 shrink-0" />;
+                          }
+                          return <CheckCircle2 className="w-5 h-5 text-muted-foreground/40 shrink-0" />;
+                        })()}
                       </div>
                       <div className="flex items-center gap-3">
                         {lesson.professor_name && (
