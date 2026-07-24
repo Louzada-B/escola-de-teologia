@@ -112,7 +112,9 @@ const ENTITIES: Record<EntityType, EntityConfig> = {
       { key: 'title', label: 'Título', required: true, example: 'Quiz - Módulo 1' },
       { key: 'lesson_title', label: 'Título da Aula (opcional)', required: false, example: 'Aula 1 - Tema' },
       { key: 'available_from', label: 'Disponível De (DD/MM/YYYY)', required: false, example: '01/03/2026' },
+      { key: 'available_from_time', label: 'Horário De (HH:MM)', required: false, example: '08:00' },
       { key: 'available_until', label: 'Disponível Até (DD/MM/YYYY)', required: false, example: '30/06/2026' },
+      { key: 'available_until_time', label: 'Horário Até (HH:MM)', required: false, example: '23:59' },
     ],
   },
   quiz_questions: {
@@ -308,8 +310,12 @@ export default function ImportDataManager({ userId }: { userId: string }) {
           record = {
             title: String(pr.data.title || '').trim(),
             lesson_id: lessonId,
-            available_from: pr.data.available_from ? convertDateTime(pr.data.available_from) : null,
-            available_until: pr.data.available_until ? convertDateTime(pr.data.available_until) : null,
+            available_from: pr.data.available_from
+              ? `${convertDate(pr.data.available_from)}T${pr.data.available_from_time ? String(pr.data.available_from_time).slice(0,5) : '00:00'}:00`
+              : null,
+            available_until: pr.data.available_until
+              ? `${convertDate(pr.data.available_until)}T${pr.data.available_until_time ? String(pr.data.available_until_time).slice(0,5) : '23:59'}:00`
+              : null,
             created_by: userId,
           };
         } else if (entity === 'quiz_questions') {
