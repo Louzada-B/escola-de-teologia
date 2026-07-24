@@ -449,7 +449,7 @@ export default function ImportDataManager({ userId }: { userId: string }) {
                       </TableCell>
                       {config!.columns.map(c => (
                         <TableCell key={c.key} className="text-xs max-w-[200px] truncate">
-                          {pr.data[c.key] != null ? String(pr.data[c.key]) : '—'}
+                          {pr.data[c.key] != null ? (c.key.includes('date') || c.key.includes('from') || c.key.includes('until') ? formatDateBRPreview(pr.data[c.key]) : String(pr.data[c.key])) : '—'}
                         </TableCell>
                       ))}
                     </TableRow>
