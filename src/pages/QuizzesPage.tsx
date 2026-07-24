@@ -37,13 +37,26 @@ export default function QuizzesPage() {
         .eq('user_id', user?.id || '');
 
       if (quizData) {
-        const filtered = selectedCohort
+        const now = new Date();
+
+        const filtered = (selectedCohort
           ? quizData.filter((q: any) => {
               const lessonDate = q.lessons?.scheduled_date;
               if (!lessonDate) return true;
               return lessonDate >= selectedCohort.start_date && lessonDate <= selectedCohort.end_date;
             })
-          : quizData;
+          : quizData
+        ).filter((q: any) => {
+          // Remove questionários que ainda não abriram (futuros)
+          if (q.available_from && new Date(q.available_from) > now) return false;
+          return true;
+        }).sort((a: any, b: any) => {
+          // Ordena do mais recente para o mais antigo (por available_from ou created_at)
+          const dateA = new Date(a.available_from || a.created_at).getTime();
+          const dateB = new Date(b.available_from || b.created_at).getTime();
+          return dateB - dateA;
+        });
+
         setQuizzes(filtered);
       }
       if (qData) {
