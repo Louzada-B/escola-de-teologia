@@ -35,7 +35,7 @@ export default function QuizzesPage() {
       const { data: qData } = await supabase.from('quiz_questions').select('*').order('order_index');
       const { data: responses } = await supabase
         .from('quiz_responses')
-        .select('quiz_id, question_id, answer')
+        .select('quiz_id, answers')
         .eq('user_id', user?.id || '');
 
       if (quizData) {
@@ -72,13 +72,7 @@ export default function QuizzesPage() {
       if (responses) {
         setSubmitted(new Set(responses.map((r: any) => r.quiz_id)));
 
-        // Monta gabaritoData para todos os quizzes já respondidos
-        const grouped: Record<string, Record<string, any>> = {};
-        responses.forEach((r: any) => {
-          if (!grouped[r.quiz_id]) grouped[r.quiz_id] = {};
-          grouped[r.quiz_id][r.question_id] = r.answer;
-        });
-
+        // Monta gabaritoData — uma linha por quiz, answers é JSONB {question_id: answer}
         if (qData) {
           const questionsByQuiz: Record<string, any[]> = {};
           qData.forEach((q: any) => {
@@ -87,10 +81,10 @@ export default function QuizzesPage() {
           });
 
           const gabarito: Record<string, { questions: any[]; studentAnswers: Record<string, any> }> = {};
-          Object.keys(grouped).forEach((quizId) => {
-            gabarito[quizId] = {
-              questions: questionsByQuiz[quizId] || [],
-              studentAnswers: grouped[quizId],
+          responses.forEach((r: any) => {
+            gabarito[r.quiz_id] = {
+              questions: questionsByQuiz[r.quiz_id] || [],
+              studentAnswers: (r.answers as Record<string, any>) || {},
             };
           });
           setGabaritoData(gabarito);
