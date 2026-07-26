@@ -92,23 +92,29 @@ export default function ProfessorPage() {
     <div className="page-container">
       <h1 className="section-title mb-4">Gestão de Conteúdo</h1>
 
-      {/* ── Nav horizontal desktop ── */}
-      <div className="hidden md:flex flex-wrap items-start gap-x-6 gap-y-1 border-b border-border pb-3 mb-6">
+      {/* ── Nav desktop: grupos com separadores verticais ── */}
+      <div className="hidden md:flex border border-border rounded-xl bg-card mb-6 overflow-hidden">
         {visibleGroups.map((group, gi) => (
-          <div key={group.label} className="flex flex-col gap-0.5">
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mb-1">
+          <div
+            key={group.label}
+            className={cn(
+              "flex flex-col py-3 px-4 flex-1",
+              gi > 0 && "border-l border-border"
+            )}
+          >
+            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mb-2">
               {group.label}
             </span>
-            <div className="flex gap-1">
+            <div className="flex flex-col gap-0.5">
               {group.items.map(item => (
                 <button
                   key={item.value}
                   onClick={() => setActive(item.value)}
                   className={cn(
-                    "px-3 py-1.5 rounded-md text-sm font-body transition-colors whitespace-nowrap",
+                    "text-left px-2 py-1.5 rounded-md text-sm font-body transition-colors whitespace-nowrap",
                     active === item.value
-                      ? "bg-primary text-primary-foreground font-medium"
-                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                   )}
                 >
                   {item.label}
