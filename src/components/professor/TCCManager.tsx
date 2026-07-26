@@ -57,9 +57,9 @@ export default function TCCManager({ userId }: { userId: string }) {
       if (s) {
         setSettingsId(s.id);
         setSettings({
-          accept_from: (s as any).accept_from ? (s as any).accept_from.slice(0, 10) : "",
+          accept_from: (s as any).accept_from ? (() => { const d = new Date((s as any).accept_from); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })() : "",
           accept_from_time: (s as any).accept_from ? new Date((s as any).accept_from).toTimeString().slice(0, 5) : "00:00",
-          deadline: (s as any).deadline ? (s as any).deadline.slice(0, 10) : "",
+          deadline: (s as any).deadline ? (() => { const d = new Date((s as any).deadline); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })() : "",
           deadline_time: (s as any).deadline ? new Date((s as any).deadline).toTimeString().slice(0, 5) : "23:59",
           template_path: (s as any).template_path,
           template_name: (s as any).template_name,
