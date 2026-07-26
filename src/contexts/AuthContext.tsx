@@ -118,7 +118,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const answeredIds = new Set((responses || []).map((r: any) => r.quiz_id));
           const quizPct = totalQuiz > 0 ? (answeredIds.size / totalQuiz) * 100 : 100;
 
-          setHasEligibleCompletion(attReg >= 75 && quizPct >= 75);
+          // Verifica TCC aprovado
+          const { data: tccData } = await supabase
+            .from('tcc_submissions')
+            .select('status')
+            .eq('user_id', userId)
+            .eq('cohort_id', cohortId)
+            .eq('status', 'approved')
+            .maybeSingle();
+          const tccApproved = !!tccData;
+
+          setHasEligibleCompletion(attReg >= 75 && quizPct >= 75 && tccApproved);
         }
       } else {
         setHasEligibleCompletion(false);

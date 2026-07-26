@@ -17,6 +17,7 @@ interface StudentEligibility {
   attendanceRegular: number;
   attendanceSpecial: number;
   quizCompletion: number;
+  tccApproved: boolean;
   eligible: boolean;
 }
 
@@ -418,6 +419,15 @@ export default function CertificatesManager() {
     const { data: responses } = await supabase
       .from("quiz_responses").select("user_id, quiz_id").in("user_id", ids);
 
+    // TCC aprovados por aluno
+    const { data: tccSubs } = await supabase
+      .from("tcc_submissions")
+      .select("user_id, status")
+      .in("user_id", ids)
+      .eq("cohort_id", selectedCohort.id)
+      .eq("status", "approved");
+    const approvedTccIds = new Set((tccSubs || []).map((t: any) => t.user_id));
+
     // Só aulas já realizadas como denominador (igual ao dashboard)
     const todayStr = now.slice(0, 10);
     const pastRegular = regular.filter((l: any) => l.scheduled_date && l.scheduled_date <= todayStr);
@@ -437,7 +447,8 @@ export default function CertificatesManager() {
           .map((r: any) => r.quiz_id)
       );
       const quizPct = totalQuiz > 0 ? (quizSet.size / totalQuiz) * 100 : 100;
-      const eligible = courseComplete && attReg >= 75 && attSpe >= 20 && quizPct >= 75;
+      const tccApproved = approvedTccIds.has(uid);
+      const eligible = courseComplete && attReg >= 75 && attSpe >= 20 && quizPct >= 75 && tccApproved;
 
       return {
         userId: uid,
@@ -446,6 +457,7 @@ export default function CertificatesManager() {
         attendanceRegular: Math.round(attReg),
         attendanceSpecial: Math.round(attSpe),
         quizCompletion:    Math.round(quizPct),
+        tccApproved,
         eligible,
       };
     });
@@ -652,6 +664,7 @@ export default function CertificatesManager() {
                     <th className="text-center p-3 font-medium">Aulas</th>
                     <th className="text-center p-3 font-medium">Especiais</th>
                     <th className="text-center p-3 font-medium">Quiz</th>
+                    <th className="text-center p-3 font-medium">TCC</th>
                     <th className="text-center p-3 font-medium">Status</th>
                     <th className="text-center p-3 font-medium">Ações</th>
                   </tr>
@@ -676,6 +689,11 @@ export default function CertificatesManager() {
                       <td className="text-center p-3">
                         <Badge variant={s.quizCompletion >= 75 ? "default" : "destructive"}>
                           {s.quizCompletion}%
+                        </Badge>
+                      </td>
+                      <td className="text-center p-3">
+                        <Badge variant={s.tccApproved ? "default" : "destructive"}>
+                          {s.tccApproved ? "Aprovado" : "Pendente"}
                         </Badge>
                       </td>
                       <td className="text-center p-3">

@@ -6,7 +6,7 @@ import { isDateWithinCohortPeriod, getLocalToday } from "@/lib/cohortDateUtils";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, FileCheck, FileClock, FileX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   BookOpen,
@@ -115,6 +115,7 @@ export default function DashboardHome() {
   const [mainQuizPerc, setMainQuizPerc] = useState(0);
   const [pendingLesson, setPendingLesson] = useState<any>(null);
   const [pendingQuizCount, setPendingQuizCount] = useState(0);
+  const [tccStatus, setTccStatus] = useState<"none"|"pending"|"approved"|"rejected"|"hidden">("hidden");
   const [isWithinTime, setIsWithinTime] = useState(true);
 
   const cohortStart = selectedCohort?.start_date;
@@ -448,6 +449,29 @@ export default function DashboardHome() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Card TCC — só para alunos após abertura */}
+      {profile?.role === "aluno" && tccStatus !== "hidden" && (
+        <Card className="card-academic mt-2">
+          <CardHeader className="flex flex-row items-center gap-2 pb-2">
+            {tccStatus === "approved"
+              ? <FileCheck className="w-5 h-5 text-green-500" />
+              : tccStatus === "pending"
+              ? <FileClock className="w-5 h-5 text-amber-500" />
+              : <FileX className="w-5 h-5 text-muted-foreground" />}
+            <CardTitle className="font-heading text-lg">Trabalho de Conclusão de Curso</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className={`text-sm font-body ${tccStatus === "approved" ? "text-green-600" : tccStatus === "pending" ? "text-amber-600" : "text-muted-foreground"}`}>
+              {tccStatus === "approved"
+                ? "✓ TCC entregue e aprovado pelo professor."
+                : tccStatus === "pending"
+                ? "Aguardando aprovação do professor."
+                : "TCC ainda não entregue. Acesse a aba TCC para enviar."}
+            </p>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
