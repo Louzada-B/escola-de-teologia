@@ -33,6 +33,7 @@ interface TCCSubmission {
 export default function TCCPage() {
   const { user } = useAuth();
   const { selectedCohort } = useCohort();
+  const [studentCohortId, setStudentCohortId] = useState<string | null>(null);
   const [settings, setSettings] = useState<TCCSettings | null>(null);
   const [submission, setSubmission] = useState<TCCSubmission | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -52,14 +53,30 @@ export default function TCCPage() {
         .maybeSingle();
       setSettings(settingsData as TCCSettings | null);
 
-      if (selectedCohort && user) {
-        const { data: subData } = await supabase
-          .from("tcc_submissions")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("cohort_id", selectedCohort.id)
-          .maybeSingle();
-        setSubmission(subData as TCCSubmission | null);
+      if (user) {
+        // Resolve o cohort_id: para alunos busca direto em cohort_students
+        // para admin/professor usa selectedCohort do contexto
+        let cohortId = selectedCohort?.id ?? null;
+        if (!cohortId) {
+          const { data: cs } = await supabase
+            .from("cohort_students")
+            .select("cohort_id")
+            .eq("user_id", user.id)
+            .limit(1)
+            .maybeSingle();
+          cohortId = (cs as any)?.cohort_id ?? null;
+        }
+        setStudentCohortId(cohortId);
+
+        if (cohortId) {
+          const { data: subData } = await supabase
+            .from("tcc_submissions")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("cohort_id", cohortId)
+            .maybeSingle();
+          setSubmission(subData as TCCSubmission | null);
+        }
       }
     } finally {
       setLoading(false);
@@ -110,7 +127,7 @@ export default function TCCPage() {
       } else {
         const { error } = await supabase
           .from("tcc_submissions")
-          .insert({ user_id: user.id, cohort_id: selectedCohort.id, file_path: path, file_name: file.name });
+          .insert({ user_id: user.id, cohort_id: studentCohortId!, file_path: path, file_name: file.name });
         if (error) throw error;
       }
 
