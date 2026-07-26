@@ -343,7 +343,7 @@ export default function ModulesManager({ userId }: { userId: string }) {
             <Label htmlFor="mandatory" className="cursor-pointer">Presença obrigatória</Label>
           </div>
           <div><Label>Data da Aula</Label><Input type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)} /></div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div><Label>Horário de Início</Label><Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} /></div>
             <div><Label>Horário de Encerramento</Label><Input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} /></div>
           </div>
@@ -450,7 +450,7 @@ export default function ModulesManager({ userId }: { userId: string }) {
               <Label htmlFor="edit-mandatory" className="cursor-pointer">Presença obrigatória</Label>
             </div>
             <div><Label>Data da Aula</Label><Input type="date" value={editLessonDate} onChange={e => setEditLessonDate(e.target.value)} /></div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div><Label>Horário de Início</Label><Input type="time" value={editStartTime} onChange={e => setEditStartTime(e.target.value)} /></div>
             <div><Label>Horário de Encerramento</Label><Input type="time" value={editEndTime} onChange={e => setEditEndTime(e.target.value)} /></div>
           </div>

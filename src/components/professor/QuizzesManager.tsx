@@ -352,7 +352,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
               ))}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Label>Disponível a partir de</Label>
               <Input type="datetime-local" value={availableFrom} onChange={(e) => setAvailableFrom(e.target.value)} />
@@ -509,7 +509,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
                 ))}
               </select>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label>Disponível a partir de</Label>
                 <Input type="datetime-local" value={editFrom} onChange={(e) => setEditFrom(e.target.value)} />
