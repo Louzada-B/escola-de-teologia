@@ -15,7 +15,9 @@ import { ptBR } from "date-fns/locale";
 interface TCCSettings {
   id?: string;
   accept_from: string;
+  accept_from_time: string;
   deadline: string;
+  deadline_time: string;
   template_path: string | null;
   template_name: string | null;
   instructions: string;
@@ -38,7 +40,7 @@ interface Submission {
 
 export default function TCCManager({ userId }: { userId: string }) {
   const { selectedCohort } = useCohort();
-  const [settings, setSettings] = useState<TCCSettings>({ accept_from: "", deadline: "", template_path: null, template_name: null, instructions: "" });
+  const [settings, setSettings] = useState<TCCSettings>({ accept_from: "", accept_from_time: "00:00", deadline: "", deadline_time: "23:59", template_path: null, template_name: null, instructions: "" });
   const [settingsId, setSettingsId] = useState<string | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [feedbackMap, setFeedbackMap] = useState<Record<string, string>>({});
@@ -55,8 +57,10 @@ export default function TCCManager({ userId }: { userId: string }) {
       if (s) {
         setSettingsId(s.id);
         setSettings({
-          accept_from: (s as any).accept_from || "",
-          deadline: (s as any).deadline || "",
+          accept_from: (s as any).accept_from ? (s as any).accept_from.slice(0, 10) : "",
+          accept_from_time: (s as any).accept_from ? new Date((s as any).accept_from).toTimeString().slice(0, 5) : "00:00",
+          deadline: (s as any).deadline ? (s as any).deadline.slice(0, 10) : "",
+          deadline_time: (s as any).deadline ? new Date((s as any).deadline).toTimeString().slice(0, 5) : "23:59",
           template_path: (s as any).template_path,
           template_name: (s as any).template_name,
           instructions: (s as any).instructions || "",
@@ -100,8 +104,12 @@ export default function TCCManager({ userId }: { userId: string }) {
     setSaving(true);
     try {
       const payload = {
-        accept_from: settings.accept_from || null,
-        deadline: settings.deadline || null,
+        accept_from: settings.accept_from
+          ? `${settings.accept_from}T${settings.accept_from_time || "00:00"}:00-03:00`
+          : null,
+        deadline: settings.deadline
+          ? `${settings.deadline}T${settings.deadline_time || "23:59"}:00-03:00`
+          : null,
         template_path: settings.template_path,
         template_name: settings.template_name,
         instructions: settings.instructions || null,
@@ -199,13 +207,19 @@ export default function TCCManager({ userId }: { userId: string }) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div>
+            <div className="space-y-2">
               <Label>Aceitar a partir de</Label>
-              <Input type="date" value={settings.accept_from} onChange={e => setSettings(p => ({ ...p, accept_from: e.target.value }))} />
+              <div className="flex gap-2">
+                <Input type="date" value={settings.accept_from} onChange={e => setSettings(p => ({ ...p, accept_from: e.target.value }))} className="flex-1" />
+                <Input type="time" value={settings.accept_from_time} onChange={e => setSettings(p => ({ ...p, accept_from_time: e.target.value }))} className="w-28" />
+              </div>
             </div>
-            <div>
+            <div className="space-y-2">
               <Label>Data limite de entrega</Label>
-              <Input type="date" value={settings.deadline} onChange={e => setSettings(p => ({ ...p, deadline: e.target.value }))} />
+              <div className="flex gap-2">
+                <Input type="date" value={settings.deadline} onChange={e => setSettings(p => ({ ...p, deadline: e.target.value }))} className="flex-1" />
+                <Input type="time" value={settings.deadline_time} onChange={e => setSettings(p => ({ ...p, deadline_time: e.target.value }))} className="w-28" />
+              </div>
             </div>
           </div>
 
