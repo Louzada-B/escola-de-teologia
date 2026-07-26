@@ -214,10 +214,12 @@ export default function LessonsPage() {
                                 href={getFileUrl(file.file_path)}
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                title={file.file_name}
+                                className="block max-w-full"
                               >
-                                <Button variant="outline" size="sm" className="mr-2 mb-1">
-                                  <Download className="w-3 h-3 mr-1" />
-                                  {file.file_name}
+                                <Button variant="outline" size="sm" className="mr-2 mb-1 max-w-[240px] w-full justify-start">
+                                  <Download className="w-3 h-3 mr-1 shrink-0" />
+                                  <span className="truncate">{file.file_name}</span>
                                 </Button>
                               </a>
                             ))}
