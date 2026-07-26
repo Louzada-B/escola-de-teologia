@@ -679,7 +679,11 @@ export default function CertificatesManager() {
                         </Badge>
                       </td>
                       <td className="text-center p-3">
-                        {s.eligible ? (
+                        {!courseEndDate || new Date().toISOString().slice(0,10) < courseEndDate ? (
+                          <div className="flex items-center justify-center gap-1 text-muted-foreground">
+                            <span className="text-xs">Em andamento</span>
+                          </div>
+                        ) : s.eligible ? (
                           <div className="flex flex-col items-center gap-0.5">
                             <div className="flex items-center gap-1 text-green-600">
                               <CheckCircle className="w-4 h-4" />
