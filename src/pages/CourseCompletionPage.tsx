@@ -82,7 +82,7 @@ export default function CourseCompletionPage() {
     // TCC
     const { data: tcc } = await supabase
       .from('tcc_submissions')
-      .select('id')
+      .select('id, status')
       .eq('user_id', user.id)
       .eq('cohort_id', cohortId)
       .maybeSingle();
@@ -90,7 +90,7 @@ export default function CourseCompletionPage() {
     // Certificado
     const { data: cert } = await supabase
       .from('issued_certificates')
-      .select('id')
+      .select('id, status')
       .eq('user_id', user.id)
       .eq('cohort_id', cohortId)
       .maybeSingle();
@@ -102,7 +102,7 @@ export default function CourseCompletionPage() {
       cohortName: cohort.name,
       attendanceRegular: attReg,
       quizCompletion: quizPct,
-      tccSubmitted: !!tcc,
+      tccSubmitted: !!(tcc && (tcc as any).status === 'approved'),
       certificateIssued: !!cert,
       eligible,
     });
