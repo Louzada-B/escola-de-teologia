@@ -418,14 +418,19 @@ export default function CertificatesManager() {
     const { data: responses } = await supabase
       .from("quiz_responses").select("user_id, quiz_id").in("user_id", ids);
 
+    // Só aulas já realizadas como denominador (igual ao dashboard)
+    const todayStr = now.slice(0, 10);
+    const pastRegular = regular.filter((l: any) => l.scheduled_date && l.scheduled_date <= todayStr);
+    const pastSpecial = special.filter((l: any) => l.scheduled_date && l.scheduled_date <= todayStr);
+
     const result: StudentEligibility[] = ids.map((uid: string) => {
       const p = pMap[uid] || {};
       const att = (attendance || []).filter((a: any) => a.user_id === uid);
 
-      const regDone = att.filter((a: any) => regular.some((l: any) => l.id === a.lesson_id)).length;
-      const speDone = att.filter((a: any) => special.some((l: any) => l.id === a.lesson_id)).length;
-      const attReg  = regular.length  > 0 ? (regDone / regular.length)  * 100 : 100;
-      const attSpe  = special.length  > 0 ? (speDone / special.length)  * 100 : 100;
+      const regDone = att.filter((a: any) => pastRegular.some((l: any) => l.id === a.lesson_id)).length;
+      const speDone = att.filter((a: any) => pastSpecial.some((l: any) => l.id === a.lesson_id)).length;
+      const attReg  = pastRegular.length > 0 ? (regDone / pastRegular.length) * 100 : 100;
+      const attSpe  = pastSpecial.length > 0 ? (speDone / pastSpecial.length) * 100 : 100;
       const quizSet = new Set(
         (responses || [])
           .filter((r: any) => r.user_id === uid && openedQuizIds.has(r.quiz_id))
