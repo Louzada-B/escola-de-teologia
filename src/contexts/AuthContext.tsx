@@ -92,14 +92,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .from('cohorts').select('start_date, end_date').eq('id', cohortId).single();
 
         if (cohortInfo) {
+          const todayStr = new Date().toISOString().slice(0, 10);
           const { data: lessons } = await supabase
             .from('lessons')
-            .select('id, event_type')
+            .select('id, event_type, scheduled_date')
             .gte('scheduled_date', cohortInfo.start_date)
             .lte('scheduled_date', cohortInfo.end_date)
             .eq('mandatory_attendance', true);
 
-          const regular = (lessons || []).filter((l: any) => l.event_type === 'aula');
+          // Só aulas já realizadas como denominador (igual ao dashboard)
+          const regular = (lessons || [])
+            .filter((l: any) => l.event_type === 'aula' && l.scheduled_date <= todayStr);
           const { data: att } = await supabase
             .from('attendance_records').select('lesson_id').eq('user_id', userId);
           const attIds = new Set((att || []).map((a: any) => a.lesson_id));
