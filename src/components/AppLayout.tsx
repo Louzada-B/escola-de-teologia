@@ -105,7 +105,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto sidebar-scroll">
           {navItems.map((item) => {
             const active = location.pathname === item.to;
             return (
