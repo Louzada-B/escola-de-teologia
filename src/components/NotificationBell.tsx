@@ -52,11 +52,15 @@ export default function NotificationBell() {
       .order('scheduled_at', { ascending: false })
       .limit(20) as any;
 
-    // Fetch recent events
+    // Fetch eventos: apenas do dia de hoje para trás (últimos 30 dias)
+    // Eventos futuros não aparecem — só no dia em que acontecem (meia-noite)
+    const today = new Date().toISOString().split('T')[0];
+    const thirtyDaysAgoDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const { data: events } = await supabase
       .from('calendar_events')
       .select('id, title, event_date')
-      .gte('event_date', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+      .lte('event_date', today)
+      .gte('event_date', thirtyDaysAgoDate)
       .order('event_date', { ascending: false })
       .limit(10);
 
