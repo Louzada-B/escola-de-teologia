@@ -271,6 +271,26 @@ export default function DashboardHome() {
         { name: "Respondidos", value: ansPerc, qty: answered },
         { name: "Disponíveis", value: availPerc, qty: available },
       ]);
+
+      // TCC: só para alunos, após abertura do período
+      if (profile?.role === "aluno" && selectedCohort) {
+        const { data: tccSettings } = await supabase
+          .from("tcc_settings").select("accept_from").limit(1).maybeSingle();
+        const acceptFrom = (tccSettings as any)?.accept_from;
+        const tccOpen = acceptFrom && new Date(acceptFrom) <= new Date();
+        if (tccOpen) {
+          const { data: tccSub } = await supabase
+            .from("tcc_submissions")
+            .select("status")
+            .eq("user_id", user!.id)
+            .eq("cohort_id", selectedCohort.id)
+            .maybeSingle();
+          const st = (tccSub as any)?.status;
+          setTccStatus(st === "approved" ? "approved" : st ? "pending" : "none");
+        } else {
+          setTccStatus("hidden");
+        }
+      }
     }
     loadDashboardData();
   }, [user, selectedCohort, effectiveCutoffDate]);
