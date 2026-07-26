@@ -11,6 +11,7 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   hasActiveCohort: boolean | null; // null = still checking, true/false for students
+  hasCompletedCohort: boolean; // true se tem turma inativa (curso encerrado)
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -21,6 +22,7 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   loading: true,
   hasActiveCohort: null,
+  hasCompletedCohort: false,
   signOut: async () => {},
   refreshProfile: async () => {},
 });
@@ -32,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasActiveCohort, setHasActiveCohort] = useState<boolean | null>(null);
+  const [hasCompletedCohort, setHasCompletedCohort] = useState<boolean>(false);
 
   const loadProfile = async (userId: string) => {
     const { data, error } = await supabase
@@ -62,12 +65,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (error) {
       console.error('Erro ao verificar turma:', error.message);
-      // On error, allow access to avoid blocking
       setHasActiveCohort(true);
       return;
     }
 
-    setHasActiveCohort(data && data.length > 0);
+    const active = data && data.length > 0;
+    setHasActiveCohort(active);
+
+    // Se não tem turma ativa, verifica se tem turma inativa (curso encerrado)
+    if (!active) {
+      const { data: inactiveData } = await supabase
+        .from('cohort_students')
+        .select('cohort_id, cohorts!inner(is_active)')
+        .eq('user_id', userId)
+        .eq('cohorts.is_active', false);
+      setHasCompletedCohort(!!(inactiveData && inactiveData.length > 0));
+    } else {
+      setHasCompletedCohort(false);
+    }
   };
 
   useEffect(() => {
@@ -133,7 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user: session?.user ?? null, profile, loading, hasActiveCohort, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ session, user: session?.user ?? null, profile, loading, hasActiveCohort, hasCompletedCohort, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
