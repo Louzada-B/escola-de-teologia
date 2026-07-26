@@ -324,6 +324,7 @@ export default function CertificatesManager() {
   const [issuedMap, setIssuedMap]     = useState<Record<string, boolean>>({});
   const [emailSentMap, setEmailSentMap] = useState<Record<string, boolean>>({});
   const [progress, setProgress]       = useState("");
+  const [courseEndDate, setCourseEndDate] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedCohort) { fetchEligibility(); fetchIssued(); }
@@ -376,10 +377,38 @@ export default function CertificatesManager() {
       .in("lesson_id", allIds.length ? allIds : ["none"]);
 
     const now = new Date().toISOString();
+
+    // Última data cadastrada de cada categoria (independente de ter ocorrido ou não)
+    const lastRegularDate = regular.length > 0
+      ? regular.map((l: any) => l.scheduled_date).filter(Boolean).sort().pop() ?? null
+      : null;
+    const lastSpecialDate = special.length > 0
+      ? special.map((l: any) => l.scheduled_date).filter(Boolean).sort().pop() ?? null
+      : null;
+
     const { data: quizzes }   = await supabase
       .from("quizzes")
-      .select("id, available_from")
+      .select("id, available_from, available_until")
       .gte("available_from", "1900-01-01"); // busca todos
+
+    // Último available_until entre os questionários da turma
+    const cohortQuizIds = new Set((quizzes || []).map((q: any) => q.id));
+    const lastQuizDate = (quizzes || [])
+      .filter((q: any) => q.available_until)
+      .map((q: any) => q.available_until)
+      .sort().pop() ?? null;
+
+    // Curso completo quando hoje passou das três últimas datas cadastradas
+    const today = now.slice(0, 10);
+    const courseComplete =
+      (!lastRegularDate || today >= lastRegularDate) &&
+      (!lastSpecialDate || today >= lastSpecialDate) &&
+      (!lastQuizDate    || today >= lastQuizDate.slice(0, 10));
+
+    // Data mais tardia para exibir ao professor
+    const latestDate = [lastRegularDate, lastSpecialDate, lastQuizDate?.slice(0, 10)]
+      .filter(Boolean).sort().pop() ?? null;
+    setCourseEndDate(latestDate);
     // Denominador: só quizzes já abertos (mesma lógica do dashboard e analytics)
     const openedQuizzes = (quizzes || []).filter(
       (q: any) => !q.available_from || q.available_from <= now
@@ -403,7 +432,7 @@ export default function CertificatesManager() {
           .map((r: any) => r.quiz_id)
       );
       const quizPct = totalQuiz > 0 ? (quizSet.size / totalQuiz) * 100 : 100;
-      const eligible = attReg >= 75 && attSpe >= 20 && quizPct >= 75;
+      const eligible = courseComplete && attReg >= 75 && attSpe >= 20 && quizPct >= 75;
 
       return {
         userId: uid,
@@ -573,12 +602,17 @@ export default function CertificatesManager() {
           <div className="flex flex-wrap gap-2">
             <Button
               onClick={handleIssueAll}
-              disabled={processing || pending.length === 0}
+              disabled={processing || pending.length === 0 || !courseEndDate || new Date().toISOString().slice(0,10) < courseEndDate}
               className="gap-2"
             >
               <Send className="w-4 h-4" />
               {processing ? (progress || "Processando…") : `Emitir e Enviar (${pending.length})`}
             </Button>
+            {courseEndDate && new Date().toISOString().slice(0,10) < courseEndDate && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Emissão disponível após {new Date(courseEndDate + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}.
+              </p>
+            )}
             {eligible.length > 0 && (
               <Button variant="outline" onClick={downloadCSV} className="gap-2">
                 <Download className="w-4 h-4" /> Exportar CSV
