@@ -272,7 +272,6 @@ export default function DashboardHome() {
         { name: "Disponíveis", value: availPerc, qty: available },
       ]);
     }
-
     loadDashboardData();
   }, [user, selectedCohort, effectiveCutoffDate]);
 
