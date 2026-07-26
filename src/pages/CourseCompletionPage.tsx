@@ -51,7 +51,11 @@ export default function CourseCompletionPage() {
       .lte('scheduled_date', cohort.end_date)
       .eq('mandatory_attendance', true);
 
-    const regular = (lessons || []).filter((l: any) => l.event_type === 'aula');
+    // Só aulas já realizadas como denominador
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const regular = (lessons || []).filter(
+      (l: any) => l.event_type === 'aula' && l.scheduled_date <= todayStr
+    );
     const { data: att } = await supabase
       .from('attendance_records')
       .select('lesson_id')
