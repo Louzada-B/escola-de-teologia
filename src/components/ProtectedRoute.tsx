@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut, ShieldX } from "lucide-react";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { session, loading, profile, hasActiveCohort, hasCompletedCohort, signOut } = useAuth();
+  const { session, loading, profile, hasActiveCohort, hasCompletedCohort, hasEligibleCompletion, signOut } = useAuth();
 
   // Still loading auth OR student cohort check not finished yet
   if (loading || (session && profile?.role === "aluno" && hasActiveCohort === null)) {
@@ -21,8 +21,8 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   // Block students without active cohort
   if (profile?.role === "aluno" && hasActiveCohort === false) {
-    // Curso encerrado (turma desativada) → tela de conclusão
-    if (hasCompletedCohort) return <CourseCompletionPage />;
+    // Curso encerrado + atingiu critérios → tela de parabéns
+    if (hasCompletedCohort && hasEligibleCompletion) return <CourseCompletionPage />;
 
     // Sem turma alguma → tela genérica de aguardo
     return (

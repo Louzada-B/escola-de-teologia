@@ -10,6 +10,7 @@ interface CompletionStats {
   quizCompletion: number;
   tccSubmitted: boolean;
   certificateIssued: boolean;
+  eligible: boolean;
 }
 
 export default function CourseCompletionPage() {
@@ -90,12 +91,16 @@ export default function CourseCompletionPage() {
       .eq('cohort_id', cohortId)
       .maybeSingle();
 
+    // Verifica se atingiu os critérios mínimos
+    const eligible = attReg >= 75 && quizPct >= 75;
+
     setStats({
       cohortName: cohort.name,
       attendanceRegular: attReg,
       quizCompletion: quizPct,
       tccSubmitted: !!tcc,
       certificateIssued: !!cert,
+      eligible,
     });
     setLoading(false);
   }

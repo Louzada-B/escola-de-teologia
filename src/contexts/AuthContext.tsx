@@ -12,6 +12,7 @@ interface AuthContextType {
   loading: boolean;
   hasActiveCohort: boolean | null; // null = still checking, true/false for students
   hasCompletedCohort: boolean; // true se tem turma inativa (curso encerrado)
+  hasEligibleCompletion: boolean; // true se completou com critérios mínimos
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -23,6 +24,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   hasActiveCohort: null,
   hasCompletedCohort: false,
+  hasEligibleCompletion: false,
   signOut: async () => {},
   refreshProfile: async () => {},
 });
@@ -35,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [hasActiveCohort, setHasActiveCohort] = useState<boolean | null>(null);
   const [hasCompletedCohort, setHasCompletedCohort] = useState<boolean>(false);
+  const [hasEligibleCompletion, setHasEligibleCompletion] = useState<boolean>(false);
 
   const loadProfile = async (userId: string) => {
     const { data, error } = await supabase
@@ -79,7 +82,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .select('cohort_id, cohorts!inner(is_active)')
         .eq('user_id', userId)
         .eq('cohorts.is_active', false);
-      setHasCompletedCohort(!!(inactiveData && inactiveData.length > 0));
+      const hasInactive = !!(inactiveData && inactiveData.length > 0);
+      setHasCompletedCohort(hasInactive);
+
+      if (hasInactive) {
+        // Verifica critérios mínimos de formação
+        const cohortId = (inactiveData![0] as any).cohort_id;
+        const { data: cohortInfo } = await supabase
+          .from('cohorts').select('start_date, end_date').eq('id', cohortId).single();
+
+        if (cohortInfo) {
+          const { data: lessons } = await supabase
+            .from('lessons')
+            .select('id, event_type')
+            .gte('scheduled_date', cohortInfo.start_date)
+            .lte('scheduled_date', cohortInfo.end_date)
+            .eq('mandatory_attendance', true);
+
+          const regular = (lessons || []).filter((l: any) => l.event_type === 'aula');
+          const { data: att } = await supabase
+            .from('attendance_records').select('lesson_id').eq('user_id', userId);
+          const attIds = new Set((att || []).map((a: any) => a.lesson_id));
+          const attDone = regular.filter((l: any) => attIds.has(l.id)).length;
+          const attReg = regular.length > 0 ? (attDone / regular.length) * 100 : 100;
+
+          const nowIso = new Date().toISOString();
+          const { data: quizzes } = await supabase
+            .from('quizzes').select('id').lte('available_from', nowIso);
+          const totalQuiz = (quizzes || []).length;
+          const { data: responses } = await supabase
+            .from('quiz_responses').select('quiz_id').eq('user_id', userId);
+          const answeredIds = new Set((responses || []).map((r: any) => r.quiz_id));
+          const quizPct = totalQuiz > 0 ? (answeredIds.size / totalQuiz) * 100 : 100;
+
+          setHasEligibleCompletion(attReg >= 75 && quizPct >= 75);
+        }
+      } else {
+        setHasEligibleCompletion(false);
+      }
     } else {
       setHasCompletedCohort(false);
     }
@@ -148,7 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user: session?.user ?? null, profile, loading, hasActiveCohort, hasCompletedCohort, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ session, user: session?.user ?? null, profile, loading, hasActiveCohort, hasCompletedCohort, hasEligibleCompletion, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
