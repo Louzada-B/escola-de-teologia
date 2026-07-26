@@ -20,6 +20,7 @@ import {
   ClipboardCheck,
   FolderOpen,
   GraduationCap,
+  ShieldCheck,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -78,12 +79,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       >
         <div className="p-6 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-sidebar-primary rounded-lg flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-sidebar-primary-foreground" />
+            <div className={cn(
+              "w-10 h-10 rounded-lg flex items-center justify-center border",
+              profile?.role === "admin"
+                ? "bg-purple-500/10 border-purple-400/30"
+                : profile?.role === "professor"
+                ? "bg-blue-400/10 border-blue-400/30"
+                : "bg-amber-400/10 border-amber-400/30"
+            )}>
+              {profile?.role === "admin"
+                ? <ShieldCheck className="w-5 h-5 text-purple-300" />
+                : profile?.role === "professor"
+                ? <GraduationCap className="w-5 h-5 text-blue-300" />
+                : <BookOpen className="w-5 h-5 text-amber-400" />
+              }
             </div>
             <div>
               <h1 className="font-heading font-semibold text-sm">Formação Teológica</h1>
-              <p className="text-xs text-sidebar-foreground/60 capitalize">{profile?.role || "aluno"}</p>
+              <p className="text-xs text-sidebar-foreground/60">
+                {profile?.full_name
+                  ? `Bem-vindo(a), ${profile.full_name.split(' ')[0]}!`
+                  : "Bem-vindo(a)!"}
+              </p>
             </div>
           </div>
         </div>
