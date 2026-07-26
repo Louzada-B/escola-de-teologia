@@ -67,8 +67,8 @@ export default function TCCPage() {
   };
 
   const now = new Date();
-  const acceptFrom = settings?.accept_from ? new Date(settings.accept_from + "T00:00:00") : null;
-  const deadline = settings?.deadline ? new Date(settings.deadline + "T23:59:59") : null;
+  const acceptFrom = settings?.accept_from ? new Date(settings.accept_from) : null;
+  const deadline = settings?.deadline ? new Date(settings.deadline) : null;
   const isOpen = acceptFrom && deadline && now >= acceptFrom && now <= deadline;
   const isBeforeOpen = acceptFrom && now < acceptFrom;
   const isAfterDeadline = deadline && now > deadline;
@@ -198,13 +198,13 @@ export default function TCCPage() {
               {acceptFrom && (
                 <div>
                   <span className="text-muted-foreground">Aceita a partir de: </span>
-                  <span className="font-medium">{format(acceptFrom, "dd/MM/yyyy", { locale: ptBR })}</span>
+                  <span className="font-medium">{format(acceptFrom, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
                 </div>
               )}
               {deadline && (
                 <div>
                   <span className="text-muted-foreground">Data limite: </span>
-                  <span className="font-medium">{format(deadline, "dd/MM/yyyy", { locale: ptBR })}</span>
+                  <span className="font-medium">{format(deadline, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
                 </div>
               )}
               <div>
