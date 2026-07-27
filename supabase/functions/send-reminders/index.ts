@@ -6,12 +6,48 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const smtpUser    = Deno.env.get("SMTP_USER")!;
 const smtpPass    = Deno.env.get("SMTP_PASS")!;
+const vapidPub    = "BPp1QQmJdq77A3OZClICx0U6NPWlj2gOF4jj6x0JQHmOnQJ5HpC1LZ1ts2aS26ID_FrGxpWXc-_1mss1KnMIc2k";
+const vapidPriv   = Deno.env.get("VAPID_PRIVATE_KEY")!;
+const vapidEmail  = `mailto:${Deno.env.get("SMTP_USER")}`;
+
 
 const btoaSafe = (str: string) => {
   const bytes = new TextEncoder().encode(str);
   let bin = ""; bytes.forEach(b => bin += String.fromCharCode(b));
   return btoa(bin);
 };
+
+async function sendPush(admin: ReturnType<typeof createClient>, userIds: string[], title: string, body: string, url: string) {
+  if (!vapidPriv) return;
+  const { data: subs } = await admin
+    .from("push_subscriptions").select("endpoint, p256dh, auth").in("user_id", userIds);
+  if (!subs?.length) return;
+
+  for (const sub of subs) {
+    try {
+      const payload = JSON.stringify({ title, body, url, icon: "/pwa-192x192.png" });
+      // Usa Web Push via fetch direto — sem biblioteca externa
+      const vapidHeaders = await buildVapidHeaders(sub.endpoint);
+      await fetch(sub.endpoint, {
+        method: "POST",
+        headers: { ...vapidHeaders, "Content-Type": "application/octet-stream", "Content-Encoding": "aes128gcm", "TTL": "86400" },
+        body: new TextEncoder().encode(payload),
+      });
+    } catch (_) { /* silencioso */ }
+  }
+}
+
+async function buildVapidHeaders(audience: string) {
+  const url = new URL(audience);
+  const origin = url.origin;
+  const now = Math.floor(Date.now() / 1000);
+  const exp = now + 12 * 3600;
+  const header = btoa(JSON.stringify({ typ: "JWT", alg: "ES256" })).replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");
+  const claims = btoa(JSON.stringify({ aud: origin, exp, sub: vapidEmail })).replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");
+  return {
+    "Authorization": `vapid t=${header}.${claims},k=${vapidPub}`,
+  };
+}
 
 async function sendEmail(to: string, subject: string, html: string) {
   const client = new SMTPClient({
@@ -103,6 +139,7 @@ async function remindQuizzes(admin: ReturnType<typeof createClient>) {
           </a>
         </div>`;
       await sendEmail(profile.email, `Lembrete: questionário fecha hoje — ${quiz.title}`, emailWrap(body));
+      await sendPush(admin, [profile.id], "Questionário fecha hoje!", `${quiz.title} — encerra às ${deadline}`, "https://formacao-teologica.vercel.app/dashboard/questionarios");
       sent++;
     }
   }
@@ -179,6 +216,7 @@ async function remindAttendance(admin: ReturnType<typeof createClient>) {
           </a>
         </div>`;
       await sendEmail(profile.email, `Lembrete: registre sua presen\u00e7a — ${lesson.title}`, emailWrap(body));
+      await sendPush(admin, [profile.id], "Registre sua presen\u00e7a!", lesson.title, "https://formacao-teologica.vercel.app/dashboard/presenca");
       sent++;
     }
   }
@@ -244,6 +282,7 @@ async function remindTCC(admin: ReturnType<typeof createClient>) {
         </a>
       </div>`;
     await sendEmail(profile.email, "Lembrete: prazo do TCC em 4 horas!", emailWrap(body));
+    await sendPush(admin, [profile.id], "TCC: prazo em 4 horas!", `Encerra ${deadlineFmt}`, "https://formacao-teologica.vercel.app/dashboard/tcc");
     sent++;
   }
   return { sent };
