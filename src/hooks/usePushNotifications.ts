@@ -18,20 +18,22 @@ export function usePushNotifications() {
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
-  const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+  const isPWA = typeof window !== 'undefined' && window.matchMedia?.('(display-mode: standalone)').matches;
   const supported = isPWA && 'serviceWorker' in navigator && 'PushManager' in window;
 
   useEffect(() => {
     if (!supported) return;
-    setPermission(Notification.permission);
+    try { setPermission(Notification.permission); } catch (_) {}
     checkSubscription();
   }, [user]);
 
   async function checkSubscription() {
     if (!user || !supported) return;
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.getSubscription();
-    setSubscribed(!!sub);
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      setSubscribed(!!sub);
+    } catch (_) {}
   }
 
   async function subscribe() {
