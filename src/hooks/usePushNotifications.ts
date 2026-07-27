@@ -18,7 +18,8 @@ export function usePushNotifications() {
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
-  const supported = 'serviceWorker' in navigator && 'PushManager' in window;
+  const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+  const supported = isPWA && 'serviceWorker' in navigator && 'PushManager' in window;
 
   useEffect(() => {
     if (!supported) return;
