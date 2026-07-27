@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCohort } from '@/contexts/CohortContext';
 import { Bell } from 'lucide-react';
@@ -17,6 +18,7 @@ interface NotificationItem {
 
 export default function NotificationBell() {
   const { user, profile } = useAuth();
+  const { supported: pushSupported, permission, subscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications();
   const { selectedCohort } = useCohort();
   const navigate = useNavigate();
   const [items, setItems] = useState<NotificationItem[]>([]);
@@ -208,6 +210,19 @@ export default function NotificationBell() {
               ))
             )}
           </div>
+
+          {/* Botão de notificações push — só no PWA */}
+          {pushSupported && permission !== 'denied' && (
+            <div className="border-t border-border px-3 py-2">
+              <button
+                onClick={subscribed ? unsubscribe : subscribe}
+                disabled={pushLoading}
+                className={`w-full text-xs py-1.5 px-3 rounded-md border transition-colors ${subscribed ? 'border-destructive/40 text-destructive hover:bg-destructive/10' : 'border-primary/40 text-primary hover:bg-primary/10'}`}
+              >
+                {pushLoading ? 'Aguarde...' : subscribed ? '🔔 Notificações ativas — desativar' : '🔔 Ativar notificações neste dispositivo'}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
