@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Download } from 'lucide-react';
 
 export default function AuthPage() {
   const { session, loading: authLoading } = useAuth();
@@ -16,7 +16,29 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [forgotMode, setForgotMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    setIsIOS(ios);
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true);
+      return;
+    }
+    const handler = (e: any) => { e.preventDefault(); setInstallPrompt(e); };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  async function handleInstall() {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    const result = await installPrompt.userChoice;
+    if (result.outcome === 'accepted') setInstallPrompt(null);
+  }
 
   useEffect(() => {
     if (!authLoading && session) {
@@ -169,6 +191,29 @@ export default function AuthPage() {
             </form>
           )}
         </CardContent>
+
+        {/* Botão de instalação PWA */}
+        {!isInstalled && (
+          <div className="mt-4 text-center">
+            {installPrompt && (
+              <button
+                onClick={handleInstall}
+                className="flex items-center gap-2 mx-auto text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                Instalar app na tela inicial
+              </button>
+            )}
+            {isIOS && !installPrompt && (
+              <p className="text-xs text-muted-foreground px-4">
+                Para instalar: toque em{' '}
+                <span className="font-medium">Compartilhar</span>{' '}
+                e depois em{' '}
+                <span className="font-medium">"Adicionar à Tela de Início"</span>
+              </p>
+            )}
+          </div>
+        )}
       </Card>
     </div>
   );
