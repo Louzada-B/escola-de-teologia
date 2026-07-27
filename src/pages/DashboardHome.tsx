@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCohort } from "@/contexts/CohortContext";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { isDateWithinCohortPeriod, getLocalToday } from "@/lib/cohortDateUtils";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { HelpCircle, FileCheck, FileClock, FileX } from "lucide-react";
+import { HelpCircle, FileCheck, FileClock, FileX, Bell, BellOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   BookOpen,
@@ -97,31 +98,6 @@ function DonutChart({
           </div>
         ))}
       </div>
-      {/* Notificações push — só para alunos em PWA/navegadores compatíveis */}
-      {profile?.role === "aluno" && pushSupported && permission !== 'denied' && (
-        <Card className="card-academic mt-2">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div className="flex items-center gap-2">
-              {subscribed ? <Bell className="w-5 h-5 text-primary" /> : <BellOff className="w-5 h-5 text-muted-foreground" />}
-              <CardTitle className="font-heading text-lg">Notificações</CardTitle>
-            </div>
-            <button
-              onClick={subscribed ? unsubscribe : subscribe}
-              disabled={pushLoading}
-              className={`text-xs px-3 py-1.5 rounded-md border transition-colors ${subscribed ? 'border-destructive/40 text-destructive hover:bg-destructive/10' : 'border-primary/40 text-primary hover:bg-primary/10'}`}
-            >
-              {pushLoading ? 'Aguarde...' : subscribed ? 'Desativar' : 'Ativar notificações'}
-            </button>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm font-body text-muted-foreground">
-              {subscribed
-                ? 'Você receberá lembretes de questionários, presenças e TCC neste dispositivo.'
-                : 'Ative para receber lembretes automáticos diretamente neste dispositivo.'}
-            </p>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
@@ -519,6 +495,31 @@ export default function DashboardHome() {
         </Card>
       )}
       {/* Notificações push — só para alunos em PWA/navegadores compatíveis */}
+      {profile?.role === "aluno" && pushSupported && permission !== 'denied' && (
+        <Card className="card-academic mt-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div className="flex items-center gap-2">
+              {subscribed ? <Bell className="w-5 h-5 text-primary" /> : <BellOff className="w-5 h-5 text-muted-foreground" />}
+              <CardTitle className="font-heading text-lg">Notificações</CardTitle>
+            </div>
+            <button
+              onClick={subscribed ? unsubscribe : subscribe}
+              disabled={pushLoading}
+              className={`text-xs px-3 py-1.5 rounded-md border transition-colors ${subscribed ? 'border-destructive/40 text-destructive hover:bg-destructive/10' : 'border-primary/40 text-primary hover:bg-primary/10'}`}
+            >
+              {pushLoading ? 'Aguarde...' : subscribed ? 'Desativar' : 'Ativar notificações'}
+            </button>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm font-body text-muted-foreground">
+              {subscribed
+                ? 'Você receberá lembretes de questionários, presenças e TCC neste dispositivo.'
+                : 'Ative para receber lembretes automáticos diretamente neste dispositivo.'}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+      {/* Notificações push — só para alunos no PWA */}
       {profile?.role === "aluno" && pushSupported && permission !== 'denied' && (
         <Card className="card-academic mt-2">
           <CardHeader className="flex flex-row items-center justify-between pb-2">

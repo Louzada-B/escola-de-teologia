@@ -54,7 +54,7 @@ export function usePushNotifications() {
       const auth = sub.getKey('auth');
       if (!key || !auth) return;
 
-      await supabase.from('push_subscriptions').upsert({
+      await (supabase as any).from('push_subscriptions').upsert({
         user_id: user.id,
         endpoint: sub.endpoint,
         p256dh: btoa(String.fromCharCode(...new Uint8Array(key))),
@@ -74,7 +74,7 @@ export function usePushNotifications() {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
-        await supabase.from('push_subscriptions')
+        await (supabase as any).from('push_subscriptions')
           .delete().eq('user_id', user.id).eq('endpoint', sub.endpoint);
         await sub.unsubscribe();
       }
