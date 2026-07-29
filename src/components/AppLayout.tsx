@@ -26,12 +26,17 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import CohortSelector from "@/components/CohortSelector";
 import NotificationBell from "@/components/NotificationBell";
+import HelpDrawer from "@/components/HelpDrawer";
+import { getHelpContent } from "@/lib/helpContent";
+import { HelpCircle } from "lucide-react";
 import { useCohort } from "@/contexts/CohortContext";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { profile, signOut } = useAuth();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const helpContent = getHelpContent(location.pathname);
   const isProfessor = profile?.role === "professor";
   const isAdmin = profile?.role === "admin";
   const isStudent = profile?.role === "aluno";
@@ -178,6 +183,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="px-4 pt-3 md:px-8 md:pt-4 flex items-center justify-end gap-3">
           {(isProfessor || isAdmin) && <CohortSelector />}
           <NotificationBell />
+          {helpContent && (
+            <button
+              type="button"
+              onClick={() => setHelpOpen(h => !h)}
+              className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              aria-label="Ajuda"
+            >
+              <HelpCircle className="w-4 h-4" />
+            </button>
+          )}
         </div>
         {children}
       </main>
