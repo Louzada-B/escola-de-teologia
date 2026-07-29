@@ -178,24 +178,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto h-full">
-        <div className="px-4 pt-3 md:px-8 md:pt-4 flex items-center justify-end gap-3">
-          {(isProfessor || isAdmin) && <CohortSelector />}
-          <NotificationBell />
-          {helpContent && (
-            <button
-              type="button"
-              onClick={() => setHelpOpen(h => !h)}
-              className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-              aria-label="Ajuda"
-            >
-              <HelpCircle className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-        {children}
-      </main>
+      {/* Main content + Help drawer */}
+      <div className="flex flex-1 overflow-hidden">
+        <main className="flex-1 overflow-y-auto h-full">
+          <div className="px-4 pt-3 md:px-8 md:pt-4 flex items-center justify-end gap-3">
+            {(isProfessor || isAdmin) && <CohortSelector />}
+            <NotificationBell />
+            {helpContent && (
+              <button
+                type="button"
+                onClick={() => setHelpOpen(h => !h)}
+                className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                aria-label="Ajuda"
+              >
+                <HelpCircle className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          {children}
+        </main>
+        <HelpDrawer open={helpOpen} onClose={() => setHelpOpen(false)} content={helpContent} />
+      </div>
     </div>
   );
 }
