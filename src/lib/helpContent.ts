@@ -100,7 +100,7 @@ const helpContent: Record<string, HelpContent> = {
       { icon: "ti-lock", title: "Senha", description: "Altere sua senha a qualquer momento. Use uma senha forte com letras, números e símbolos." },
     ],
   },
-  "/professor": {
+  "/dashboard/professor": {
     title: "Gestão de Conteúdo",
     items: [
       { icon: "ti-book", title: "Módulos e Aulas", description: "Crie e organize os módulos do curso. Adicione aulas com datas, horários, arquivos e vídeos." },
@@ -113,7 +113,7 @@ const helpContent: Record<string, HelpContent> = {
       { icon: "ti-file-text", title: "TCC", description: "Configure o período de entrega e acompanhe as submissões dos alunos." },
     ],
   },
-  "/analytics": {
+  "/dashboard/analises": {
     title: "Análises",
     items: [
       { icon: "ti-chart-bar", title: "Visão geral", description: "Resumo de presença, questionários e elegibilidade de todos os alunos da turma." },
