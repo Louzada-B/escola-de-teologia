@@ -21,6 +21,8 @@ export default function AuthPage() {
   const [isInstalled, setIsInstalled] = useState(false);
   const navigate = useNavigate();
 
+  const isMobile = /iphone|ipad|ipod|android/i.test(navigator.userAgent);
+
   useEffect(() => {
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
     setIsIOS(ios);
@@ -193,7 +195,7 @@ export default function AuthPage() {
         </CardContent>
 
         {/* Botão de instalação PWA */}
-        {!isInstalled && (
+        {!isInstalled && isMobile && (
           <div className="mt-4 text-center">
             {installPrompt && (
               <button
