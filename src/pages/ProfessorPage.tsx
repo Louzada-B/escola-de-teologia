@@ -108,6 +108,7 @@ export default function ProfessorPage() {
             <div className="flex flex-col gap-0.5">
               {group.items.map(item => (
                 <button
+                  type="button"
                   key={item.value}
                   onClick={() => setActive(item.value)}
                   className={cn(

@@ -155,6 +155,7 @@ export default function NotificationBell() {
   return (
     <div ref={ref} className="relative">
       <button
+        type="button"
         onClick={handleOpen}
         className="relative p-2 rounded-md hover:bg-accent/10 transition-colors text-foreground/70 hover:text-foreground"
         aria-label="Notificações"
@@ -174,6 +175,7 @@ export default function NotificationBell() {
             <span className="font-heading font-semibold text-sm">Notificações</span>
             {unreadCount > 0 && (
               <button
+                type="button"
                 onClick={markAllRead}
                 className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
@@ -191,6 +193,7 @@ export default function NotificationBell() {
             ) : (
               items.map(item => (
                 <button
+                  type="button"
                   key={`${item.type}:${item.id}`}
                   onClick={() => handleClick(item)}
                   className={`w-full text-left px-4 py-3 border-b border-border/50 last:border-0 hover:bg-muted/40 transition-colors flex items-start gap-3 ${!item.read ? 'bg-primary/5' : ''}`}
@@ -215,6 +218,7 @@ export default function NotificationBell() {
           {pushSupported && permission !== 'denied' && (
             <div className="border-t border-border px-3 py-2">
               <button
+                type="button"
                 onClick={subscribed ? unsubscribe : subscribe}
                 disabled={pushLoading}
                 className={`w-full text-xs py-1.5 px-3 rounded-md border transition-colors ${subscribed ? 'border-destructive/40 text-destructive hover:bg-destructive/10' : 'border-primary/40 text-primary hover:bg-primary/10'}`}

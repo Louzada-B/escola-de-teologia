@@ -147,7 +147,7 @@ export default function AuthPage() {
                   {loading ? 'Enviando...' : 'Enviar link de recuperação'}
                 </Button>
                 <button
-                  type="button"
+                 type="button"
                   className="text-sm text-muted-foreground hover:text-foreground w-full text-center"
                   onClick={() => setForgotMode(false)}
                 >
@@ -184,7 +184,7 @@ export default function AuthPage() {
                 {loading ? 'Carregando...' : 'Entrar'}
               </Button>
               <button
-                type="button"
+               type="button"
                 className="text-sm text-muted-foreground hover:text-foreground w-full text-center"
                 onClick={() => setForgotMode(true)}
               >
@@ -199,6 +199,7 @@ export default function AuthPage() {
           <div className="mt-4 text-center">
             {installPrompt && (
               <button
+                type="button"
                 onClick={handleInstall}
                 className="flex items-center gap-2 mx-auto text-sm text-muted-foreground hover:text-foreground transition-colors"
               >

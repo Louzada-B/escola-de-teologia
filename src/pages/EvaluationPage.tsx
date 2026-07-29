@@ -19,8 +19,8 @@ function StarRating({ value, onChange, label }: { value: number; onChange: (v: n
       <div className="flex gap-1">
         {[1, 2, 3, 4, 5].map((star) => (
           <button
-            key={star}
             type="button"
+            key={star}
             onClick={() => onChange(star)}
             onMouseEnter={() => setHover(star)}
             onMouseLeave={() => setHover(0)}

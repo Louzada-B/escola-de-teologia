@@ -67,7 +67,7 @@ const SimpleEditor = React.forwardRef<HTMLDivElement, SimpleEditorProps>(
           <Popover>
             <PopoverTrigger asChild>
               <button
-                type="button"
+               type="button"
                 className="inline-flex items-center justify-center rounded-md h-8 w-8 text-sm hover:bg-muted transition-colors"
                 aria-label="Cor do texto"
               >
@@ -78,8 +78,8 @@ const SimpleEditor = React.forwardRef<HTMLDivElement, SimpleEditorProps>(
               <div className="flex gap-1">
                 {COLORS.map((c) => (
                   <button
-                    key={c.value || "default"}
                     type="button"
+                    key={c.value || "default"}
                     className="h-6 w-6 rounded-full border border-input transition-transform hover:scale-110"
                     style={{ backgroundColor: c.value || "hsl(var(--foreground))" }}
                     title={c.label}

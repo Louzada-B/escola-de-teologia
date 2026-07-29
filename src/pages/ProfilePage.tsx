@@ -121,6 +121,7 @@ export default function ProfilePage() {
               <AvatarFallback className="bg-primary text-primary-foreground">{initials}</AvatarFallback>
             </Avatar>
             <button
+              type="button"
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
               className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
