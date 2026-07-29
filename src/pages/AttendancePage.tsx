@@ -149,10 +149,16 @@ export default function AttendancePage() {
         }
         setGpsLoading(null);
       },
-      () => {
+      (err) => {
+        const isPermissionDenied = err.code === 1;
+        const isPositionUnavailable = err.code === 2;
         toast({
-          title: "Erro de GPS",
-          description: "Não foi possível obter sua localização. Verifique as permissões do navegador.",
+          title: "Localização indisponível",
+          description: isPermissionDenied
+            ? "Permissão de localização negada. Acesse as configurações do navegador e permita o acesso à localização para esta página."
+            : isPositionUnavailable
+            ? "GPS desligado ou sinal indisponível. Ative a localização do seu celular e tente novamente."
+            : "Não foi possível obter sua localização. Ative o GPS e tente novamente.",
           variant: "destructive",
         });
         setGpsLoading(null);
