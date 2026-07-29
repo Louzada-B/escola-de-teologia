@@ -1,3 +1,2 @@
-# Welcome to your Lovable project
-
-TODO: Document your project here
+# Escola de Teologia Brasa Church
+Portal acadêmico da Formação Teológica.
