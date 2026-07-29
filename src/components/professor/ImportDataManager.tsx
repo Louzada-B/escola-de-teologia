@@ -26,7 +26,7 @@ const convertTimeFromExcel = (val: any): string | null => {
   if (/^\d{1,2}:\d{2}/.test(s)) return s.slice(0, 5);
   // Número fracionário do Excel (ex: 0.9166... = 22:00)
   const n = Number(val);
-  if (!isNaN(n) && n >= 0 && n < 1) {
+  if (!Number.isNaN(n) && n >= 0 && n < 1) {
     const totalMinutes = Math.round(n * 24 * 60);
     const h = Math.floor(totalMinutes / 60);
     const m = totalMinutes % 60;
@@ -46,14 +46,14 @@ const formatDateBRPreview = (val: any): string => {
   if (!val) return '';
   const s = String(val).trim();
   // Serial de data Excel (> 30000)
-  if (!isNaN(Number(val)) && Number(val) > 30000) {
+  if (!Number.isNaN(Number(val)) && Number(val) > 30000) {
     const iso = excelSerialToDateStr(Number(val));
     const [y, m, d] = iso.split('-');
     return `${d}/${m}/${y}`;
   }
   // Fração de horário Excel (0 a 1)
   const n = Number(val);
-  if (!isNaN(n) && n > 0 && n < 1) {
+  if (!Number.isNaN(n) && n > 0 && n < 1) {
     return convertTimeFromExcel(val) || s;
   }
   return s;
@@ -66,7 +66,7 @@ const convertDate = (val: any): string | null => {
   if (ddmm) return `${ddmm[3]}-${ddmm[2].padStart(2, '0')}-${ddmm[1].padStart(2, '0')}`;
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
   // Número serial do Excel — usa meio-dia UTC para evitar problema de timezone
-  if (!isNaN(Number(val)) && Number(val) > 30000) {
+  if (!Number.isNaN(Number(val)) && Number(val) > 30000) {
     return excelSerialToDateStr(Number(val));
   }
   return s;

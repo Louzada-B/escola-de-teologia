@@ -95,11 +95,11 @@ export default function AttendanceSettingsManager({ userId }: Props) {
     const lng = Number.parseFloat(longitude);
     const rad = Number.parseInt(radius);
 
-    if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    if (Number.isNaN(lat) || Number.isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
       toast({ title: 'Erro', description: 'Coordenadas inválidas.', variant: 'destructive' });
       return;
     }
-    if (isNaN(rad) || rad < 10 || rad > 5000) {
+    if (Number.isNaN(rad) || rad < 10 || rad > 5000) {
       toast({ title: 'Erro', description: 'Raio deve ser entre 10 e 5000 metros.', variant: 'destructive' });
       return;
     }
@@ -274,7 +274,7 @@ export default function AttendanceSettingsManager({ userId }: Props) {
             </div>
           </div>
 
-          {latitude && longitude && !isNaN(Number.parseFloat(latitude)) && !isNaN(Number.parseFloat(longitude)) && (
+          {latitude && longitude && !Number.isNaN(Number.parseFloat(latitude)) && !Number.isNaN(Number.parseFloat(longitude)) && (
             <div className="rounded-md overflow-hidden border border-input">
               <iframe
                 title="Mapa do local da aula"

@@ -140,7 +140,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
   const toLocalISO = (dtLocal: string) => {
     if (!dtLocal) return null;
     const d = new Date(dtLocal);
-    if (isNaN(d.getTime())) return null;
+    if (Number.isNaN(d.getTime())) return null;
     return d.toISOString();
   };
 
@@ -194,7 +194,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
   const toDatetimeLocal = (isoStr: string | null) => {
     if (!isoStr) return "";
     const d = new Date(isoStr);
-    if (isNaN(d.getTime())) return "";
+    if (Number.isNaN(d.getTime())) return "";
     const pad = (n: number) => String(n).padStart(2, "0");
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   };
