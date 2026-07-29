@@ -175,16 +175,6 @@ export default function AttendancePage() {
         Registre sua presença nas aulas do dia dentro do horário definido pelo professor.
       </p>
 
-      {false && (
-        <Card className="card-academic mb-6 border-yellow-500/30 bg-yellow-500/5">
-          <CardContent className="flex items-center gap-3 py-4">
-            <Clock className="w-5 h-5 text-yellow-600" />
-            <p className="text-sm font-body text-yellow-700 dark:text-yellow-400">
-              O registro de presença está disponível 30 minutos antes do início até 2 horas após o encerramento.
-            </p>
-          </CardContent>
-        </Card>
-      )}
 
       {!settings && (
         <Card className="card-academic mb-6 border-destructive/30 bg-destructive/5">

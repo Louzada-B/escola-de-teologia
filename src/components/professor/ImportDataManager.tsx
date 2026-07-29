@@ -402,7 +402,7 @@ export default function ImportDataManager({ userId }: { userId: string }) {
         <CardContent className="space-y-4">
           {/* Entity selector */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Selecione a entidade</label>
+            <p className="text-sm font-medium">Selecione a entidade</p>
             <Select value={entity} onValueChange={(v) => { setEntity(v as EntityType); setPreviewRows([]); setResult(null); }}>
               <SelectTrigger className="w-full max-w-sm">
                 <SelectValue placeholder="Escolha o tipo de dado..." />
