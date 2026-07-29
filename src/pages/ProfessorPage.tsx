@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import ModulesManager from "@/components/professor/ModulesManager";
 import AnnouncementsManager from "@/components/professor/AnnouncementsManager";
@@ -15,6 +14,9 @@ import TCCManager from "@/components/professor/TCCManager";
 import CertificatesManager from "@/components/professor/CertificatesManager";
 import StudentsManager from "@/components/professor/StudentsManager";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { BookOpen } from "lucide-react";
+import ManualModal from "@/components/ManualModal";
 
 interface NavItem { value: string; label: string; adminOnly?: boolean; }
 interface NavGroup { label: string; items: NavItem[]; }
@@ -80,6 +82,7 @@ export default function ProfessorPage() {
   const { user, profile } = useAuth();
   const isAdmin = profile?.role === "admin";
   const [active, setActive] = useState("modules");
+  const [manualOpen, setManualOpen] = useState(false);
 
   const visibleGroups = NAV_GROUPS.map(g => ({
     ...g,
@@ -90,7 +93,18 @@ export default function ProfessorPage() {
 
   return (
     <div className="page-container">
-      <h1 className="section-title mb-4">Gestão de Conteúdo</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="section-title">Gestão de Conteúdo</h1>
+        <button
+          type="button"
+          onClick={() => setManualOpen(true)}
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-1.5 hover:bg-muted/50 transition-colors"
+        >
+          <BookOpen className="w-4 h-4" />
+          <span className="hidden sm:inline">Manual</span>
+        </button>
+      </div>
+      <ManualModal open={manualOpen} onClose={() => setManualOpen(false)} />
 
       {/* ── Nav desktop: grupos com separadores verticais ── */}
       <div className="hidden md:flex border border-border rounded-xl bg-card mb-6 overflow-hidden">
