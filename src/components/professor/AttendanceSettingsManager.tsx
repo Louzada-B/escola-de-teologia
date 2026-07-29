@@ -91,9 +91,9 @@ export default function AttendanceSettingsManager({ userId }: Props) {
   }
 
   const handleSave = async () => {
-    const lat = parseFloat(latitude);
-    const lng = parseFloat(longitude);
-    const rad = parseInt(radius);
+    const lat = Number.parseFloat(latitude);
+    const lng = Number.parseFloat(longitude);
+    const rad = Number.parseInt(radius);
 
     if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
       toast({ title: 'Erro', description: 'Coordenadas inválidas.', variant: 'destructive' });
@@ -274,7 +274,7 @@ export default function AttendanceSettingsManager({ userId }: Props) {
             </div>
           </div>
 
-          {latitude && longitude && !isNaN(parseFloat(latitude)) && !isNaN(parseFloat(longitude)) && (
+          {latitude && longitude && !isNaN(Number.parseFloat(latitude)) && !isNaN(Number.parseFloat(longitude)) && (
             <div className="rounded-md overflow-hidden border border-input">
               <iframe
                 title="Mapa do local da aula"
@@ -282,7 +282,7 @@ export default function AttendanceSettingsManager({ userId }: Props) {
                 height="300"
                 style={{ border: 0 }}
                 loading="lazy"
-                src={`https://www.openstreetmap.org/export/embed.html?bbox=${parseFloat(longitude) - 0.005}%2C${parseFloat(latitude) - 0.003}%2C${parseFloat(longitude) + 0.005}%2C${parseFloat(latitude) + 0.003}&layer=mapnik&marker=${latitude}%2C${longitude}`}
+                src={`https://www.openstreetmap.org/export/embed.html?bbox=${Number.parseFloat(longitude) - 0.005}%2C${Number.parseFloat(latitude) - 0.003}%2C${Number.parseFloat(longitude) + 0.005}%2C${Number.parseFloat(latitude) + 0.003}&layer=mapnik&marker=${latitude}%2C${longitude}`}
               />
             </div>
           )}

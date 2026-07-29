@@ -163,14 +163,14 @@ export default function CohortsManager({ userId }: { userId: string }) {
                   <Input
                     type="number"
                     value={form.year}
-                    onChange={(e) => setForm((f) => ({ ...f, year: parseInt(e.target.value) }))}
+                    onChange={(e) => setForm((f) => ({ ...f, year: Number.parseInt(e.target.value) }))}
                   />
                 </div>
                 <div>
                   <Label>Semestre</Label>
                   <select
                     value={form.semester}
-                    onChange={(e) => setForm((f) => ({ ...f, semester: parseInt(e.target.value) }))}
+                    onChange={(e) => setForm((f) => ({ ...f, semester: Number.parseInt(e.target.value) }))}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   >
                     <option value={1}>1º Semestre</option>
