@@ -1,6 +1,37 @@
-import { X, HelpCircle } from "lucide-react";
+import { X, HelpCircle, BarChart2, AlertCircle, FileText, Bell, MapPin, Clock, Check, BookOpen, Video, Download, MessageSquare, Calendar, BookMarked, Folder, Heart, Star, Upload, User, Lock, Layout, Users, UserCheck, Award, GraduationCap, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { HelpContent } from "@/lib/helpContent";
+
+const iconMap: Record<string, React.ElementType> = {
+  "ti-chart-bar": BarChart2,
+  "ti-alert-circle": AlertCircle,
+  "ti-file-text": FileText,
+  "ti-bell": Bell,
+  "ti-map-pin": MapPin,
+  "ti-clock": Clock,
+  "ti-check": Check,
+  "ti-book": BookOpen,
+  "ti-video": Video,
+  "ti-download": Download,
+  "ti-message": MessageSquare,
+  "ti-calendar": Calendar,
+  "ti-books": BookMarked,
+  "ti-folder": Folder,
+  "ti-heart": Heart,
+  "ti-star": Star,
+  "ti-upload": Upload,
+  "ti-user": User,
+  "ti-lock": Lock,
+  "ti-layout": Layout,
+  "ti-users": Users,
+  "ti-user-check": UserCheck,
+  "ti-award": Award,
+  "ti-school": GraduationCap,
+  "ti-clipboard-list": ClipboardList,
+  "ti-eye": HelpCircle,
+  "ti-circle-check": Check,
+  "ti-external-link": Download,
+};
 
 interface HelpDrawerProps {
   open: boolean;
@@ -23,17 +54,20 @@ export default function HelpDrawer({ open, onClose, content }: HelpDrawerProps) 
         </button>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-1">
-        {content.items.map((item, i) => (
-          <div key={i} className="flex items-start gap-3 py-3 border-b border-border last:border-0">
-            <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <i className={`ti ${item.icon}`} style={{ fontSize: 14, color: "hsl(var(--primary))" }} aria-hidden="true" />
+        {content.items.map((item, i) => {
+          const Icon = iconMap[item.icon] ?? HelpCircle;
+          return (
+            <div key={i} className="flex items-start gap-3 py-3 border-b border-border last:border-0">
+              <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Icon className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">{item.title}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{item.description}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">{item.title}</p>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{item.description}</p>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </>
   );
@@ -42,7 +76,7 @@ export default function HelpDrawer({ open, onClose, content }: HelpDrawerProps) 
     <>
       {/* Desktop — drawer lateral */}
       <div className={cn(
-        "hidden lg:flex flex-col w-72 border-l border-border bg-card flex-shrink-0 transition-all duration-200 overflow-hidden",
+        "hidden lg:flex flex-col border-l border-border bg-card flex-shrink-0 transition-all duration-200 overflow-hidden",
         open ? "w-72" : "w-0 border-0"
       )}>
         {open && body}
