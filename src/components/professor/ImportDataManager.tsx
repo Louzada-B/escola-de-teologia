@@ -257,6 +257,37 @@ export default function ImportDataManager({ userId }: { userId: string }) {
       config.columns.filter(c => c.required).forEach(c => {
         if (!row[c.key] && row[c.key] !== 0) errors.push(`"${c.label}" é obrigatório`);
       });
+
+      // Validações específicas para quiz_questions
+      if (entity === 'quiz_questions') {
+        const qType = String(row.question_type || '').trim();
+        const validTypes = ['objetiva', 'dissertativa', 'verdadeiro_falso', 'ligar_colunas'];
+        if (qType && !validTypes.includes(qType)) {
+          errors.push(`Tipo inválido: "${qType}". Use: ${validTypes.join(', ')}`);
+        }
+        if (qType === 'objetiva') {
+          const opts = String(row.options || '').split(';').map((s: string) => s.trim()).filter(Boolean);
+          if (opts.length < 2) errors.push('Objetiva precisa de pelo menos 2 opções');
+          const co = row.correct_option !== '' && row.correct_option != null ? Number(row.correct_option) : NaN;
+          if (Number.isNaN(co)) errors.push('Opção Correta deve ser um número');
+          else if (co < 0 || co >= opts.length) errors.push(`Opção Correta (${co}) fora do intervalo (0 a ${opts.length - 1})`);
+        }
+        if (qType === 'verdadeiro_falso') {
+          const opts = String(row.options || '').split(';').map((s: string) => s.trim()).filter(Boolean);
+          if (opts.length < 1) errors.push('Verdadeiro/Falso precisa de pelo menos 1 afirmação');
+        }
+        if (qType === 'ligar_colunas') {
+          try {
+            const pairs = JSON.parse(String(row.options || '[]'));
+            if (!Array.isArray(pairs)) throw new Error();
+            const invalid = pairs.some((p: any) => !p.left || !p.right);
+            if (invalid) errors.push('Ligar Colunas: todos os pares precisam ter "left" e "right"');
+          } catch {
+            errors.push('Ligar Colunas: campo Opções deve ser um JSON válido de pares [{left,right}]');
+          }
+        }
+      }
+
       return { data: row, errors, index: idx + 2 };
     });
 
@@ -485,7 +516,7 @@ export default function ImportDataManager({ userId }: { userId: string }) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="max-h-[400px] overflow-auto">
+            <div className="overflow-x-auto"><ScrollArea className="max-h-[400px]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -513,7 +544,7 @@ export default function ImportDataManager({ userId }: { userId: string }) {
                   ))}
                 </TableBody>
               </Table>
-            </ScrollArea>
+            </ScrollArea></div>
             <div className="flex gap-3 mt-4">
               <Button onClick={doImport} disabled={importing || validCount === 0}>
                 {importing ? 'Importando...' : `Confirmar Importação (${validCount} registro(s))`}
