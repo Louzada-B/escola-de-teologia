@@ -26,7 +26,7 @@ export default function QuizGabarito({ questions, studentAnswers }: GabaritoData
             </p>
 
                 {q.complement && (
-                  <blockquote className="border-l-2 border-primary/40 pl-3 py-1 bg-muted/30 rounded-r text-sm text-muted-foreground italic">
+                  <blockquote className="border-l-2 border-primary/40 pl-3 py-1 bg-muted/30 rounded-r text-sm text-muted-foreground italic whitespace-pre-line">
                     {q.complement}
                   </blockquote>
                 )}
