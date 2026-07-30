@@ -681,11 +681,19 @@ export default function QuizzesManager({ userId }: { userId: string }) {
                         )); } catch { return null; }})()}
                       </div>
                     ) : q.question_type === "dissertativa" ? (
-                      <textarea
-                        disabled
-                        className="w-full text-sm bg-muted/30 border border-border rounded-md px-3 py-2 text-muted-foreground resize-none h-20"
-                        placeholder="Campo de resposta dissertativa"
-                      />
+                      <div className="space-y-1.5">
+                        <textarea
+                          disabled
+                          className="w-full text-sm bg-muted/30 border border-border rounded-md px-3 py-2 text-muted-foreground resize-none h-20"
+                          placeholder="Campo de resposta dissertativa"
+                        />
+                        {q.expected_text && (
+                          <div className="text-xs text-muted-foreground bg-amber-500/5 border border-amber-500/20 rounded px-3 py-2">
+                            <span className="font-medium text-amber-700">Resposta esperada: </span>
+                            {q.expected_text}
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <div className="space-y-2">
                         {(q.options || []).map((opt: string, i: number) => (
