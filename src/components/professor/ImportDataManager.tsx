@@ -236,29 +236,33 @@ export default function ImportDataManager({ userId }: { userId: string }) {
     setResult(null);
 
     const data = await file.arrayBuffer();
-    const wb = XLSX.read(data, { type: 'array', cellText: true, cellNF: false });
+    const wb = XLSX.read(data, { type: 'array', raw: false });
     const ws = wb.Sheets[wb.SheetNames[0]];
-    const jsonRows: Record<string, any>[] = XLSX.utils.sheet_to_json(ws, { defval: '', raw: true });
 
-    // Preserve newlines from Alt+Enter by reading raw worksheet cell values
+    // Build rows directly from raw cell values to preserve Alt+Enter newlines
     const wsRange = XLSX.utils.decode_range(ws['!ref'] || 'A1');
     const wsHeaders: string[] = [];
     for (let ci = wsRange.s.c; ci <= wsRange.e.c; ci++) {
       const hCell = ws[XLSX.utils.encode_cell({ r: wsRange.s.r, c: ci })];
-      wsHeaders.push(hCell ? String(hCell.v || '') : '');
+      wsHeaders.push(hCell ? String(hCell.v != null ? hCell.v : '') : '');
     }
+    const jsonRows: Record<string, any>[] = [];
     for (let ri = wsRange.s.r + 1; ri <= wsRange.e.r; ri++) {
-      const rowIdx = ri - wsRange.s.r - 1;
+      const row: Record<string, any> = {};
+      let hasData = false;
       for (let ci = wsRange.s.c; ci <= wsRange.e.c; ci++) {
-        const cell = ws[XLSX.utils.encode_cell({ r: ri, c: ci })];
         const header = wsHeaders[ci - wsRange.s.c];
-        if (cell && cell.t === 's' && header && rowIdx < jsonRows.length) {
-          const raw = String(cell.v != null ? cell.v : '');
-          if (raw.indexOf('\r') !== -1 || raw.indexOf('\n') !== -1) {
-            jsonRows[rowIdx][header] = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-          }
+        if (!header) continue;
+        const cell = ws[XLSX.utils.encode_cell({ r: ri, c: ci })];
+        if (cell != null && cell.v != null) {
+          const val = String(cell.v).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+          row[header] = val;
+          hasData = true;
+        } else {
+          row[header] = '';
         }
       }
+      if (hasData) jsonRows.push(row);
     }
 
     // Map header labels to field keys
