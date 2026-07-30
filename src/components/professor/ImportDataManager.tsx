@@ -236,9 +236,37 @@ export default function ImportDataManager({ userId }: { userId: string }) {
     setResult(null);
 
     const data = await file.arrayBuffer();
-    const wb = XLSX.read(data);
+    const wb = XLSX.read(data, { type: 'array', cellText: true, cellNF: false });
     const ws = wb.Sheets[wb.SheetNames[0]];
-    const jsonRows: Record<string, any>[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
+    const jsonRows: Record<string, any>[] = XLSX.utils.sheet_to_json(ws, { defval: '', raw: true });
+
+    // Preserva 
+ das células com Alt+Enter lendo direto do worksheet
+    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+    const headers: string[] = [];
+    for (let c2 = range.s.c; c2 <= range.e.c; c2++) {
+      const cell = ws[XLSX.utils.encode_cell({ r: range.s.r, c: c2 })];
+      headers.push(cell ? String(cell.v || '') : '');
+    }
+    for (let r = range.s.r + 1; r <= range.e.r; r++) {
+      const rowIdx = r - range.s.r - 1;
+      for (let c2 = range.s.c; c2 <= range.e.c; c2++) {
+        const cell = ws[XLSX.utils.encode_cell({ r, c: c2 })];
+        const header = headers[c2 - range.s.c];
+        if (cell && cell.t === 's' && header) {
+          // Usa o valor raw da célula que preserva 
+ do Alt+Enter
+          const rawVal = cell.v != null ? String(cell.v) : '';
+          if (rawVal.includes('
+') || rawVal.includes('')) {
+            jsonRows[rowIdx][header] = rawVal.replace(/
+/g, '
+').replace(//g, '
+');
+          }
+        }
+      }
+    }
 
     // Map header labels to keys
     const labelToKey: Record<string, string> = {};
