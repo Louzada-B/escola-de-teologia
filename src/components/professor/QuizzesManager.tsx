@@ -34,6 +34,7 @@ function defaultQuestionState() {
     correctOption: 0,
     expectedText: "",
     complement: "",
+    orderIndex: 0,
     vfPhrases: [{ text: "", answer: true }] as VFPhrase[],
     matchPairs: [{ left: "", right: "" }] as MatchPair[],
   };
@@ -214,7 +215,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
     const insertData: any = {
       question: form.text,
       question_type: form.type,
-      order_index: 0,
+      order_index: form.orderIndex ?? 0,
     };
     if (form.type === "objetiva") {
       insertData.options = form.options.filter((o) => o.trim());
@@ -268,6 +269,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
     const form = defaultQuestionState();
     form.text = q.question;
     form.type = q.question_type || "objetiva";
+    form.orderIndex = q.order_index ?? 0;
 
     if (form.type === "objetiva") {
       form.options = Array.isArray(q.options) ? [...(q.options as string[])] : ["", "", "", ""];
