@@ -205,10 +205,11 @@ export default function ImportDataManager({ userId }: { userId: string }) {
 
     if (entity === 'quiz_questions') {
       exampleRows = [
-        ['Quiz - Módulo 1', 'Qual a capital do Brasil?', 'objetiva', 'Brasília;São Paulo;Rio de Janeiro;Salvador', '0', '', '1'],
-        ['Quiz - Módulo 1', 'Explique o conceito de cidadania.', 'dissertativa', '', '', 'Cidadania é o exercício dos direitos e deveres civis, políticos e sociais.', '2'],
-        ['Quiz - Módulo 1', 'Marque V ou F para cada afirmação:', 'verdadeiro_falso', 'O Brasil é uma república;A capital é São Paulo;O país tem 26 estados', '', '{"0":"verdadeiro","1":"falso","2":"verdadeiro"}', '3'],
-        ['Quiz - Módulo 1', 'Ligue cada país à sua capital:', 'ligar_colunas', '[{"left":"Brasil","right":"Brasília"},{"left":"Argentina","right":"Buenos Aires"}]', '', '', '4'],
+        // quiz_title | question | complement | question_type | options | correct_option | expected_text | order_index
+        ['Quiz - Módulo 1', 'Qual a capital do Brasil?', '', 'objetiva', 'Brasília;São Paulo;Rio de Janeiro;Salvador', '0', '', '1'],
+        ['Quiz - Módulo 1', 'Explique o conceito de cidadania.', '', 'dissertativa', '', '', 'Cidadania é o exercício dos direitos e deveres civis, políticos e sociais.', '2'],
+        ['Quiz - Módulo 1', 'Marque V ou F para cada afirmação:', 'Considere o contexto do Brasil atual.', 'verdadeiro_falso', 'O Brasil é uma república;A capital é São Paulo;O país tem 26 estados', '', '{"0":"verdadeiro","1":"falso","2":"verdadeiro"}', '3'],
+        ['Quiz - Módulo 1', 'Ligue cada país à sua capital:', '', 'ligar_colunas', '[{"left":"Brasil","right":"Brasília"},{"left":"Argentina","right":"Buenos Aires"}]', '', '', '4'],
       ];
     } else {
       exampleRows = [config.columns.map(c => c.example)];
