@@ -398,6 +398,10 @@ export default function QuizzesManager({ userId }: { userId: string }) {
             <Textarea value={qForm.text} onChange={(e) => setQForm((p) => ({ ...p, text: e.target.value }))} />
           </div>
           <div>
+            <Label>Complemento <span className="text-xs text-muted-foreground">(opcional — texto de contexto exibido recuado abaixo do enunciado)</span></Label>
+            <Textarea value={qForm.complement || ""} onChange={(e) => setQForm((p) => ({ ...p, complement: e.target.value }))} placeholder="Ex: definição, trecho bíblico, citação..." rows={2} />
+          </div>
+          <div>
             <Label>Tipo de Pergunta</Label>
             <select
               value={qForm.type}
@@ -541,6 +545,10 @@ export default function QuizzesManager({ userId }: { userId: string }) {
             <div>
               <Label>Pergunta</Label>
               <Textarea value={eqForm.text} onChange={(e) => setEqForm((p) => ({ ...p, text: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Complemento <span className="text-xs text-muted-foreground">(opcional)</span></Label>
+              <Textarea value={eqForm.complement || ""} onChange={(e) => setEqForm((p) => ({ ...p, complement: e.target.value }))} placeholder="Texto de contexto recuado abaixo do enunciado" rows={2} />
             </div>
             <div>
               <Label>Tipo de Pergunta</Label>
