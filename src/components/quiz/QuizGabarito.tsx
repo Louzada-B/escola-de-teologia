@@ -133,7 +133,7 @@ export default function QuizGabarito({ questions, studentAnswers }: GabaritoData
                 {q.expected_text && (
                   <div className="p-3 rounded-md bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
                     <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">Texto de referência do professor:</p>
-                    <p className="font-body text-sm">{q.expected_text}</p>
+                    <p className="font-body text-sm"><span className="whitespace-pre-line">{q.expected_text}</span></p>
                   </div>
                 )}
               </div>

@@ -353,7 +353,7 @@ export default function ImportDataManager({ userId }: { userId: string }) {
             professor_name: pr.data.professor_name ? String(pr.data.professor_name).trim() : null,
             event_type: pr.data.event_type ? String(pr.data.event_type).trim() : 'aula',
             mandatory_attendance: att ? (String(att).toLowerCase().startsWith('s') || String(att).toLowerCase() === 'true') : true,
-            complement: pr.data.complement ? String(pr.data.complement).trim() : null,
+            complement: pr.data.complement ? String(pr.data.complement).replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim() : null,
             order_index: pr.data.order_index ? Number(pr.data.order_index) : 0,
           };
         } else if (entity === 'quizzes') {
@@ -392,7 +392,7 @@ export default function ImportDataManager({ userId }: { userId: string }) {
 
           // Para verdadeiro_falso: options são as frases, expected_text é o mapa V/F
           // O formato do xlsx usa options separado por ; e correct_option como índices "0,1" para V
-          let expectedText = pr.data.expected_text ? String(pr.data.expected_text).trim() : null;
+          let expectedText = pr.data.expected_text ? String(pr.data.expected_text).replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim() : null;
           if (qType === 'verdadeiro_falso' && !expectedText && optionsVal.length > 0) {
             // Tenta derivar o mapa V/F do correct_option (ex: "0,2" = índices verdadeiros)
             const trueIndices = new Set(
@@ -413,7 +413,7 @@ export default function ImportDataManager({ userId }: { userId: string }) {
             correct_option: (qType === 'objetiva' && pr.data.correct_option !== '' && pr.data.correct_option != null)
               ? Number(pr.data.correct_option) : null,
             expected_text: expectedText,
-            complement: pr.data.complement ? String(pr.data.complement).trim() : null,
+            complement: pr.data.complement ? String(pr.data.complement).replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim() : null,
             order_index: pr.data.order_index ? Number(pr.data.order_index) : 0,
           };
         } else if (entity === 'cohort_students') {

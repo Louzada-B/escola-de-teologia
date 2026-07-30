@@ -710,7 +710,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
                           placeholder="Campo de resposta dissertativa"
                         />
                         {q.expected_text && (
-                          <div className="text-xs text-muted-foreground bg-amber-500/5 border border-amber-500/20 rounded px-3 py-2">
+                          <div className="text-xs text-muted-foreground bg-amber-500/5 border border-amber-500/20 rounded px-3 py-2 whitespace-pre-line">
                             <span className="font-medium text-amber-700">Resposta esperada: </span>
                             {q.expected_text}
                           </div>
