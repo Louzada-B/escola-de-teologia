@@ -522,7 +522,7 @@ export default function ImportDataManager({ userId }: { userId: string }) {
                   <TableRow>
                     <TableHead className="w-16">Linha</TableHead>
                     <TableHead className="w-20">Status</TableHead>
-                    {config!.columns.map(c => <TableHead key={c.key}>{c.label}</TableHead>)}
+                    {config!.columns.map(c => <TableHead key={c.key}>{c.label.replace(/\s*\(.*?\)/g, '').trim()}</TableHead>)}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
