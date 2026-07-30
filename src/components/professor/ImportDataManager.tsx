@@ -346,14 +346,39 @@ export default function ImportDataManager({ userId }: { userId: string }) {
           if (!quizId) { errors.push({ row: pr.index, msg: `Questionário "${pr.data.quiz_title}" não encontrado` }); continue; }
           const qType = pr.data.question_type ? String(pr.data.question_type).trim() : 'objetiva';
           const optionsStr = pr.data.options ? String(pr.data.options).trim() : '';
-          const optionsArr = optionsStr ? optionsStr.split(';').map((o: string) => o.trim()) : [];
+
+          // Para ligar_colunas o campo options é um JSON de pares [{left,right}]
+          // Para os demais tipos é uma lista separada por ;
+          let optionsVal: any;
+          if (qType === 'ligar_colunas') {
+            try { optionsVal = JSON.parse(optionsStr); } catch { optionsVal = []; }
+          } else {
+            optionsVal = optionsStr ? optionsStr.split(';').map((o: string) => o.trim()) : [];
+          }
+
+          // Para verdadeiro_falso: options são as frases, expected_text é o mapa V/F
+          // O formato do xlsx usa options separado por ; e correct_option como índices "0,1" para V
+          let expectedText = pr.data.expected_text ? String(pr.data.expected_text).trim() : null;
+          if (qType === 'verdadeiro_falso' && !expectedText && optionsVal.length > 0) {
+            // Tenta derivar o mapa V/F do correct_option (ex: "0,2" = índices verdadeiros)
+            const trueIndices = new Set(
+              String(pr.data.correct_option || '').split(',').map((s: string) => s.trim()).filter(Boolean)
+            );
+            const vfMap: Record<string, string> = {};
+            optionsVal.forEach((_: any, i: number) => {
+              vfMap[String(i)] = trueIndices.has(String(i)) ? 'V' : 'F';
+            });
+            expectedText = JSON.stringify(vfMap);
+          }
+
           record = {
             quiz_id: quizId,
             question: String(pr.data.question || '').trim(),
             question_type: qType,
-            options: optionsArr,
-            correct_option: pr.data.correct_option !== '' && pr.data.correct_option != null ? Number(pr.data.correct_option) : null,
-            expected_text: pr.data.expected_text ? String(pr.data.expected_text).trim() : null,
+            options: optionsVal,
+            correct_option: (qType === 'objetiva' && pr.data.correct_option !== '' && pr.data.correct_option != null)
+              ? Number(pr.data.correct_option) : null,
+            expected_text: expectedText,
             order_index: pr.data.order_index ? Number(pr.data.order_index) : 0,
           };
         } else if (entity === 'cohort_students') {
