@@ -67,7 +67,7 @@ export default function StudentsManager() {
     }
     setInviting(true);
     try {
-      const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+      const appUrl = import.meta.env.VITE_APP_URL || 'https://formacaoteologica.brasachurch.com';
       const { data, error } = await supabase.functions.invoke("invite-student", {
         body: {
           students: [{ email: email.trim(), full_name: fullName.trim(), cohort_id: cohortId }],
@@ -135,7 +135,7 @@ export default function StudentsManager() {
     }
     setBulkImporting(true);
     try {
-      const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+      const appUrl = import.meta.env.VITE_APP_URL || 'https://formacaoteologica.brasachurch.com';
       const { data, error } = await supabase.functions.invoke("invite-student", {
         body: {
           students: validRows.map((r) => ({ email: r.email, full_name: r.full_name, cohort_id: bulkCohortId })),

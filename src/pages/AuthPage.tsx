@@ -80,7 +80,7 @@ export default function AuthPage() {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/definir-senha`,
+        redirectTo: `${import.meta.env.VITE_APP_URL || 'https://formacaoteologica.brasachurch.com'}/definir-senha`,
       });
       if (error) throw error;
       setResetSent(true);
