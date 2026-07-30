@@ -240,40 +240,32 @@ export default function ImportDataManager({ userId }: { userId: string }) {
     const ws = wb.Sheets[wb.SheetNames[0]];
     const jsonRows: Record<string, any>[] = XLSX.utils.sheet_to_json(ws, { defval: '', raw: true });
 
-    // Preserve \n from Alt+Enter cells by reading raw worksheet values
-    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
-    const headers: string[] = [];
-    for (let c2 = range.s.c; c2 <= range.e.c; c2++) {
-      const cell = ws[XLSX.utils.encode_cell({ r: range.s.r, c: c2 })];
-      headers.push(cell ? String(cell.v || '') : '');
+    // Preserve newlines from Alt+Enter by reading raw worksheet cell values
+    const wsRange = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+    const wsHeaders: string[] = [];
+    for (let ci = wsRange.s.c; ci <= wsRange.e.c; ci++) {
+      const hCell = ws[XLSX.utils.encode_cell({ r: wsRange.s.r, c: ci })];
+      wsHeaders.push(hCell ? String(hCell.v || '') : '');
     }
-    for (let r = range.s.r + 1; r <= range.e.r; r++) {
-      const rowIdx = r - range.s.r - 1;
-      for (let c2 = range.s.c; c2 <= range.e.c; c2++) {
-        const cell = ws[XLSX.utils.encode_cell({ r, c: c2 })];
-        const header = headers[c2 - range.s.c];
-        if (cell && cell.t === 's' && header) {
-          // Usa o valor raw da célula que preserva 
- do Alt+Enter
-          const rawVal = cell.v != null ? String(cell.v) : '';
-          if (rawVal.includes('
-') || rawVal.includes('
-')) {
-            jsonRows[rowIdx][header] = rawVal.replace(/
-/g, '
-').replace(/
-/g, '
-');
+    for (let ri = wsRange.s.r + 1; ri <= wsRange.e.r; ri++) {
+      const rowIdx = ri - wsRange.s.r - 1;
+      for (let ci = wsRange.s.c; ci <= wsRange.e.c; ci++) {
+        const cell = ws[XLSX.utils.encode_cell({ r: ri, c: ci })];
+        const header = wsHeaders[ci - wsRange.s.c];
+        if (cell && cell.t === 's' && header && rowIdx < jsonRows.length) {
+          const raw = String(cell.v != null ? cell.v : '');
+          if (raw.indexOf('\r') !== -1 || raw.indexOf('\n') !== -1) {
+            jsonRows[rowIdx][header] = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
           }
         }
       }
     }
 
-    // Map header labels to keys
+    // Map header labels to field keys
     const labelToKey: Record<string, string> = {};
-    config.columns.forEach(c => {
-      labelToKey[c.label.toLowerCase().trim()] = c.key;
-      labelToKey[c.key.toLowerCase().trim()] = c.key;
+    config.columns.forEach(col => {
+      labelToKey[col.label.toLowerCase().trim()] = col.key;
+      labelToKey[col.key.toLowerCase().trim()] = col.key;
     });
 
     const mapped: PreviewRow[] = jsonRows.map((raw, idx) => {
@@ -283,11 +275,11 @@ export default function ImportDataManager({ userId }: { userId: string }) {
         if (key) row[key] = val;
       });
       const errors: string[] = [];
-      config.columns.filter(c => c.required).forEach(c => {
-        if (!row[c.key] && row[c.key] !== 0) errors.push(`"${c.label}" é obrigatório`);
+      config.columns.filter(col => col.required).forEach(col => {
+        if (!row[col.key] && row[col.key] !== 0) errors.push(`"${col.label}" é obrigatório`);
       });
 
-      // Validações específicas para quiz_questions
+      // Type-specific validation for quiz_questions
       if (entity === 'quiz_questions') {
         const qType = String(row.question_type || '').trim();
         const validTypes = ['objetiva', 'dissertativa', 'verdadeiro_falso', 'ligar_colunas'];
@@ -309,10 +301,9 @@ export default function ImportDataManager({ userId }: { userId: string }) {
           try {
             const pairs = JSON.parse(String(row.options || '[]'));
             if (!Array.isArray(pairs)) throw new Error();
-            const invalid = pairs.some((p: any) => !p.left || !p.right);
-            if (invalid) errors.push('Ligar Colunas: todos os pares precisam ter "left" e "right"');
+            if (pairs.some((p: any) => !p.left || !p.right)) errors.push('Ligar Colunas: todos os pares precisam ter "left" e "right"');
           } catch {
-            errors.push('Ligar Colunas: campo Opções deve ser um JSON válido de pares [{left,right}]');
+            errors.push('Ligar Colunas: campo Opções deve ser JSON válido de pares [{left,right}]');
           }
         }
       }
