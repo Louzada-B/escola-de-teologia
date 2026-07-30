@@ -115,6 +115,12 @@ export default function QuizAnswerDialog({ open, onOpenChange, quiz, questions, 
                   </span>
                 </p>
 
+                {q.complement && (
+                  <blockquote className="border-l-2 border-primary/40 pl-3 py-1 bg-muted/30 rounded-r text-sm text-muted-foreground italic">
+                    {q.complement}
+                  </blockquote>
+                )}
+
                 {qType === 'objetiva' && (
                   <RadioGroup
                     value={answers[q.id] || ''}

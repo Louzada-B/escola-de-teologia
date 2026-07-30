@@ -33,6 +33,7 @@ function defaultQuestionState() {
     options: ["", "", "", ""],
     correctOption: 0,
     expectedText: "",
+    complement: "",
     vfPhrases: [{ text: "", answer: true }] as VFPhrase[],
     matchPairs: [{ left: "", right: "" }] as MatchPair[],
   };
@@ -239,6 +240,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
       insertData.correct_option = null;
       insertData.expected_text = form.expectedText || null;
     }
+    insertData.complement = form.complement?.trim() || null;
     return insertData;
   }
 
@@ -286,6 +288,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
       form.matchPairs = Array.isArray(q.options) ? (q.options as MatchPair[]) : [{ left: "", right: "" }];
     } else {
       form.expectedText = q.expected_text || "";
+      form.complement = q.complement || "";
     }
 
     setEqForm(form);
@@ -671,6 +674,11 @@ export default function QuizzesManager({ userId }: { userId: string }) {
                       <span className="text-primary font-semibold mr-1">{idx + 1}.</span>
                       {q.question}
                     </p>
+                    {q.complement && (
+                      <blockquote className="border-l-2 border-primary/40 pl-3 py-1 bg-muted/30 rounded-r text-sm text-muted-foreground italic">
+                        {q.complement}
+                      </blockquote>
+                    )}
                     {q.question_type === "ligar_colunas" ? (
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         {(() => {

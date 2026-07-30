@@ -149,6 +149,7 @@ const ENTITIES: Record<EntityType, EntityConfig> = {
       { key: 'options', label: 'Opções (separadas por ;)', required: false, example: 'Brasília;São Paulo;Rio de Janeiro;Salvador' },
       { key: 'correct_option', label: 'Opção Correta (número, começando em 0)', required: false, example: '0' },
       { key: 'expected_text', label: 'Resposta Esperada (dissertativa)', required: false, example: 'Texto de referência' },
+      { key: 'complement', label: 'Complemento (texto de contexto)', required: false, example: 'A disciplina que estuda...' },
       { key: 'order_index', label: 'Ordem', required: false, example: '1' },
     ],
   },
@@ -320,6 +321,7 @@ export default function ImportDataManager({ userId }: { userId: string }) {
             professor_name: pr.data.professor_name ? String(pr.data.professor_name).trim() : null,
             event_type: pr.data.event_type ? String(pr.data.event_type).trim() : 'aula',
             mandatory_attendance: att ? (String(att).toLowerCase().startsWith('s') || String(att).toLowerCase() === 'true') : true,
+            complement: pr.data.complement ? String(pr.data.complement).trim() : null,
             order_index: pr.data.order_index ? Number(pr.data.order_index) : 0,
           };
         } else if (entity === 'quizzes') {
@@ -379,6 +381,7 @@ export default function ImportDataManager({ userId }: { userId: string }) {
             correct_option: (qType === 'objetiva' && pr.data.correct_option !== '' && pr.data.correct_option != null)
               ? Number(pr.data.correct_option) : null,
             expected_text: expectedText,
+            complement: pr.data.complement ? String(pr.data.complement).trim() : null,
             order_index: pr.data.order_index ? Number(pr.data.order_index) : 0,
           };
         } else if (entity === 'cohort_students') {
