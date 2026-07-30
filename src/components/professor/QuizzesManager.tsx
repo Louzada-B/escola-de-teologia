@@ -241,7 +241,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
       insertData.correct_option = null;
       insertData.expected_text = form.expectedText || null;
     }
-    insertData.complement = form.complement?.trim() || null;
+    insertData.complement = form.complement?.trimEnd() || null;
     return insertData;
   }
 
@@ -290,7 +290,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
       form.matchPairs = Array.isArray(q.options) ? (q.options as MatchPair[]) : [{ left: "", right: "" }];
     } else {
       form.expectedText = q.expected_text || "";
-      form.complement = q.complement || "";
+      form.complement = (q.complement || "").replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     }
 
     setEqForm(form);
