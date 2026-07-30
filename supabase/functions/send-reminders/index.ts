@@ -133,13 +133,13 @@ async function remindQuizzes(admin: ReturnType<typeof createClient>) {
           Voc\u00ea ainda n\u00e3o respondeu — acesse o portal antes que o prazo encerre.
         </p>
         <div style="text-align:center;margin:24px 0;">
-          <a href="https://formacao-teologica.vercel.app/dashboard/questionarios"
+          <a href="https://formacaoteologica.brasachurch.com/dashboard/questionarios"
              style="background:#1a2e52;color:#fff;padding:12px 32px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;">
             Responder agora
           </a>
         </div>`;
       await sendEmail(profile.email, `Lembrete: questionário fecha hoje — ${quiz.title}`, emailWrap(body));
-      await sendPush(admin, [profile.id], "Questionário fecha hoje!", `${quiz.title} — encerra às ${deadline}`, "https://formacao-teologica.vercel.app/dashboard/questionarios");
+      await sendPush(admin, [profile.id], "Questionário fecha hoje!", `${quiz.title} — encerra às ${deadline}`, "https://formacaoteologica.brasachurch.com/dashboard/questionarios");
       sent++;
     }
   }
@@ -210,13 +210,13 @@ async function remindAttendance(admin: ReturnType<typeof createClient>) {
           <strong>${lesson.title}</strong>. Ainda h\u00e1 tempo — acesse o portal agora.
         </p>
         <div style="text-align:center;margin:24px 0;">
-          <a href="https://formacao-teologica.vercel.app/dashboard/presenca"
+          <a href="https://formacaoteologica.brasachurch.com/dashboard/presenca"
              style="background:#1a2e52;color:#fff;padding:12px 32px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;">
             Registrar presen\u00e7a
           </a>
         </div>`;
       await sendEmail(profile.email, `Lembrete: registre sua presen\u00e7a — ${lesson.title}`, emailWrap(body));
-      await sendPush(admin, [profile.id], "Registre sua presen\u00e7a!", lesson.title, "https://formacao-teologica.vercel.app/dashboard/presenca");
+      await sendPush(admin, [profile.id], "Registre sua presen\u00e7a!", lesson.title, "https://formacaoteologica.brasachurch.com/dashboard/presenca");
       sent++;
     }
   }
@@ -276,13 +276,13 @@ async function remindTCC(admin: ReturnType<typeof createClient>) {
         (${deadlineFmt}). Voc\u00ea ainda n\u00e3o enviou seu trabalho — acesse o portal agora.
       </p>
       <div style="text-align:center;margin:24px 0;">
-        <a href="https://formacao-teologica.vercel.app/dashboard/tcc"
+        <a href="https://formacaoteologica.brasachurch.com/dashboard/tcc"
            style="background:#1a2e52;color:#fff;padding:12px 32px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;">
           Enviar TCC
         </a>
       </div>`;
     await sendEmail(profile.email, "Lembrete: prazo do TCC em 4 horas!", emailWrap(body));
-    await sendPush(admin, [profile.id], "TCC: prazo em 4 horas!", `Encerra ${deadlineFmt}`, "https://formacao-teologica.vercel.app/dashboard/tcc");
+    await sendPush(admin, [profile.id], "TCC: prazo em 4 horas!", `Encerra ${deadlineFmt}`, "https://formacaoteologica.brasachurch.com/dashboard/tcc");
     sent++;
   }
   return { sent };
