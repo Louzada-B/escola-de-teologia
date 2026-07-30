@@ -696,7 +696,22 @@ export default function QuizzesManager({ userId }: { userId: string }) {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        {(q.options || []).map((opt: string, i: number) => (
+                        {q.question_type === "verdadeiro_falso" ? (() => {
+                            let vfMap: Record<string, string> = {};
+                            try { vfMap = JSON.parse(q.expected_text || "{}"); } catch {}
+                            return (q.options || []).map((opt: string, i: number) => {
+                              const answer = vfMap[String(i)] || "";
+                              const isTrue = answer === "V";
+                              return (
+                                <div key={i} className={`flex items-center gap-3 px-3 py-2 rounded-md border text-sm ${isTrue ? "border-green-500/30 bg-green-500/5" : "border-red-500/30 bg-red-500/5"}`}>
+                                  <span className={`px-2 py-0.5 rounded text-xs font-bold flex-shrink-0 ${isTrue ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}>
+                                    {answer || "?"}
+                                  </span>
+                                  <span className="text-foreground">{opt}</span>
+                                </div>
+                              );
+                            });
+                          })() : (q.options || []).map((opt: string, i: number) => (
                           <div key={i} className={`flex items-center gap-3 px-3 py-2 rounded-md border text-sm ${i === q.correct_option ? "border-green-500/40 bg-green-500/5 text-green-700" : "border-border bg-muted/30 text-foreground"}`}>
                             <span className={`w-5 h-5 rounded-full border flex items-center justify-center text-xs flex-shrink-0 ${i === q.correct_option ? "border-green-500 bg-green-500 text-white" : "border-muted-foreground"}`}>
                               {String.fromCharCode(65 + i)}
