@@ -516,7 +516,7 @@ export default function ImportDataManager({ userId }: { userId: string }) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto"><ScrollArea className="max-h-[400px]">
+            <div className="overflow-x-auto overflow-y-auto max-h-[400px]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -544,7 +544,7 @@ export default function ImportDataManager({ userId }: { userId: string }) {
                   ))}
                 </TableBody>
               </Table>
-            </ScrollArea></div>
+            </div>
             <div className="flex gap-3 mt-4">
               <Button onClick={doImport} disabled={importing || validCount === 0}>
                 {importing ? 'Importando...' : `Confirmar Importação (${validCount} registro(s))`}
