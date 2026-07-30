@@ -61,6 +61,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
   // Questions listing & editing
   const [quizQuestions, setQuizQuestions] = useState<Record<string, any[]>>({});
   const [expandedQuiz, setExpandedQuiz] = useState<string | null>(null);
+  const [previewQuiz, setPreviewQuiz] = useState<any | null>(null);
   const [editingQuestion, setEditingQuestion] = useState<any | null>(null);
   const [eqForm, setEqForm] = useState(defaultQuestionState());
 
@@ -436,6 +437,9 @@ export default function QuizzesManager({ userId }: { userId: string }) {
                       {expandedQuiz === q.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </Button>
                   </CollapsibleTrigger>
+                  <Button variant="ghost" size="icon" onClick={() => { loadQuestions(q.id); setPreviewQuiz(q); }}>
+                    <Eye className="w-4 h-4 text-muted-foreground" />
+                  </Button>
                   <Button variant="ghost" size="icon" onClick={() => openEdit(q)}>
                     <Pencil className="w-4 h-4 text-muted-foreground" />
                   </Button>
@@ -646,6 +650,65 @@ export default function QuizzesManager({ userId }: { userId: string }) {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Preview */}
+      {previewQuiz && (
+        <Dialog open={!!previewQuiz} onOpenChange={() => setPreviewQuiz(null)}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Eye className="w-4 h-4 text-primary" />
+                Pré-visualização: {previewQuiz.title}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6 py-2">
+              {(quizQuestions[previewQuiz.id] || []).length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Nenhuma questão cadastrada.</p>
+              ) : (
+                (quizQuestions[previewQuiz.id] || []).map((q: any, idx: number) => (
+                  <div key={q.id} className="space-y-3">
+                    <p className="text-sm font-medium text-foreground">
+                      <span className="text-primary font-semibold mr-1">{idx + 1}.</span>
+                      {q.question}
+                    </p>
+                    {q.question_type === "ligar_colunas" ? (
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        {(() => { try { return JSON.parse(q.options || "[]").map((pair: any, i: number) => (
+                          <div key={i} className="contents">
+                            <div className="bg-muted/50 rounded px-3 py-1.5 text-foreground">{pair.left}</div>
+                            <div className="bg-muted/50 rounded px-3 py-1.5 text-muted-foreground">{pair.right}</div>
+                          </div>
+                        )); } catch { return null; }})()}
+                      </div>
+                    ) : q.question_type === "dissertativa" ? (
+                      <textarea
+                        disabled
+                        className="w-full text-sm bg-muted/30 border border-border rounded-md px-3 py-2 text-muted-foreground resize-none h-20"
+                        placeholder="Campo de resposta dissertativa"
+                      />
+                    ) : (
+                      <div className="space-y-2">
+                        {(q.options || []).map((opt: string, i: number) => (
+                          <div key={i} className={`flex items-center gap-3 px-3 py-2 rounded-md border text-sm ${i === q.correct_option ? "border-green-500/40 bg-green-500/5 text-green-700" : "border-border bg-muted/30 text-foreground"}`}>
+                            <span className={`w-5 h-5 rounded-full border flex items-center justify-center text-xs flex-shrink-0 ${i === q.correct_option ? "border-green-500 bg-green-500 text-white" : "border-muted-foreground"}`}>
+                              {String.fromCharCode(65 + i)}
+                            </span>
+                            {opt}
+                            {i === q.correct_option && <span className="ml-auto text-xs text-green-600 font-medium">✓ Correta</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {idx < (quizQuestions[previewQuiz.id] || []).length - 1 && (
+                      <div className="border-t border-border pt-2" />
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
