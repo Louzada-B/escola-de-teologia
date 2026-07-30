@@ -673,12 +673,18 @@ export default function QuizzesManager({ userId }: { userId: string }) {
                     </p>
                     {q.question_type === "ligar_colunas" ? (
                       <div className="grid grid-cols-2 gap-2 text-sm">
-                        {(() => { try { return JSON.parse(q.options || "[]").map((pair: any, i: number) => (
-                          <div key={i} className="contents">
-                            <div className="bg-muted/50 rounded px-3 py-1.5 text-foreground">{pair.left}</div>
-                            <div className="bg-muted/50 rounded px-3 py-1.5 text-muted-foreground">{pair.right}</div>
-                          </div>
-                        )); } catch { return null; }})()}
+                        {(() => {
+                          try {
+                            const pairs = Array.isArray(q.options) ? q.options
+                              : typeof q.options === "string" ? JSON.parse(q.options) : [];
+                            return pairs.map((pair: any, i: number) => (
+                              <div key={i} className="contents">
+                                <div className="bg-muted/50 rounded px-3 py-1.5 text-foreground">{pair.left}</div>
+                                <div className="bg-muted/50 rounded px-3 py-1.5 text-muted-foreground">{pair.right}</div>
+                              </div>
+                            ));
+                          } catch { return null; }
+                        })()}
                       </div>
                     ) : q.question_type === "dissertativa" ? (
                       <div className="space-y-1.5">
