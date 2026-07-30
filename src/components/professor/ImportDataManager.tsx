@@ -240,8 +240,7 @@ export default function ImportDataManager({ userId }: { userId: string }) {
     const ws = wb.Sheets[wb.SheetNames[0]];
     const jsonRows: Record<string, any>[] = XLSX.utils.sheet_to_json(ws, { defval: '', raw: true });
 
-    // Preserva 
- das células com Alt+Enter lendo direto do worksheet
+    // Preserve \n from Alt+Enter cells by reading raw worksheet values
     const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
     const headers: string[] = [];
     for (let c2 = range.s.c; c2 <= range.e.c; c2++) {
@@ -258,10 +257,12 @@ export default function ImportDataManager({ userId }: { userId: string }) {
  do Alt+Enter
           const rawVal = cell.v != null ? String(cell.v) : '';
           if (rawVal.includes('
-') || rawVal.includes('')) {
+') || rawVal.includes('
+')) {
             jsonRows[rowIdx][header] = rawVal.replace(/
 /g, '
-').replace(//g, '
+').replace(/
+/g, '
 ');
           }
         }
