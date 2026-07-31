@@ -13,7 +13,7 @@ const vapidPriv   = Deno.env.get("VAPID_PRIVATE_KEY")!;
 // Extrai raw private key via JWK (metodo correto)
 async function getRawPrivateKey(): Promise<string> {
   const pad = "=".repeat((4 - (vapidPriv.length % 4)) % 4);
-  const b64 = (vapidPriv + pad).replace(/-/g, "+").replace(/\//g, "/");
+  const b64 = (vapidPriv + pad).replace(/-/g, "+").replace(/_/g, "/");
   const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
   const key = await crypto.subtle.importKey(
     "pkcs8", bytes.buffer,
