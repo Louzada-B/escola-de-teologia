@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { QuizzesSkeleton } from '@/components/SkeletonLoaders';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCohort } from '@/contexts/CohortContext';
@@ -115,7 +116,7 @@ export default function QuizzesPage() {
     setShowGabaritoId(quizId);
   };
 
-  if (loading) return <div className="page-container"><p className="text-muted-foreground">Carregando...</p></div>;
+  if (loading) return <QuizzesSkeleton />;
 
   const activeQuiz = quizzes.find(q => q.id === activeQuizId);
 

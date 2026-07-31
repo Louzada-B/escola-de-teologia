@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AnnouncementsSkeleton } from '@/components/SkeletonLoaders';
 import { supabase } from '@/integrations/supabase/client';
 import { useCohort } from '@/contexts/CohortContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -53,7 +54,7 @@ export default function AnnouncementsPage() {
   if (loading) {
     return (
       <div className="page-container">
-        <p className="text-muted-foreground">Carregando avisos...</p>
+        <p className="text-muted-foreground"><AnnouncementsSkeleton /></p>
       </div>
     );
   }

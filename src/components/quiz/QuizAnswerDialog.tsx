@@ -18,6 +18,33 @@ interface QuizAnswerDialogProps {
   onSubmitted: (quizId: string, questions: any[], mergedAnswers: Record<string, any>) => void;
 }
 
+
+function ConfirmExitDialog({ onConfirm, onCancel, answered, total }: {
+  onConfirm: () => void; onCancel: () => void; answered: number; total: number;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-card border border-border rounded-2xl p-6 max-w-xs w-full mx-4 text-center space-y-4">
+        <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto">
+          <svg className="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div>
+          <h3 className="font-semibold text-foreground">Sair do questionário?</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Você respondeu {answered} de {total} {total === 1 ? "pergunta" : "perguntas"}. Suas respostas não serão salvas.
+          </p>
+        </div>
+        <div className="flex flex-col gap-2">
+          <button type="button" onClick={onConfirm} className="w-full py-2 rounded-lg bg-destructive/10 text-destructive border border-destructive/20 text-sm font-medium">Sair sem salvar</button>
+          <button type="button" onClick={onCancel} className="w-full py-2 rounded-lg bg-green-500/10 text-green-700 border border-green-500/20 text-sm font-medium">Continuar respondendo</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function QuizAnswerDialog({ open, onOpenChange, quiz, questions, onSubmitted }: QuizAnswerDialogProps) {
   const { user } = useAuth();
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -25,6 +52,7 @@ export default function QuizAnswerDialog({ open, onOpenChange, quiz, questions, 
   const [vfAnswers, setVfAnswers] = useState<Record<string, Record<string, string>>>({});
   const [matchAnswers, setMatchAnswers] = useState<Record<string, Record<string, string>>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   const shuffledRights = useMemo(() => {
     const map: Record<string, string[]> = {};
@@ -97,7 +125,8 @@ export default function QuizAnswerDialog({ open, onOpenChange, quiz, questions, 
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={(open) => { if (!open && Object.keys(answers).length > 0 && !submitting) { setShowExitConfirm(true); } else { onOpenChange(open); } }}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-heading text-xl">{quiz.title}</DialogTitle>
@@ -114,12 +143,6 @@ export default function QuizAnswerDialog({ open, onOpenChange, quiz, questions, 
                     ({qType === 'objetiva' ? 'Objetiva' : qType === 'verdadeiro_falso' ? 'V ou F' : qType === 'ligar_colunas' ? 'Ligar Colunas' : 'Dissertativa'})
                   </span>
                 </p>
-
-                {q.complement && (
-                  <blockquote className="border-l-2 border-primary/40 pl-3 py-1 bg-muted/30 rounded-r text-sm text-muted-foreground italic whitespace-pre-line">
-                    {q.complement}
-                  </blockquote>
-                )}
 
                 {qType === 'objetiva' && (
                   <RadioGroup
@@ -195,5 +218,14 @@ export default function QuizAnswerDialog({ open, onOpenChange, quiz, questions, 
         </div>
       </DialogContent>
     </Dialog>
+      {showExitConfirm && (
+        <ConfirmExitDialog
+          answered={Object.keys(answers).length}
+          total={questions.length}
+          onConfirm={() => { setShowExitConfirm(false); onOpenChange(false); }}
+          onCancel={() => setShowExitConfirm(false)}
+        />
+      )}
+    </>
   );
 }

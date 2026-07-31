@@ -28,6 +28,7 @@ export default function AttendancePage() {
   const [checkedIn, setCheckedIn] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [gpsLoading, setGpsLoading] = useState<string | null>(null);
+  const [successLesson, setSuccessLesson] = useState<{title: string; date: string} | null>(null);
   const [isWithinTime, setIsWithinTime] = useState(false);
 
   useEffect(() => {
@@ -145,7 +146,13 @@ export default function AttendancePage() {
           }
         } else {
           setCheckedIn((prev) => new Set(prev).add(lessonId));
-          toast({ title: "Presença registrada!", description: "Sua presença foi confirmada com sucesso." });
+          const allLessons = [...(todayLessons || []), ...(pastLessons || [])];
+          const lesson = allLessons.find((l: any) => l.id === lessonId);
+          setSuccessLesson({
+            title: lesson?.title || "Aula",
+            date: lesson?.scheduled_date ? new Date(lesson.scheduled_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" }) : "",
+          });
+          setTimeout(() => setSuccessLesson(null), 4000);
         }
         setGpsLoading(null);
       },
@@ -166,6 +173,28 @@ export default function AttendancePage() {
       { enableHighAccuracy: true, timeout: 10000 },
     );
   };
+
+  if (successLesson) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="text-center space-y-4 max-w-sm w-full">
+          <div className="mx-auto w-20 h-20 rounded-full bg-green-500/10 border-2 border-green-500/30 flex items-center justify-center">
+            <svg className="w-10 h-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-2xl font-heading font-semibold text-foreground">Presença registrada!</h2>
+            <p className="text-muted-foreground mt-1 text-sm font-body">{successLesson.title}</p>
+          </div>
+          <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-2 text-sm text-green-700 font-medium">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            {successLesson.date}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading)
     return (

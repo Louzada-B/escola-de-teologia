@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { LessonsSkeleton } from "@/components/SkeletonLoaders";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -78,13 +79,7 @@ export default function LessonsPage() {
     return url;
   };
 
-  if (loading) {
-    return (
-      <div className="page-container">
-        <p className="text-muted-foreground">Carregando aulas...</p>
-      </div>
-    );
-  }
+  if (loading) return <LessonsSkeleton />;
 
   if (modules.length === 0) {
     return (
