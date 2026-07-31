@@ -9,6 +9,16 @@ const smtpUser    = Deno.env.get("SMTP_USER")!;
 const smtpPass    = Deno.env.get("SMTP_PASS")!;
 const vapidPub    = "BPp1QQmJdq77A3OZClICx0U6NPWlj2gOF4jj6x0JQHmOnQJ5HpC1LZ1ts2aS26ID_FrGxpWXc-_1mss1KnMIc2k";
 const vapidPriv   = Deno.env.get("VAPID_PRIVATE_KEY")!;
+
+// Extrai os 32 bytes raw da chave PKCS8 para o web-push
+function getRawPrivateKey(): string {
+  const pad = "=".repeat((4 - (vapidPriv.length % 4)) % 4);
+  const b64 = (vapidPriv + pad).replace(/-/g, "+").replace(/_/g, "/");
+  const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  // Raw EC private key esta nos bytes 36-68 do PKCS8
+  const raw = bytes.slice(36, 68);
+  return btoa(String.fromCharCode(...raw)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
 const vapidEmail  = `mailto:${Deno.env.get("SMTP_USER")}`;
 
 
@@ -33,7 +43,7 @@ async function sendPush(admin: ReturnType<typeof createClient>, userIds: string[
         p256dh: sub.p256dh,
         auth: sub.auth,
         vapidPublicKey: vapidPub,
-        vapidPrivateKeyRaw: vapidPriv,
+        vapidPrivateKeyRaw: getRawPrivateKey(),
         vapidSubject: vapidEmail,
         payload,
       });
