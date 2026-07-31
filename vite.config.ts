@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "pwa-192x192.png", "pwa-512x512.png"],
       manifest: {
         name: "Formação Teológica BC",
-        short_name: "Formação BC",
+        short_name: "F. Teológica",
         description: "Portal acadêmico da Escola de Teologia Brasa Church",
         theme_color: "#1a2e52",
         background_color: "#1a2e52",
