@@ -63,10 +63,13 @@ export default function AnnouncementsManager({ userId }: { userId: string }) {
     setTitle(""); setContent(""); setCohortId("__all__"); setScheduledAt(nowLocalInput());
     load();
     toast({ title: 'Aviso salvo!' });
-    // Sempre dispara push ao criar aviso
-    supabase.functions.invoke("send-reminders", {
-      body: { type: "announcement", title },
-    }).catch(() => {});
+    // Dispara push se agendado para agora ou passado (usando ISO salvo no banco)
+    const savedIso = new Date(scheduledAt).toISOString();
+    if (savedIso <= new Date().toISOString()) {
+      supabase.functions.invoke("send-reminders", {
+        body: { type: "announcement", title },
+      }).catch(() => {});
+    }
   };
 
   const update = async () => {

@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { sendWebPush } from "./webpush.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -8,6 +9,13 @@ const smtpUser    = Deno.env.get("SMTP_USER")!;
 const smtpPass    = Deno.env.get("SMTP_PASS")!;
 const vapidPub    = "BPp1QQmJdq77A3OZClICx0U6NPWlj2gOF4jj6x0JQHmOnQJ5HpC1LZ1ts2aS26ID_FrGxpWXc-_1mss1KnMIc2k";
 const vapidPriv   = Deno.env.get("VAPID_PRIVATE_KEY")!;
+
+// Decode VAPID private key from base64url PKCS8
+function decodeVapidPrivate(): Uint8Array {
+  const pad = "=".repeat((4 - (vapidPriv.length % 4)) % 4);
+  const b64 = (vapidPriv + pad).replace(/-/g, "+").replace(/_/g, "/");
+  return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+}
 const vapidEmail  = `mailto:${Deno.env.get("SMTP_USER")}`;
 
 
@@ -23,30 +31,22 @@ async function sendPush(admin: ReturnType<typeof createClient>, userIds: string[
     .from("push_subscriptions").select("endpoint, p256dh, auth").in("user_id", userIds);
   if (!subs?.length) return;
 
+  const privKeyBytes = decodeVapidPrivate();
+  const payload = JSON.stringify({ title, body, url, icon: "/pwa-192x192.png" });
+
   for (const sub of subs) {
     try {
-      const payload = JSON.stringify({ title, body, url, icon: "/pwa-192x192.png" });
-      // Usa Web Push via fetch direto — sem biblioteca externa
-      const vapidHeaders = await buildVapidHeaders(sub.endpoint);
-      await fetch(sub.endpoint, {
-        method: "POST",
-        headers: { ...vapidHeaders, "Content-Type": "application/octet-stream", "Content-Encoding": "aes128gcm", "TTL": "86400" },
-        body: new TextEncoder().encode(payload),
+      await sendWebPush({
+        endpoint: sub.endpoint,
+        p256dh: sub.p256dh,
+        auth: sub.auth,
+        vapidPublicKey: vapidPub,
+        vapidPrivateKeyPkcs8: privKeyBytes,
+        vapidSubject: vapidEmail,
+        payload,
       });
     } catch (_) { /* silencioso */ }
   }
-}
-
-async function buildVapidHeaders(audience: string) {
-  const url = new URL(audience);
-  const origin = url.origin;
-  const now = Math.floor(Date.now() / 1000);
-  const exp = now + 12 * 3600;
-  const header = btoa(JSON.stringify({ typ: "JWT", alg: "ES256" })).replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");
-  const claims = btoa(JSON.stringify({ aud: origin, exp, sub: vapidEmail })).replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");
-  return {
-    "Authorization": `vapid t=${header}.${claims},k=${vapidPub}`,
-  };
 }
 
 async function sendEmail(to: string, subject: string, html: string) {
