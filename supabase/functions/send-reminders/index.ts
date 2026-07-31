@@ -303,11 +303,12 @@ async function remindTCC(admin: ReturnType<typeof createClient>) {
 // Push para avisos agendados que acabaram de ativar
 async function remindScheduledAnnouncements(admin: ReturnType<typeof createClient>) {
   const now = new Date().toISOString();
-  // Busca TODOS os avisos ativos que ainda nao enviaram push (sem janela de tempo)
+  // Aguarda 15s apos o horario agendado para garantir que o aviso ja esta visivel no app
+  const fifteenSecAgo = new Date(Date.now() - 15 * 1000).toISOString();
   const { data: announcements } = await admin
     .from("announcements")
     .select("id, title")
-    .lte("scheduled_at", now)
+    .lte("scheduled_at", fifteenSecAgo)
     .eq("push_sent", false);
 
   if (!announcements?.length) return { sent: 0 };
