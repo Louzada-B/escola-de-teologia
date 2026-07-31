@@ -50,7 +50,13 @@ async function sendPush(admin: ReturnType<typeof createClient>, userIds: string[
         vapidSubject: vapidEmail,
         payload,
       });
-    } catch (err: any) { console.error("[sendPush] erro:", err?.message, "status:", err?.statusCode, "body:", err?.body); }
+    } catch (err: any) {
+      console.error("[sendPush] erro:", err?.message);
+      // Remove subscricoes expiradas (HTTP 410)
+      if (err?.message?.includes("410")) {
+        await admin.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+      }
+    }
   }
 }
 
