@@ -364,7 +364,7 @@ Deno.serve(async (req) => {
       results.announcement = await notifyAnnouncement(admin, annId || "", annTitle || "");
     }
 
-    console.log("[send-reminders]", JSON.stringify(results));
+    console.log("[send-reminders] type:", type, "results:", JSON.stringify(results));
     return new Response(JSON.stringify({ ok: true, results }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
