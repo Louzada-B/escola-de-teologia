@@ -52,20 +52,22 @@ export default function AnnouncementsManager({ userId }: { userId: string }) {
       toast({ title: 'Preencha título e conteúdo', variant: 'destructive' });
       return;
     }
+    const savedIso = new Date(scheduledAt).toISOString();
+    const isImmediate = savedIso <= new Date().toISOString();
     const { error } = await supabase.from('announcements').insert({
       title,
       content,
       created_by: userId,
       cohort_id: (cohortId && cohortId !== "__all__") ? cohortId : null,
-      scheduled_at: new Date(scheduledAt).toISOString(),
+      scheduled_at: savedIso,
+      push_sent: isImmediate,
     } as any);
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
     setTitle(""); setContent(""); setCohortId("__all__"); setScheduledAt(nowLocalInput());
     load();
     toast({ title: 'Aviso salvo!' });
-    // Dispara push se agendado para agora ou passado (usando ISO salvo no banco)
-    const savedIso = new Date(scheduledAt).toISOString();
-    if (savedIso <= new Date().toISOString()) {
+    // Dispara push imediato se publicado agora
+    if (isImmediate) {
       supabase.functions.invoke("send-reminders", {
         body: { type: "announcement", title },
       }).catch(() => {});

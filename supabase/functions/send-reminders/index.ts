@@ -289,6 +289,43 @@ async function remindTCC(admin: ReturnType<typeof createClient>) {
 }
 
 // ── Handler principal ─────────────────────────────────────────────
+// Push para avisos agendados que acabaram de ativar
+async function remindScheduledAnnouncements(admin: ReturnType<typeof createClient>) {
+  const now = new Date().toISOString();
+  // Busca avisos que ativaram nos ultimos 2 minutos e ainda nao enviaram push
+  const twoMinAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+  const { data: announcements } = await admin
+    .from("announcements")
+    .select("id, title")
+    .lte("scheduled_at", now)
+    .gte("scheduled_at", twoMinAgo)
+    .eq("push_sent", false);
+
+  if (!announcements?.length) return { sent: 0 };
+
+  // Busca alunos ativos
+  const { data: cohortStudents } = await admin
+    .from("cohort_students")
+    .select("user_id, cohorts!inner(is_active)")
+    .eq("cohorts.is_active", true);
+
+  const studentIds = [...new Set(((cohortStudents || []) as any[]).map((cs: any) => cs.user_id))];
+  let sent = 0;
+
+  for (const ann of announcements) {
+    await sendPush(
+      admin, studentIds,
+      "Novo aviso publicado",
+      ann.title,
+      "https://formacaoteologica.brasachurch.com/dashboard/avisos"
+    );
+    // Marca como enviado
+    await admin.from("announcements").update({ push_sent: true } as any).eq("id", ann.id);
+    sent++;
+  }
+  return { sent };
+}
+
 // Push para novo aviso
 async function notifyAnnouncement(admin: ReturnType<typeof createClient>, announcementId: string, title: string) {
   // Busca alunos ativos
@@ -320,7 +357,10 @@ Deno.serve(async (req) => {
     const results: Record<string, any> = {};
 
     if (type === "quiz"       || type === "all") results.quiz       = await remindQuizzes(admin);
-    if (type === "attendance" || type === "all") results.attendance = await remindAttendance(admin);
+    if (type === "attendance" || type === "all") {
+      results.attendance = await remindAttendance(admin);
+      results.scheduledAnnouncements = await remindScheduledAnnouncements(admin);
+    }
     if (type === "tcc"        || type === "all") results.tcc        = await remindTCC(admin);
     if (type === "announcement") {
       results.announcement = await notifyAnnouncement(admin, annId || "", annTitle || "");
