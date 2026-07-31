@@ -10,17 +10,17 @@ const smtpPass    = Deno.env.get("SMTP_PASS")!;
 const vapidPub    = "BPp1QQmJdq77A3OZClICx0U6NPWlj2gOF4jj6x0JQHmOnQJ5HpC1LZ1ts2aS26ID_FrGxpWXc-_1mss1KnMIc2k";
 const vapidPriv   = Deno.env.get("VAPID_PRIVATE_KEY")!;
 
-// Extrai raw private key via JWK (metodo correto)
+// Extrai raw private key d via PKCS8 -> JWK
 async function getRawPrivateKey(): Promise<string> {
   const pad = "=".repeat((4 - (vapidPriv.length % 4)) % 4);
   const b64 = (vapidPriv + pad).replace(/-/g, "+").replace(/_/g, "/");
-  const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+  const der = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
   const key = await crypto.subtle.importKey(
-    "pkcs8", bytes.buffer,
+    "pkcs8", der.buffer,
     { name: "ECDSA", namedCurve: "P-256" }, true, ["sign"]
   );
   const jwk = await crypto.subtle.exportKey("jwk", key) as JsonWebKey;
-  return jwk.d!;
+  return jwk.d!; // raw 32-byte private scalar in base64url
 }
 const vapidEmail  = `mailto:${Deno.env.get("SMTP_USER")}`;
 
