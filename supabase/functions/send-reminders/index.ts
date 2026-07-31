@@ -50,7 +50,7 @@ async function sendPush(admin: ReturnType<typeof createClient>, userIds: string[
         vapidSubject: vapidEmail,
         payload,
       });
-    } catch (err: any) { console.error("[sendPush] erro:", err?.message || err); }
+    } catch (err: any) { console.error("[sendPush] erro:", err?.message, "status:", err?.statusCode, "body:", err?.body); }
   }
 }
 
