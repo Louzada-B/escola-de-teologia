@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -16,33 +17,6 @@ interface QuizAnswerDialogProps {
   quiz: any;
   questions: any[];
   onSubmitted: (quizId: string, questions: any[], mergedAnswers: Record<string, any>) => void;
-}
-
-
-function ConfirmExitDialog({ onConfirm, onCancel, answered, total }: {
-  onConfirm: () => void; onCancel: () => void; answered: number; total: number;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-card border border-border rounded-2xl p-6 max-w-xs w-full mx-4 text-center space-y-4">
-        <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto">
-          <svg className="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
-        <div>
-          <h3 className="font-semibold text-foreground">Sair do questionário?</h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Você respondeu {answered} de {total} {total === 1 ? "pergunta" : "perguntas"}. Suas respostas não serão salvas.
-          </p>
-        </div>
-        <div className="flex flex-col gap-2">
-          <button type="button" onClick={onConfirm} className="w-full py-2 rounded-lg bg-destructive/10 text-destructive border border-destructive/20 text-sm font-medium">Sair sem salvar</button>
-          <button type="button" onClick={onCancel} className="w-full py-2 rounded-lg bg-green-500/10 text-green-700 border border-green-500/20 text-sm font-medium">Continuar respondendo</button>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export default function QuizAnswerDialog({ open, onOpenChange, quiz, questions, onSubmitted }: QuizAnswerDialogProps) {
@@ -126,7 +100,21 @@ export default function QuizAnswerDialog({ open, onOpenChange, quiz, questions, 
 
   return (
     <>
-      <Dialog open={open} onOpenChange={(open) => { if (!open && Object.keys(answers).length > 0 && !submitting) { setShowExitConfirm(true); } else { onOpenChange(open); } }}>
+      <AlertDialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sair do questionário?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você respondeu {Object.keys(answers).length} de {questions.length} {questions.length === 1 ? "pergunta" : "perguntas"}. Suas respostas não serão salvas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2">
+            <AlertDialogAction onClick={() => { setShowExitConfirm(false); onOpenChange(false); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sair sem salvar</AlertDialogAction>
+            <AlertDialogCancel onClick={() => setShowExitConfirm(false)}>Continuar respondendo</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <Dialog open={open} onOpenChange={(val) => { if (!val && Object.keys(answers).length > 0 && !submitting) { setShowExitConfirm(true); } else { onOpenChange(val); } }}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-heading text-xl">{quiz.title}</DialogTitle>
@@ -218,14 +206,6 @@ export default function QuizAnswerDialog({ open, onOpenChange, quiz, questions, 
         </div>
       </DialogContent>
     </Dialog>
-      {showExitConfirm && (
-        <ConfirmExitDialog
-          answered={Object.keys(answers).length}
-          total={questions.length}
-          onConfirm={() => { setShowExitConfirm(false); onOpenChange(false); }}
-          onCancel={() => setShowExitConfirm(false)}
-        />
-      )}
     </>
   );
 }
