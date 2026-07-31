@@ -314,7 +314,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { type } = await req.json().catch(() => ({ type: "all" }));
+    const body = await req.json().catch(() => ({ type: "all" }));
+    const { type, title: annTitle, announcement_id: annId } = body;
     const admin = createClient(supabaseUrl, serviceKey);
     const results: Record<string, any> = {};
 
@@ -322,8 +323,7 @@ Deno.serve(async (req) => {
     if (type === "attendance" || type === "all") results.attendance = await remindAttendance(admin);
     if (type === "tcc"        || type === "all") results.tcc        = await remindTCC(admin);
     if (type === "announcement") {
-      const body = await req.json().catch(() => ({}));
-      results.announcement = await notifyAnnouncement(admin, body.announcement_id, body.title);
+      results.announcement = await notifyAnnouncement(admin, annId || "", annTitle || "");
     }
 
     console.log("[send-reminders]", JSON.stringify(results));
