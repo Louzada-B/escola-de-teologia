@@ -63,6 +63,13 @@ export default function AnnouncementsManager({ userId }: { userId: string }) {
     setTitle(""); setContent(""); setCohortId("__all__"); setScheduledAt(nowLocalInput());
     load();
     toast({ title: 'Aviso salvo!' });
+    // Dispara push se o aviso esta sendo publicado agora (nao agendado para futuro)
+    const isImmediate = new Date(scheduledAt) <= new Date();
+    if (isImmediate) {
+      supabase.functions.invoke("send-reminders", {
+        body: { type: "announcement", title, announcement_id: "" },
+      }).catch(() => {});
+    }
   };
 
   const update = async () => {

@@ -289,6 +289,27 @@ async function remindTCC(admin: ReturnType<typeof createClient>) {
 }
 
 // ── Handler principal ─────────────────────────────────────────────
+// Push para novo aviso
+async function notifyAnnouncement(admin: ReturnType<typeof createClient>, announcementId: string, title: string) {
+  // Busca alunos ativos
+  const { data: cohortStudents } = await admin
+    .from("cohort_students")
+    .select("user_id, cohorts!inner(is_active)")
+    .eq("cohorts.is_active", true);
+
+  if (!cohortStudents?.length) return { sent: 0 };
+  const studentIds = [...new Set((cohortStudents as any[]).map((cs: any) => cs.user_id))];
+
+  await sendPush(
+    admin,
+    studentIds,
+    "Novo aviso publicado",
+    title || "Um novo aviso foi publicado no portal.",
+    "https://formacaoteologica.brasachurch.com/dashboard/avisos"
+  );
+  return { sent: studentIds.length };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -300,6 +321,10 @@ Deno.serve(async (req) => {
     if (type === "quiz"       || type === "all") results.quiz       = await remindQuizzes(admin);
     if (type === "attendance" || type === "all") results.attendance = await remindAttendance(admin);
     if (type === "tcc"        || type === "all") results.tcc        = await remindTCC(admin);
+    if (type === "announcement") {
+      const body = await req.json().catch(() => ({}));
+      results.announcement = await notifyAnnouncement(admin, body.announcement_id, body.title);
+    }
 
     console.log("[send-reminders]", JSON.stringify(results));
     return new Response(JSON.stringify({ ok: true, results }),
