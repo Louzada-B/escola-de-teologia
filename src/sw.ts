@@ -1,3 +1,6 @@
+/// <reference lib="webworker" />
+declare const self: ServiceWorkerGlobalScope;
+
 import { precacheAndRoute } from 'workbox-precaching';
 
 // Precache gerado pelo vite-plugin-pwa
@@ -5,7 +8,7 @@ precacheAndRoute(self.__WB_MANIFEST);
 
 // Handler de push notifications
 self.addEventListener('push', (event) => {
-  let data = {};
+  let data: Record<string, string> = {};
   try { data = event.data?.json() ?? {}; } catch {}
 
   const title = data.title || 'Formação Teológica BC';
@@ -29,7 +32,7 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = event.notification.data?.url || '/dashboard';
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
       for (const client of list) {
         if (client.url.includes(self.location.origin)) {
           client.focus();
@@ -37,7 +40,7 @@ self.addEventListener('notificationclick', (event) => {
           return;
         }
       }
-      clients.openWindow(url);
+      self.clients.openWindow(url);
     })
   );
 });
