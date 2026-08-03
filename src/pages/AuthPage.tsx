@@ -9,6 +9,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from '@/hooks/use-toast';
 import { BookOpen, Download } from 'lucide-react';
 
+function getErrorMessage(error: any): string {
+  const raw = error?.message;
+  // Alguns erros de auth chegam sem mensagem útil (ex: "{}") — nesses casos,
+  // mostra algo acionável em vez do erro cru.
+  if (!raw || raw === '{}' || raw === '[object Object]') {
+    return 'Não foi possível concluir agora. Tente novamente em alguns minutos ou fale com a coordenação.';
+  }
+  return raw;
+}
+
 export default function AuthPage() {
   const { session, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
@@ -58,7 +68,7 @@ export default function AuthPage() {
     } catch (error: any) {
       toast({
         title: 'Erro',
-        description: error.message,
+        description: getErrorMessage(error),
         variant: 'destructive',
       });
     } finally {
@@ -87,7 +97,7 @@ export default function AuthPage() {
     } catch (error: any) {
       toast({
         title: 'Erro',
-        description: error.message,
+        description: getErrorMessage(error),
         variant: 'destructive',
       });
     } finally {
