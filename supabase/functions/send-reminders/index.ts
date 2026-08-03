@@ -7,6 +7,8 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const smtpUser    = Deno.env.get("SMTP_USER")!;
 const smtpPass    = Deno.env.get("SMTP_PASS")!;
+const smtpHost    = Deno.env.get("SMTP_HOST")!;
+const smtpPort    = Number(Deno.env.get("SMTP_PORT") ?? "465");
 const vapidPub    = "BPp1QQmJdq77A3OZClICx0U6NPWlj2gOF4jj6x0JQHmOnQJ5HpC1LZ1ts2aS26ID_FrGxpWXc-_1mss1KnMIc2k";
 const vapidPriv   = Deno.env.get("VAPID_PRIVATE_KEY")!;
 
@@ -62,7 +64,7 @@ async function sendPush(admin: ReturnType<typeof createClient>, userIds: string[
 
 async function sendEmail(to: string, subject: string, html: string) {
   const client = new SMTPClient({
-    connection: { hostname: "smtp.gmail.com", port: 465, tls: true,
+    connection: { hostname: smtpHost, port: smtpPort, tls: true,
       auth: { username: smtpUser, password: smtpPass } },
   });
   await client.send({

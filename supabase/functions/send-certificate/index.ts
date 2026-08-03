@@ -19,6 +19,8 @@ serve(async (req: Request) => {
 
     const smtpUser = Deno.env.get("SMTP_USER")!;
     const smtpPass = Deno.env.get("SMTP_PASS")!;
+    const smtpHost = Deno.env.get("SMTP_HOST")!;
+    const smtpPort = Number(Deno.env.get("SMTP_PORT") ?? "465");
 
     if (!smtpUser || !smtpPass) {
       throw new Error("SMTP_USER e SMTP_PASS não configurados nos secrets.");
@@ -26,8 +28,8 @@ serve(async (req: Request) => {
 
     const client = new SMTPClient({
       connection: {
-        hostname: "smtp.gmail.com",
-        port: 465,
+        hostname: smtpHost,
+        port: smtpPort,
         tls: true,
         auth: {
           username: smtpUser,
