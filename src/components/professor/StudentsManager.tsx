@@ -437,7 +437,7 @@ export default function StudentsManager() {
                     </button>
                     <Badge variant="outline">{selectedPending.size} de {pendingList.length} selecionado(s)</Badge>
                   </div>
-                  <ScrollArea className="max-h-72 border rounded-md">
+                  <ScrollArea className="max-h-96 border rounded-md">
                     <Table>
                       <TableHeader>
                         <TableRow>
