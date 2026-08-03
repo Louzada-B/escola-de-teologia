@@ -437,7 +437,7 @@ export default function StudentsManager() {
                     </button>
                     <Badge variant="outline">{selectedPending.size} de {pendingList.length} selecionado(s)</Badge>
                   </div>
-                  <ScrollArea className="max-h-96 border rounded-md">
+                  <div className="max-h-96 overflow-y-auto border rounded-md">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -461,7 +461,7 @@ export default function StudentsManager() {
                         ))}
                       </TableBody>
                     </Table>
-                  </ScrollArea>
+                  </div>
                   <Button onClick={doResendPending} disabled={resending || selectedPending.size === 0} className="gap-2">
                     {resending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     {resending ? "Reenviando..." : `Reenviar convite (${selectedPending.size})`}
