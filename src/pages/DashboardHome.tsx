@@ -112,6 +112,8 @@ export default function DashboardHome() {
   const [aulaEspecialData, setAulaEspecialData] = useState<ChartEntry[]>([]);
   const [aulaPerc, setAulaPerc] = useState(0);
   const [aulaEspecialPerc, setAulaEspecialPerc] = useState(0);
+  const [aulaHasStarted, setAulaHasStarted] = useState(false);
+  const [aulaEspecialHasStarted, setAulaEspecialHasStarted] = useState(false);
   const [quizData, setQuizData] = useState<ChartEntry[]>([]);
   const [mainQuizPerc, setMainQuizPerc] = useState(0);
   const [pendingLesson, setPendingLesson] = useState<any>(null);
@@ -218,22 +220,31 @@ export default function DashboardHome() {
         const checkedInIds = new Set(userRecords.map((r) => r.lesson_id));
 
         const calcForType = (type: string) => {
-          const past = allLessons.filter(
+          // Aulas obrigatórias desse tipo cujo dia já chegou (dentro do período da turma)
+          const relevant = allLessons.filter(
             (l) =>
               l.event_type === type &&
               l.mandatory_attendance &&
-              isDateWithinCohortPeriod(l.scheduled_date, cohortStart, effectiveCutoffDate) &&
-              // Aula de hoje só entra na conta se o aluno já registrou presença —
-              // senão contaria como falta antes mesmo da aula acontecer
-              (l.scheduled_date !== today || checkedInIds.has(l.id)),
+              isDateWithinCohortPeriod(l.scheduled_date, cohortStart, effectiveCutoffDate),
           );
-          const total = past.length;
-          const present = past.filter((l) => checkedInIds.has(l.id)).length;
+          // Só mostra o gráfico a partir do dia da primeira aula desse tipo
+          const hasStarted = relevant.length > 0;
+
+          // Aula de hoje só "resolve" (conta pra presença ou falta) se o aluno já registrou —
+          // senão ela ainda não passou de verdade, fica de fora até amanhã
+          const resolved = relevant.filter((l) => l.scheduled_date !== today || checkedInIds.has(l.id));
+          const total = resolved.length;
+          const present = resolved.filter((l) => checkedInIds.has(l.id)).length;
           const absent = total - present;
-          const pPerc = total > 0 ? Math.round((present / total) * 100) : 0;
-          const aPerc = total > 0 ? 100 - pPerc : 0;
+
+          // Começa em 100%: sem nenhuma aula resolvida ainda (ex: no próprio dia da 1ª aula,
+          // antes de registrar), o aluno não está em falta de nada — só cai quando uma aula
+          // passa sem registro.
+          const pPerc = total > 0 ? Math.round((present / total) * 100) : 100;
+          const aPerc = 100 - pPerc;
           return {
             perc: pPerc,
+            hasStarted,
             data: [
               { name: "Presenças", value: pPerc, qty: present },
               { name: "Faltas", value: aPerc, qty: absent },
@@ -244,10 +255,12 @@ export default function DashboardHome() {
         const aula = calcForType("aula");
         setAulaPerc(aula.perc);
         setAulaData(aula.data);
+        setAulaHasStarted(aula.hasStarted);
 
         const especial = calcForType("aula_especial");
         setAulaEspecialPerc(especial.perc);
         setAulaEspecialData(especial.data);
+        setAulaEspecialHasStarted(especial.hasStarted);
       }
 
       // Quizzes — filtered by cohort
@@ -401,7 +414,7 @@ export default function DashboardHome() {
               </Popover>
             </CardHeader>
             <CardContent>
-              {aulaData.length === 0 || (aulaData[0].qty === 0 && aulaData[1].qty === 0) ? (
+              {!aulaHasStarted ? (
                 <p className="text-center py-10 text-muted-foreground font-body">Sem dados de aulas regulares.</p>
               ) : (
                 <DonutChart
@@ -430,7 +443,7 @@ export default function DashboardHome() {
               </Popover>
             </CardHeader>
             <CardContent>
-              {aulaEspecialData.length === 0 || (aulaEspecialData[0].qty === 0 && aulaEspecialData[1].qty === 0) ? (
+              {!aulaEspecialHasStarted ? (
                 <p className="text-center py-10 text-muted-foreground font-body">Sem dados de aulas especiais.</p>
               ) : (
                 <DonutChart
