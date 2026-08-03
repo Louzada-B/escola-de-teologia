@@ -160,7 +160,7 @@ async function remindQuizzes(admin: ReturnType<typeof createClient>) {
 }
 
 // ── LEMBRETE 2: Presença pendente 1h após início da aula ─────────
-async function remindAttendance(admin: ReturnType<typeof createClient>) {
+async function remindAttendance(admin: ReturnType<typeof createClient>, force = false) {
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
   const nowMins  = now.getHours() * 60 + now.getMinutes();
@@ -174,12 +174,16 @@ async function remindAttendance(admin: ReturnType<typeof createClient>) {
 
   if (!lessons?.length) return { sent: 0 };
 
-  // Filtra aulas cujo start_time + 1h = agora (±5 min de tolerância)
+  // Filtra aulas cujo start_time + 1h = agora (±5 min de tolerância).
+  // Com force=true (disparo manual), ignora a janela e pega qualquer aula
+  // de hoje que já passou de 1h desde o início — usado pra recuperar um
+  // aviso perdido (ex: cron ficou desligado durante a janela normal).
   const targetLessons = (lessons || []).filter((l: any) => {
     if (!l.start_time) return false;
     const [h, m] = l.start_time.split(":").map(Number);
     const startMins = h * 60 + m;
     const targetMins = startMins + 60; // 1h depois
+    if (force) return nowMins >= targetMins;
     return Math.abs(nowMins - targetMins) <= 5;
   });
 
@@ -364,13 +368,13 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({ type: "all" }));
-    const { type, title: annTitle, announcement_id: annId } = body;
+    const { type, title: annTitle, announcement_id: annId, force } = body;
     const admin = createClient(supabaseUrl, serviceKey);
     const results: Record<string, any> = {};
 
     if (type === "quiz"       || type === "all") results.quiz       = await remindQuizzes(admin);
     if (type === "attendance" || type === "all") {
-      results.attendance = await remindAttendance(admin);
+      results.attendance = await remindAttendance(admin, force === true);
       results.scheduledAnnouncements = await remindScheduledAnnouncements(admin);
     }
     if (type === "tcc"        || type === "all") results.tcc        = await remindTCC(admin);
