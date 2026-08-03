@@ -222,7 +222,10 @@ export default function DashboardHome() {
             (l) =>
               l.event_type === type &&
               l.mandatory_attendance &&
-              isDateWithinCohortPeriod(l.scheduled_date, cohortStart, effectiveCutoffDate),
+              isDateWithinCohortPeriod(l.scheduled_date, cohortStart, effectiveCutoffDate) &&
+              // Aula de hoje só entra na conta se o aluno já registrou presença —
+              // senão contaria como falta antes mesmo da aula acontecer
+              (l.scheduled_date !== today || checkedInIds.has(l.id)),
           );
           const total = past.length;
           const present = past.filter((l) => checkedInIds.has(l.id)).length;
