@@ -9,9 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { UserPlus, Upload, Download, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { UserPlus, Upload, Download, CheckCircle, AlertCircle, Loader2, Send } from "lucide-react";
 
 export default function StudentsManager() {
   const queryClient = useQueryClient();
@@ -24,6 +25,12 @@ export default function StudentsManager() {
   const [bulkResult, setBulkResult] = useState<{ successCount: number; errorCount: number; results: any[] } | null>(null);
   const [bulkImporting, setBulkImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const [resendCohortId, setResendCohortId] = useState("");
+  const [pendingList, setPendingList] = useState<{ id: string; email: string; full_name: string }[] | null>(null);
+  const [selectedPending, setSelectedPending] = useState<Set<string>>(new Set());
+  const [resending, setResending] = useState(false);
+  const [resendResult, setResendResult] = useState<{ successCount: number; errorCount: number; results: any[] } | null>(null);
 
   const { data: cohorts = [] } = useQuery({
     queryKey: ["cohorts"],
@@ -57,6 +64,15 @@ export default function StudentsManager() {
       const { data, error } = await supabase.from("cohort_students").select("*");
       if (error) throw error;
       return data;
+    },
+  });
+
+  const { data: statusMap = {} } = useQuery({
+    queryKey: ["students-status"],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("students-status");
+      if (error) throw error;
+      return data.statuses as Record<string, { confirmed_at: string | null; last_sign_in_at: string | null }>;
     },
   });
 
@@ -165,6 +181,71 @@ export default function StudentsManager() {
       .filter((cs) => cs.user_id === userId)
       .map((cs) => getCohortName(cs.cohort_id))
       .filter(Boolean);
+  };
+
+  const isStudentConfirmed = (userId: string) => Boolean(statusMap[userId]?.confirmed_at);
+
+  const listPending = () => {
+    if (!resendCohortId) {
+      toast.error("Selecione uma turma.");
+      return;
+    }
+    const memberIds = new Set(
+      cohortStudents.filter((cs) => cs.cohort_id === resendCohortId).map((cs) => cs.user_id)
+    );
+    const pending = students
+      .filter((s) => memberIds.has(s.id) && !isStudentConfirmed(s.id))
+      .map((s) => ({ id: s.id, email: s.email, full_name: s.full_name || "" }));
+    setPendingList(pending);
+    setSelectedPending(new Set(pending.map((p) => p.id)));
+    setResendResult(null);
+  };
+
+  const togglePending = (id: string) => {
+    setSelectedPending((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllPending = () => {
+    if (!pendingList) return;
+    setSelectedPending((prev) => (prev.size === pendingList.length ? new Set() : new Set(pendingList.map((p) => p.id))));
+  };
+
+  const doResendPending = async () => {
+    if (!pendingList || selectedPending.size === 0) {
+      toast.error("Selecione ao menos um aluno.");
+      return;
+    }
+    setResending(true);
+    setResendResult(null);
+    try {
+      const appUrl = import.meta.env.VITE_APP_URL || "https://formacaoteologica.brasachurch.com";
+      const toResend = pendingList.filter((p) => selectedPending.has(p.id));
+      const { data, error } = await supabase.functions.invoke("invite-student", {
+        body: {
+          students: toResend.map((p) => ({ email: p.email, full_name: p.full_name, cohort_id: resendCohortId })),
+          redirectTo: `${appUrl}/definir-senha`,
+        },
+      });
+      if (error) throw error;
+      setResendResult(data);
+      queryClient.invalidateQueries({ queryKey: ["students-status"] });
+      if (data.errorCount === 0) {
+        toast.success(`${data.successCount} convite(s) reenviado(s)!`);
+      } else {
+        toast.warning(`${data.successCount} sucesso(s), ${data.errorCount} erro(s).`);
+      }
+      setPendingList(null);
+      setSelectedPending(new Set());
+    } catch (err: any) {
+      toast.error("Erro ao reenviar: " + (err?.message || "Erro desconhecido"));
+    } finally {
+      setResending(false);
+    }
   };
 
   return (
@@ -297,6 +378,105 @@ export default function StudentsManager() {
                 Resultado: {bulkResult.successCount} sucesso(s), {bulkResult.errorCount} erro(s)
               </p>
               {bulkResult.results
+                .filter((r: any) => !r.success)
+                .map((r: any, i: number) => (
+                  <p key={i} className="text-destructive text-xs">
+                    {r.email}: {r.error}
+                  </p>
+                ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Resend pending invites */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Send className="w-5 h-5" />
+            Reenviar Convites Pendentes
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1">
+              <Label>Turma</Label>
+              <Select value={resendCohortId} onValueChange={(v) => { setResendCohortId(v); setPendingList(null); }}>
+                <SelectTrigger className="w-64">
+                  <SelectValue placeholder="Selecione a turma..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {cohorts.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name} {c.is_active ? "" : "(Inativa)"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button variant="outline" onClick={listPending} disabled={!resendCohortId}>
+              Listar pendentes
+            </Button>
+          </div>
+
+          {pendingList && (
+            <div className="space-y-3">
+              {pendingList.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Ninguém pendente nessa turma — todo mundo já confirmou o acesso.
+                </p>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={toggleAllPending}
+                      className="text-xs text-muted-foreground hover:underline"
+                    >
+                      {selectedPending.size === pendingList.length ? "Desmarcar todos" : "Selecionar todos"}
+                    </button>
+                    <Badge variant="outline">{selectedPending.size} de {pendingList.length} selecionado(s)</Badge>
+                  </div>
+                  <ScrollArea className="max-h-72 border rounded-md">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-10"></TableHead>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>E-mail</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {pendingList.map((p) => (
+                          <TableRow key={p.id} className="cursor-pointer" onClick={() => togglePending(p.id)}>
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={selectedPending.has(p.id)}
+                                onCheckedChange={() => togglePending(p.id)}
+                              />
+                            </TableCell>
+                            <TableCell className="text-sm whitespace-nowrap">{p.full_name || "-"}</TableCell>
+                            <TableCell className="text-sm whitespace-nowrap">{p.email}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                  <Button onClick={doResendPending} disabled={resending || selectedPending.size === 0} className="gap-2">
+                    {resending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    {resending ? "Reenviando..." : `Reenviar convite (${selectedPending.size})`}
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+
+          {resendResult && (
+            <div className="p-3 rounded-md bg-muted text-sm space-y-1">
+              <p className="font-medium">
+                Resultado: {resendResult.successCount} sucesso(s), {resendResult.errorCount} erro(s)
+              </p>
+              {resendResult.results
                 .filter((r: any) => !r.success)
                 .map((r: any, i: number) => (
                   <p key={i} className="text-destructive text-xs">

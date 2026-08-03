@@ -53,7 +53,23 @@ Deno.serve(async (req) => {
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
-    const results: { email: string; success: boolean; error?: string }[] = [];
+    const results: { email: string; success: boolean; error?: string; resent?: boolean }[] = [];
+
+    // Mapa de e-mail -> confirmado (auth.users.confirmed_at) para decidir quem está pendente
+    const confirmedMap: Record<string, boolean> = {};
+    {
+      let page = 1;
+      const perPage = 200;
+      while (true) {
+        const { data: listData, error: listError } = await adminClient.auth.admin.listUsers({ page, perPage });
+        if (listError) break; // se falhar, segue sem o mapa (comportamento antigo: nunca reenvia)
+        for (const u of listData.users) {
+          if (u.email) confirmedMap[u.email.toLowerCase()] = Boolean(u.confirmed_at);
+        }
+        if (listData.users.length < perPage) break;
+        page += 1;
+      }
+    }
 
     for (const student of students) {
       const email = String(student.email || "").trim().toLowerCase();
@@ -73,9 +89,20 @@ Deno.serve(async (req) => {
           .maybeSingle();
 
         let userId: string;
+        let resent = false;
 
         if (existingProfiles) {
           userId = existingProfiles.id;
+          const isConfirmed = confirmedMap[email] ?? true; // se não sabemos, não mexe (comportamento seguro)
+
+          if (!isConfirmed) {
+            const { error: resendError } = await adminClient.auth.admin.inviteUserByEmail(email, {
+              data: { full_name: fullName, role: "aluno" },
+              redirectTo,
+            });
+            // Não é fatal: mesmo se o reenvio falhar, o aluno já tem perfil e vínculo com a turma segue normalmente
+            if (!resendError) resent = true;
+          }
         } else {
           const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
             data: { full_name: fullName, role: "aluno" },
@@ -98,7 +125,7 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        results.push({ email, success: true });
+        results.push({ email, success: true, resent });
       } catch (err: any) {
         results.push({ email, success: false, error: err?.message || JSON.stringify(err) || "Erro desconhecido" });
       }
