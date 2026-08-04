@@ -3,7 +3,9 @@ import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 // E-mail que recebe o resumo de todo envio feito pelo sistema (convites,
 // certificados, lembretes automáticos). Chamadas aqui NUNCA lançam erro —
 // uma falha ao notificar o admin não pode derrubar o envio principal.
-const NOTIFY_EMAIL = "escoladeteologia@brasachurch.com";
+// Configurável via secret ADMIN_NOTIFY_EMAIL -- importante em staging, pra
+// não misturar notificação de teste com a caixa real de produção.
+const NOTIFY_EMAIL = Deno.env.get("ADMIN_NOTIFY_EMAIL") || "escoladeteologia@brasachurch.com";
 
 export async function notifyAdmin(subject: string, htmlBody: string) {
   try {
