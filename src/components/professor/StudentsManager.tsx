@@ -529,10 +529,10 @@ export default function StudentsManager() {
         <CardContent>
           {studentsLoading ? (
             <p className="text-sm text-muted-foreground">Carregando...</p>
-          ) : students.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum aluno cadastrado.</p>
+          ) : students.filter((s) => getStudentCohorts(s.id).length > 0).length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum aluno vinculado a uma turma ainda.</p>
           ) : (
-            <ScrollArea className="max-h-96">
+            <div className="max-h-96 overflow-auto border rounded-md">
               <div className="min-w-[500px]">
                 <Table>
                   <TableHeader>
@@ -543,7 +543,10 @@ export default function StudentsManager() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {students.map((s) => (
+                    {students
+                      .filter((s) => getStudentCohorts(s.id).length > 0)
+                      .sort((a, b) => (a.full_name || "").localeCompare(b.full_name || "", "pt-BR"))
+                      .map((s) => (
                       <TableRow key={s.id}>
                         <TableCell className="text-sm whitespace-nowrap">{s.full_name || "-"}</TableCell>
                         <TableCell className="text-sm whitespace-nowrap">{s.email}</TableCell>
@@ -561,8 +564,7 @@ export default function StudentsManager() {
                   </TableBody>
                 </Table>
               </div>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
+            </div>
           )}
         </CardContent>
       </Card>
