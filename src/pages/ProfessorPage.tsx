@@ -13,12 +13,13 @@ import ExtraMaterialsManager from "@/components/professor/ExtraMaterialsManager"
 import TCCManager from "@/components/professor/TCCManager";
 import CertificatesManager from "@/components/professor/CertificatesManager";
 import StudentsManager from "@/components/professor/StudentsManager";
+import TempPasswordsManager from "@/components/professor/TempPasswordsManager";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { BookOpen } from "lucide-react";
 import ManualModal from "@/components/ManualModal";
 
-interface NavItem { value: string; label: string; adminOnly?: boolean; }
+interface NavItem { value: string; label: string; adminOnly?: boolean; superAdminOnly?: boolean; }
 interface NavGroup { label: string; items: NavItem[]; }
 
 const NAV_GROUPS: NavGroup[] = [
@@ -34,10 +35,11 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Alunos",
     items: [
-      { value: "students",     label: "Alunos",       adminOnly: true },
-      { value: "attendance",   label: "Presença" },
-      { value: "cohorts",      label: "Turmas" },
-      { value: "certificates", label: "Certificados", adminOnly: true },
+      { value: "students",       label: "Alunos",              adminOnly: true },
+      { value: "attendance",     label: "Presença" },
+      { value: "cohorts",        label: "Turmas" },
+      { value: "certificates",   label: "Certificados",        adminOnly: true },
+      { value: "temp-passwords", label: "Senhas Temporárias",  superAdminOnly: true },
     ],
   },
   {
@@ -74,6 +76,7 @@ function SectionContent({ value, userId }: { value: string; userId: string }) {
     case "import":           return <ImportDataManager userId={userId} />;
     case "students":         return <StudentsManager />;
     case "certificates":     return <CertificatesManager />;
+    case "temp-passwords":   return <TempPasswordsManager />;
     default:                 return null;
   }
 }
@@ -81,12 +84,13 @@ function SectionContent({ value, userId }: { value: string; userId: string }) {
 export default function ProfessorPage() {
   const { user, profile } = useAuth();
   const isAdmin = profile?.role === "admin";
+  const isSuperAdmin = profile?.is_super_admin === true;
   const [active, setActive] = useState("modules");
   const [manualOpen, setManualOpen] = useState(false);
 
   const visibleGroups = NAV_GROUPS.map(g => ({
     ...g,
-    items: g.items.filter(i => !i.adminOnly || isAdmin),
+    items: g.items.filter(i => (!i.adminOnly || isAdmin) && (!i.superAdminOnly || isSuperAdmin)),
   })).filter(g => g.items.length > 0);
 
   const allItems = visibleGroups.flatMap(g => g.items);
