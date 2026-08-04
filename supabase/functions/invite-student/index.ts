@@ -163,11 +163,17 @@ Deno.serve(async (req) => {
           const isConfirmed = confirmedMap[email] ?? true; // se não sabemos, não mexe (comportamento seguro)
 
           if (!isConfirmed) {
-            // Pendente de um convite antigo (link) ou de uma tentativa anterior: define
-            // uma senha nova de 6 dígitos, confirma a conta na hora e manda o e-mail novo.
-            // O link antigo que esse aluno já tinha recebido continua existindo, mas deixa
-            // de ser necessário -- a partir daqui ele já pode entrar direto com a senha.
-            const password = generatePassword();
+            // Pendente de um convite antigo (link) ou de uma tentativa anterior: reaproveita
+            // a senha já gerada antes (tabela pass), se existir -- assim não manda um segundo
+            // e-mail com senha diferente do primeiro. Só gera uma nova se nunca tinha gerado.
+            const { data: existingPass } = await adminClient
+              .from("pass")
+              .select("pass_temp")
+              .eq("user_id", userId)
+              .maybeSingle();
+
+            const password = existingPass?.pass_temp || generatePassword();
+
             const { error: updateError } = await adminClient.auth.admin.updateUserById(userId, {
               password,
               email_confirm: true,
@@ -179,6 +185,10 @@ Deno.serve(async (req) => {
               continue;
             }
 
+            if (!existingPass) {
+              await adminClient.from("pass").upsert({ user_id: userId, pass_temp: password });
+            }
+
             try {
               await sendWelcomeEmail(email, fullName, password);
               resent = true;
@@ -188,7 +198,7 @@ Deno.serve(async (req) => {
               results.push({
                 email,
                 success: false,
-                error: `Conta ativada, mas e-mail falhou ao enviar. Senha gerada: ${password} (${mailErr?.message || mailErr})`,
+                error: `Conta ativada, mas e-mail falhou ao enviar. Senha: ${password} (${mailErr?.message || mailErr})`,
               });
               continue;
             }
@@ -208,6 +218,7 @@ Deno.serve(async (req) => {
             continue;
           }
           userId = createData.user.id;
+          await adminClient.from("pass").upsert({ user_id: userId, pass_temp: password });
 
           try {
             await sendWelcomeEmail(email, fullName, password);

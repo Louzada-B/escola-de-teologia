@@ -97,6 +97,9 @@ export default function ProfilePage() {
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
+      // A partir daqui a senha original (se existia salva pra reenvio) não deve
+      // mais aparecer em lugar nenhum -- apaga a própria linha da tabela pass.
+      await supabase.from('pass').delete().eq('user_id', user.id);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
