@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { notifyAdmin, notifyEmailWrap } from "../_shared/notify.ts";
 
 // Convites antigos (magic link via inviteUserByEmail) continuam funcionando
 // normalmente pra quem já recebeu esse e-mail — essa function não mexe nisso,
@@ -254,6 +255,18 @@ Deno.serve(async (req) => {
 
     const successCount = results.filter((r) => r.success).length;
     const errorCount = results.filter((r) => !r.success).length;
+
+    if (successCount > 0) {
+      const now = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+      const succeeded = results.filter((r) => r.success);
+      const html = notifyEmailWrap(`
+        <p style="margin:0 0 12px;color:#1a2e52;"><strong>Foi enviado convite para novos alunos</strong></p>
+        <p style="margin:0 0 12px;color:#4a5568;">Horário: ${now}</p>
+        <p style="margin:0 0 8px;color:#4a5568;">${successCount} destinatário(s) processado(s) com sucesso${errorCount > 0 ? ` — ${errorCount} com erro` : ""}:</p>
+        <ul style="margin:0;padding-left:20px;color:#4a5568;">${succeeded.map((r) => `<li>${r.email}</li>`).join("")}</ul>
+      `);
+      await notifyAdmin("Convites enviados — Formação Teológica", html);
+    }
 
     return new Response(
       JSON.stringify({ results, successCount, errorCount }),

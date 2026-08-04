@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { notifyAdmin, notifyEmailWrap } from "../_shared/notify.ts";
 
 const btoaSafe = (str: string) => {
   const bytes = new TextEncoder().encode(str);
@@ -89,6 +90,17 @@ serve(async (req: Request) => {
     });
 
     await client.close();
+
+    const now = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+    await notifyAdmin(
+      "Certificado enviado — Formação Teológica",
+      notifyEmailWrap(`
+        <p style="margin:0 0 12px;color:#1a2e52;"><strong>Foi enviado certificado de conclusão</strong></p>
+        <p style="margin:0 0 8px;color:#4a5568;">Horário: ${now}</p>
+        <p style="margin:0 0 4px;color:#4a5568;">Aluno: ${studentName} (${studentEmail})</p>
+        <p style="margin:0;color:#4a5568;">Turma: ${cohortName}</p>
+      `),
+    );
 
     return new Response(
       JSON.stringify({ success: true }),

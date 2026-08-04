@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { sendWebPush } from "./webpush.ts";
+import { notifyAdmin, notifyEmailWrap } from "../_shared/notify.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -130,6 +131,7 @@ async function remindQuizzes(admin: ReturnType<typeof createClient>) {
     .from("profiles").select("id, full_name, email").in("id", activeStudentIds);
 
   let sent = 0;
+  const emailsSent: string[] = [];
   for (const quiz of quizzes) {
     const answeredIds = answeredMap[quiz.id] || new Set();
     const deadline = new Date(quiz.available_until).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -154,9 +156,10 @@ async function remindQuizzes(admin: ReturnType<typeof createClient>) {
       await sendEmail(profile.email, `Lembrete: questionário fecha hoje — ${quiz.title}`, emailWrap(body));
       await sendPush(admin, [profile.id], "Questionário fecha hoje!", `${quiz.title} — encerra às ${deadline}`, "https://formacaoteologica.brasachurch.com/dashboard/questionarios");
       sent++;
+      emailsSent.push(profile.email);
     }
   }
-  return { sent };
+  return { sent, emails: emailsSent };
 }
 
 // ── LEMBRETE 2: Presença pendente 1h após início da aula ─────────
@@ -213,6 +216,7 @@ async function remindAttendance(admin: ReturnType<typeof createClient>, force = 
     .from("profiles").select("id, full_name, email").in("id", activeStudentIds);
 
   let sent = 0;
+  const emailsSent: string[] = [];
   for (const lesson of targetLessons) {
     const pendingProfiles = (profiles || []).filter(
       (p: any) => !attendedSet.has(`${p.id}:${lesson.id}`) && p.email
@@ -235,9 +239,10 @@ async function remindAttendance(admin: ReturnType<typeof createClient>, force = 
       await sendEmail(profile.email, `Lembrete: registre sua presen\u00e7a — ${lesson.title}`, emailWrap(body));
       await sendPush(admin, [profile.id], "Registre sua presen\u00e7a!", lesson.title, "https://formacaoteologica.brasachurch.com/dashboard/presenca");
       sent++;
+      emailsSent.push(profile.email);
     }
   }
-  return { sent };
+  return { sent, emails: emailsSent };
 }
 
 // ── LEMBRETE 3: TCC 4h antes do deadline ─────────────────────────
@@ -282,6 +287,7 @@ async function remindTCC(admin: ReturnType<typeof createClient>) {
   });
 
   let sent = 0;
+  const emailsSent: string[] = [];
   for (const profile of (profiles || [])) {
     if (!profile.email) continue;
     const body = `
@@ -301,8 +307,9 @@ async function remindTCC(admin: ReturnType<typeof createClient>) {
     await sendEmail(profile.email, "Lembrete: prazo do TCC em 4 horas!", emailWrap(body));
     await sendPush(admin, [profile.id], "TCC: prazo em 4 horas!", `Encerra ${deadlineFmt}`, "https://formacaoteologica.brasachurch.com/dashboard/tcc");
     sent++;
+    emailsSent.push(profile.email);
   }
-  return { sent };
+  return { sent, emails: emailsSent };
 }
 
 // ── Handler principal ─────────────────────────────────────────────
@@ -383,6 +390,30 @@ Deno.serve(async (req) => {
     }
 
     console.log("[send-reminders] type:", type, "results:", JSON.stringify(results));
+
+    // Notificação resumo pro admin -- só quando realmente saiu algum e-mail
+    // (não a cada verificação vazia do cron rodando em vazio).
+    const groups: { label: string; emails: string[] }[] = [];
+    if (results.quiz?.emails?.length) groups.push({ label: "Questionário fechando", emails: results.quiz.emails });
+    if (results.attendance?.emails?.length) groups.push({ label: "Presença pendente", emails: results.attendance.emails });
+    if (results.tcc?.emails?.length) groups.push({ label: "TCC — prazo próximo", emails: results.tcc.emails });
+
+    if (groups.length > 0) {
+      const now = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+      const sections = groups.map((g) => `
+        <p style="margin:16px 0 4px;color:#1a2e52;"><strong>${g.label}</strong> (${g.emails.length}):</p>
+        <ul style="margin:0 0 8px;padding-left:20px;color:#4a5568;">${g.emails.map((e) => `<li>${e}</li>`).join("")}</ul>
+      `).join("");
+      await notifyAdmin(
+        "Lembretes automáticos enviados — Formação Teológica",
+        notifyEmailWrap(`
+          <p style="margin:0 0 12px;color:#1a2e52;"><strong>Lembretes enviados</strong></p>
+          <p style="margin:0 0 4px;color:#4a5568;">Horário: ${now}</p>
+          ${sections}
+        `),
+      );
+    }
+
     return new Response(JSON.stringify({ ok: true, results }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
