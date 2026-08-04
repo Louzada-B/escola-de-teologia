@@ -98,8 +98,13 @@ export default function ProfilePage() {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
       // A partir daqui a senha original (se existia salva pra reenvio) não deve
-      // mais aparecer em lugar nenhum -- apaga a própria linha da tabela pass.
-      await supabase.from('pass').delete().eq('user_id', user.id);
+      // mais aparecer em lugar nenhum -- apaga via function (service role, não
+      // depende de RLS pra funcionar). Não bloqueia o fluxo se isso falhar, mas
+      // loga pra dar pra investigar.
+      const { error: clearError } = await supabase.functions.invoke('clear-temp-password');
+      if (clearError) {
+        console.error('Falha ao limpar senha temporária salva:', clearError);
+      }
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
