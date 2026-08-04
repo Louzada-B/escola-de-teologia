@@ -123,7 +123,12 @@ Deno.serve(async (req) => {
     const results: { email: string; success: boolean; error?: string; resent?: boolean }[] = [];
 
     // Mapa de e-mail -> confirmado (auth.users.confirmed_at) para decidir quem está pendente
-    const confirmedMap: Record<string, boolean> = {};
+    // Mapa de e-mail -> já acessou pelo menos uma vez (last_sign_in_at). Não usamos
+    // confirmed_at aqui porque, no fluxo de senha, ele já vem preenchido na criação
+    // da conta -- antes do aluno sequer abrir o e-mail. last_sign_in_at só é
+    // preenchido no primeiro login de verdade, então continua confiável nos dois
+    // fluxos (link antigo ou senha nova).
+    const accessedMap: Record<string, boolean> = {};
     {
       let page = 1;
       const perPage = 200;
@@ -131,7 +136,7 @@ Deno.serve(async (req) => {
         const { data: listData, error: listError } = await adminClient.auth.admin.listUsers({ page, perPage });
         if (listError) break;
         for (const u of listData.users) {
-          if (u.email) confirmedMap[u.email.toLowerCase()] = Boolean(u.confirmed_at);
+          if (u.email) accessedMap[u.email.toLowerCase()] = Boolean(u.last_sign_in_at);
         }
         if (listData.users.length < perPage) break;
         page += 1;
@@ -160,9 +165,9 @@ Deno.serve(async (req) => {
 
         if (existingProfiles) {
           userId = existingProfiles.id;
-          const isConfirmed = confirmedMap[email] ?? true; // se não sabemos, não mexe (comportamento seguro)
+          const hasAccessed = accessedMap[email] ?? true; // se não sabemos, não mexe (comportamento seguro)
 
-          if (!isConfirmed) {
+          if (!hasAccessed) {
             // Pendente de um convite antigo (link) ou de uma tentativa anterior: reaproveita
             // a senha já gerada antes (tabela pass), se existir -- assim não manda um segundo
             // e-mail com senha diferente do primeiro. Só gera uma nova se nunca tinha gerado.

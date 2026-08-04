@@ -183,7 +183,7 @@ export default function StudentsManager() {
       .filter(Boolean);
   };
 
-  const isStudentConfirmed = (userId: string) => Boolean(statusMap[userId]?.confirmed_at);
+  const hasStudentAccessed = (userId: string) => Boolean(statusMap[userId]?.last_sign_in_at);
 
   const listPending = () => {
     if (!resendCohortId) {
@@ -194,7 +194,7 @@ export default function StudentsManager() {
       cohortStudents.filter((cs) => cs.cohort_id === resendCohortId).map((cs) => cs.user_id)
     );
     const pending = students
-      .filter((s) => memberIds.has(s.id) && !isStudentConfirmed(s.id))
+      .filter((s) => memberIds.has(s.id) && !hasStudentAccessed(s.id))
       .map((s) => ({ id: s.id, email: s.email, full_name: s.full_name || "" }));
     setPendingList(pending);
     setSelectedPending(new Set(pending.map((p) => p.id)));
