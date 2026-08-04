@@ -175,19 +175,28 @@ export default function AttendanceSettingsManager({ userId }: Props) {
   }, [records]);
 
   const studentStats: StudentStats[] = useMemo(() => {
-    return students.map(s => {
-      const aulaPresent = aulaLessons.filter(l => recordSet.has(`${s.id}::${l.id}`)).length;
-      const especialPresent = especialLessons.filter(l => recordSet.has(`${s.id}::${l.id}`)).length;
-      return {
-        id: s.id,
-        name: s.name,
-        aulaTotal: aulaLessons.length,
-        aulaPresent,
-        especialTotal: especialLessons.length,
-        especialPresent,
-      };
-    });
+    return students
+      .map(s => {
+        const aulaPresent = aulaLessons.filter(l => recordSet.has(`${s.id}::${l.id}`)).length;
+        const especialPresent = especialLessons.filter(l => recordSet.has(`${s.id}::${l.id}`)).length;
+        return {
+          id: s.id,
+          name: s.name,
+          aulaTotal: aulaLessons.length,
+          aulaPresent,
+          especialTotal: especialLessons.length,
+          especialPresent,
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   }, [students, aulaLessons, especialLessons, recordSet]);
+
+  const [summarySearch, setSummarySearch] = useState('');
+  const filteredStats = useMemo(() => {
+    const q = summarySearch.trim().toLowerCase();
+    if (!q) return studentStats;
+    return studentStats.filter(s => s.name.toLowerCase().includes(q));
+  }, [studentStats, summarySearch]);
 
   // Modal lessons for selected student
   const modalLessons = useMemo(() => {
@@ -307,38 +316,59 @@ export default function AttendanceSettingsManager({ userId }: Props) {
           {students.length === 0 ? (
             <p className="text-muted-foreground font-body">Nenhum aluno cadastrado.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome do Aluno</TableHead>
-                  <TableHead className="text-center">% Aulas</TableHead>
-                  <TableHead className="text-center">% Especiais</TableHead>
-                  <TableHead className="text-center">Presenças (Aulas)</TableHead>
-                  <TableHead className="text-center">Presenças (Especiais)</TableHead>
-                  <TableHead className="text-center">Faltas (Aulas)</TableHead>
-                  <TableHead className="text-center">Faltas (Especiais)</TableHead>
-                  <TableHead className="text-center">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {studentStats.map(s => (
-                  <TableRow key={s.id}>
-                    <TableCell className="font-medium">{s.name}</TableCell>
-                    <TableCell className="text-center">{pct(s.aulaPresent, s.aulaTotal)}</TableCell>
-                    <TableCell className="text-center">{pct(s.especialPresent, s.especialTotal)}</TableCell>
-                    <TableCell className="text-center">{s.aulaPresent}/{s.aulaTotal}</TableCell>
-                    <TableCell className="text-center">{s.especialPresent}/{s.especialTotal}</TableCell>
-                    <TableCell className="text-center">{s.aulaTotal - s.aulaPresent}</TableCell>
-                    <TableCell className="text-center">{s.especialTotal - s.especialPresent}</TableCell>
-                    <TableCell className="text-center">
-                      <Button size="sm" variant="outline" onClick={() => setSelectedStudent({ id: s.id, name: s.name })}>
-                        <Eye className="w-4 h-4 mr-1" /> Ver Aulas
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="space-y-3">
+              <div className="relative max-w-sm">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar aluno por nome..."
+                  value={summarySearch}
+                  onChange={(e) => setSummarySearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="max-h-[520px] overflow-y-auto border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="sticky top-0 bg-card z-10">
+                      <TableHead>Nome do Aluno</TableHead>
+                      <TableHead className="text-center">% Aulas</TableHead>
+                      <TableHead className="text-center">% Especiais</TableHead>
+                      <TableHead className="text-center">Presenças (Aulas)</TableHead>
+                      <TableHead className="text-center">Presenças (Especiais)</TableHead>
+                      <TableHead className="text-center">Faltas (Aulas)</TableHead>
+                      <TableHead className="text-center">Faltas (Especiais)</TableHead>
+                      <TableHead className="text-center">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredStats.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-6">
+                          Nenhum aluno bate com essa busca.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredStats.map(s => (
+                        <TableRow key={s.id}>
+                          <TableCell className="font-medium">{s.name}</TableCell>
+                          <TableCell className="text-center">{pct(s.aulaPresent, s.aulaTotal)}</TableCell>
+                          <TableCell className="text-center">{pct(s.especialPresent, s.especialTotal)}</TableCell>
+                          <TableCell className="text-center">{s.aulaPresent}/{s.aulaTotal}</TableCell>
+                          <TableCell className="text-center">{s.especialPresent}/{s.especialTotal}</TableCell>
+                          <TableCell className="text-center">{s.aulaTotal - s.aulaPresent}</TableCell>
+                          <TableCell className="text-center">{s.especialTotal - s.especialPresent}</TableCell>
+                          <TableCell className="text-center">
+                            <Button size="sm" variant="outline" onClick={() => setSelectedStudent({ id: s.id, name: s.name })}>
+                              <Eye className="w-4 h-4 mr-1" /> Ver Aulas
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
