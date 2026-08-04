@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { UserPlus, Upload, Download, CheckCircle, AlertCircle, Loader2, Send } from "lucide-react";
+import { UserPlus, Upload, Download, CheckCircle, AlertCircle, Loader2, Send, Search } from "lucide-react";
 
 export default function StudentsManager() {
   const queryClient = useQueryClient();
@@ -28,6 +28,7 @@ export default function StudentsManager() {
 
   const [resendCohortId, setResendCohortId] = useState("");
   const [pendingList, setPendingList] = useState<{ id: string; email: string; full_name: string }[] | null>(null);
+  const [pendingSearch, setPendingSearch] = useState("");
   const [selectedPending, setSelectedPending] = useState<Set<string>>(new Set());
   const [resending, setResending] = useState(false);
   const [resendResult, setResendResult] = useState<{ successCount: number; errorCount: number; results: any[] } | null>(null);
@@ -195,11 +196,19 @@ export default function StudentsManager() {
     );
     const pending = students
       .filter((s) => memberIds.has(s.id) && !hasStudentAccessed(s.id))
-      .map((s) => ({ id: s.id, email: s.email, full_name: s.full_name || "" }));
+      .map((s) => ({ id: s.id, email: s.email, full_name: s.full_name || "" }))
+      .sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR"));
     setPendingList(pending);
+    setPendingSearch("");
     setSelectedPending(new Set(pending.map((p) => p.id)));
     setResendResult(null);
   };
+
+  const filteredPendingList = (pendingList || []).filter((p) => {
+    const q = pendingSearch.trim().toLowerCase();
+    if (!q) return true;
+    return p.full_name.toLowerCase().includes(q) || p.email.toLowerCase().includes(q);
+  });
 
   const togglePending = (id: string) => {
     setSelectedPending((prev) => {
@@ -211,8 +220,13 @@ export default function StudentsManager() {
   };
 
   const toggleAllPending = () => {
-    if (!pendingList) return;
-    setSelectedPending((prev) => (prev.size === pendingList.length ? new Set() : new Set(pendingList.map((p) => p.id))));
+    const visibleIds = filteredPendingList.map((p) => p.id);
+    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedPending.has(id));
+    setSelectedPending((prev) => {
+      const next = new Set(prev);
+      visibleIds.forEach((id) => (allVisibleSelected ? next.delete(id) : next.add(id)));
+      return next;
+    });
   };
 
   const doResendPending = async () => {
@@ -427,13 +441,24 @@ export default function StudentsManager() {
                 </p>
               ) : (
                 <>
+                  <div className="relative">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por nome ou e-mail..."
+                      value={pendingSearch}
+                      onChange={(e) => setPendingSearch(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
                   <div className="flex items-center justify-between">
                     <button
                       type="button"
                       onClick={toggleAllPending}
                       className="text-xs text-muted-foreground hover:underline"
                     >
-                      {selectedPending.size === pendingList.length ? "Desmarcar todos" : "Selecionar todos"}
+                      {filteredPendingList.length > 0 && filteredPendingList.every((p) => selectedPending.has(p.id))
+                        ? "Desmarcar todos"
+                        : "Selecionar todos"}
                     </button>
                     <Badge variant="outline">{selectedPending.size} de {pendingList.length} selecionado(s)</Badge>
                   </div>
@@ -447,18 +472,26 @@ export default function StudentsManager() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {pendingList.map((p) => (
-                          <TableRow key={p.id} className="cursor-pointer" onClick={() => togglePending(p.id)}>
-                            <TableCell onClick={(e) => e.stopPropagation()}>
-                              <Checkbox
-                                checked={selectedPending.has(p.id)}
-                                onCheckedChange={() => togglePending(p.id)}
-                              />
+                        {filteredPendingList.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-6">
+                              Nenhum aluno pendente bate com essa busca.
                             </TableCell>
-                            <TableCell className="text-sm whitespace-nowrap">{p.full_name || "-"}</TableCell>
-                            <TableCell className="text-sm whitespace-nowrap">{p.email}</TableCell>
                           </TableRow>
-                        ))}
+                        ) : (
+                          filteredPendingList.map((p) => (
+                            <TableRow key={p.id} className="cursor-pointer" onClick={() => togglePending(p.id)}>
+                              <TableCell onClick={(e) => e.stopPropagation()}>
+                                <Checkbox
+                                  checked={selectedPending.has(p.id)}
+                                  onCheckedChange={() => togglePending(p.id)}
+                                />
+                              </TableCell>
+                              <TableCell className="text-sm whitespace-nowrap">{p.full_name || "-"}</TableCell>
+                              <TableCell className="text-sm whitespace-nowrap">{p.email}</TableCell>
+                            </TableRow>
+                          ))
+                        )}
                       </TableBody>
                     </Table>
                   </div>
