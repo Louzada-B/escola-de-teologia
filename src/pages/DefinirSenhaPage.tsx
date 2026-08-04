@@ -9,6 +9,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from '@/hooks/use-toast';
 import { KeyRound } from 'lucide-react';
 
+function getErrorMessage(error: any): string {
+  const raw = error?.message;
+  if (!raw || raw === '{}' || raw === '[object Object]') {
+    return 'Não foi possível salvar a senha agora. Tente novamente em alguns minutos ou peça um novo convite.';
+  }
+  return raw;
+}
+
 export default function DefinirSenhaPage() {
   const { session, loading: authLoading } = useAuth();
   const [password, setPassword] = useState('');
@@ -50,7 +58,7 @@ export default function DefinirSenhaPage() {
     } catch (error: any) {
       toast({
         title: 'Erro ao definir senha',
-        description: error.message,
+        description: getErrorMessage(error),
         variant: 'destructive',
       });
     } finally {
