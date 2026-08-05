@@ -58,8 +58,20 @@ export default function ModulesManager({ userId }: { userId: string }) {
   const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const loadData = async () => {
-    const { data: mods } = await supabase.from('modules').select('*').order('order_index');
-    const { data: less } = await supabase.from('lessons').select('*, lesson_files(*)').order('order_index');
+    if (!selectedCohort?.course_id) {
+      setModules([]);
+      setLessons([]);
+      return;
+    }
+    const { data: mods } = await supabase
+      .from('modules')
+      .select('*')
+      .eq('course_id', selectedCohort.course_id)
+      .order('order_index');
+    const moduleIds = (mods || []).map((m) => m.id);
+    const { data: less } = moduleIds.length
+      ? await supabase.from('lessons').select('*, lesson_files(*)').in('module_id', moduleIds).order('order_index')
+      : { data: [] as any[] };
     setModules(mods || []);
     setLessons(less || []);
   };
@@ -77,8 +89,12 @@ export default function ModulesManager({ userId }: { userId: string }) {
 
   const addModule = async () => {
     if (!title.trim()) return;
+    if (!selectedCohort?.course_id) {
+      toast({ title: 'Erro', description: 'Selecione uma turma primeiro — o módulo pertence ao curso dela.', variant: 'destructive' });
+      return;
+    }
     const { error } = await supabase.from('modules').insert({
-      title, description, created_by: userId, order_index: modules.length,
+      title, description, created_by: userId, order_index: modules.length, course_id: selectedCohort.course_id,
     });
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
     setTitle(''); setDescription('');

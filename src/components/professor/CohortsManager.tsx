@@ -34,16 +34,19 @@ export default function CohortsManager({ userId }: { userId: string }) {
     start_date: "",
     end_date: "",
     course_id: "",
+    access_code: "",
   });
 
   const { data: courses = [] } = useQuery({
     queryKey: ["courses"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("courses").select("id, name").eq("is_active", true).order("name");
+      const { data, error } = await supabase.from("courses").select("id, name, access_model").eq("is_active", true).order("name");
       if (error) throw error;
       return data;
     },
   });
+
+  const selectedCourse = courses.find((c) => c.id === form.course_id);
 
   const { data: cohorts = [], isLoading } = useQuery({
     queryKey: ["cohorts"],
@@ -89,6 +92,7 @@ export default function CohortsManager({ userId }: { userId: string }) {
         start_date: form.start_date,
         end_date: form.end_date,
         course_id: form.course_id,
+        access_code: selectedCourse?.access_model === "code" ? form.access_code.trim().toUpperCase() : null,
       });
       if (error) throw error;
     },
@@ -96,7 +100,7 @@ export default function CohortsManager({ userId }: { userId: string }) {
       queryClient.invalidateQueries({ queryKey: ["cohorts"] });
       toast.success("Turma criada com sucesso");
       setShowForm(false);
-      setForm({ name: "", year: new Date().getFullYear(), semester: 1, start_date: "", end_date: "", course_id: "" });
+      setForm({ name: "", year: new Date().getFullYear(), semester: 1, start_date: "", end_date: "", course_id: "", access_code: "" });
     },
     onError: (e: any) => toast.error("Erro ao criar turma: " + e.message),
   });
@@ -218,12 +222,26 @@ export default function CohortsManager({ userId }: { userId: string }) {
                   onChange={(e) => setForm((f) => ({ ...f, end_date: e.target.value }))}
                 />
               </div>
+              {selectedCourse?.access_model === "code" && (
+                <div>
+                  <Label>Código de acesso (sem conta)</Label>
+                  <Input
+                    placeholder="Ex: CRESC1AGO"
+                    value={form.access_code}
+                    onChange={(e) => setForm((f) => ({ ...f, access_code: e.target.value.toUpperCase() }))}
+                    className="uppercase font-mono"
+                  />
+                </div>
+              )}
             </div>
             <div className="flex gap-2">
               <Button
                 size="sm"
                 onClick={() => createCohort.mutate()}
-                disabled={!form.name || !form.start_date || !form.end_date || !form.course_id}
+                disabled={
+                  !form.name || !form.start_date || !form.end_date || !form.course_id ||
+                  (selectedCourse?.access_model === "code" && !form.access_code.trim())
+                }
               >
                 Criar Turma
               </Button>

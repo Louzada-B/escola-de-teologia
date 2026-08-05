@@ -13,6 +13,7 @@ interface Cohort {
   end_date: string;
   is_active: boolean;
   created_at: string;
+  course_id: string;
 }
 
 interface CohortContextType {
