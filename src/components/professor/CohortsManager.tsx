@@ -33,6 +33,16 @@ export default function CohortsManager({ userId }: { userId: string }) {
     semester: 1,
     start_date: "",
     end_date: "",
+    course_id: "",
+  });
+
+  const { data: courses = [] } = useQuery({
+    queryKey: ["courses"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("courses").select("id, name").eq("is_active", true).order("name");
+      if (error) throw error;
+      return data;
+    },
   });
 
   const { data: cohorts = [], isLoading } = useQuery({
@@ -78,6 +88,7 @@ export default function CohortsManager({ userId }: { userId: string }) {
         semester: form.semester,
         start_date: form.start_date,
         end_date: form.end_date,
+        course_id: form.course_id,
       });
       if (error) throw error;
     },
@@ -85,7 +96,7 @@ export default function CohortsManager({ userId }: { userId: string }) {
       queryClient.invalidateQueries({ queryKey: ["cohorts"] });
       toast.success("Turma criada com sucesso");
       setShowForm(false);
-      setForm({ name: "", year: new Date().getFullYear(), semester: 1, start_date: "", end_date: "" });
+      setForm({ name: "", year: new Date().getFullYear(), semester: 1, start_date: "", end_date: "", course_id: "" });
     },
     onError: (e: any) => toast.error("Erro ao criar turma: " + e.message),
   });
@@ -150,6 +161,19 @@ export default function CohortsManager({ userId }: { userId: string }) {
           <CardContent className="pt-4 space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
+                <Label>Curso</Label>
+                <select
+                  value={form.course_id}
+                  onChange={(e) => setForm((f) => ({ ...f, course_id: e.target.value }))}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">Selecione um curso...</option>
+                  {courses.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <Label>Nome</Label>
                 <Input
                   placeholder="Ex: Turma 2026/1"
@@ -199,7 +223,7 @@ export default function CohortsManager({ userId }: { userId: string }) {
               <Button
                 size="sm"
                 onClick={() => createCohort.mutate()}
-                disabled={!form.name || !form.start_date || !form.end_date}
+                disabled={!form.name || !form.start_date || !form.end_date || !form.course_id}
               >
                 Criar Turma
               </Button>

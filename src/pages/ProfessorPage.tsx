@@ -14,6 +14,7 @@ import TCCManager from "@/components/professor/TCCManager";
 import CertificatesManager from "@/components/professor/CertificatesManager";
 import StudentsManager from "@/components/professor/StudentsManager";
 import TempPasswordsManager from "@/components/professor/TempPasswordsManager";
+import CoursesManager from "@/components/professor/CoursesManager";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { BookOpen } from "lucide-react";
@@ -23,6 +24,12 @@ interface NavItem { value: string; label: string; adminOnly?: boolean; superAdmi
 interface NavGroup { label: string; items: NavItem[]; }
 
 const NAV_GROUPS: NavGroup[] = [
+  {
+    label: "Escola de Teologia",
+    items: [
+      { value: "courses", label: "Cursos", adminOnly: true },
+    ],
+  },
   {
     label: "Conteúdo",
     items: [
@@ -77,6 +84,7 @@ function SectionContent({ value, userId }: { value: string; userId: string }) {
     case "students":         return <StudentsManager />;
     case "certificates":     return <CertificatesManager />;
     case "temp-passwords":   return <TempPasswordsManager />;
+    case "courses":          return <CoursesManager />;
     default:                 return null;
   }
 }
