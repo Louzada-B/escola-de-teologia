@@ -91,8 +91,8 @@ function SectionContent({ value, userId }: { value: string; userId: string }) {
 
 export default function ProfessorPage() {
   const { user, profile } = useAuth();
-  const isAdmin = profile?.role === "admin";
   const isSuperAdmin = profile?.is_super_admin === true;
+  const isAdmin = profile?.role === "admin" || isSuperAdmin;
   const [active, setActive] = useState("modules");
   const [manualOpen, setManualOpen] = useState(false);
 
