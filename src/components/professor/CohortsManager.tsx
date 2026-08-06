@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Plus, Trash2, Users, ChevronDown, ChevronUp, Search } from "lucide-react";
+import { Plus, Trash2, Users, ChevronDown, ChevronUp, Search, Copy } from "lucide-react";
 
 interface Cohort {
   id: string;
@@ -275,6 +275,20 @@ export default function CohortsManager({ userId }: { userId: string }) {
                       <Badge variant="outline" className="text-[10px] gap-1">
                         <Users className="w-3 h-3" /> {studentIds.length}
                       </Badge>
+                      {cohort.access_code && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(cohort.access_code);
+                            toast.success("Código copiado: " + cohort.access_code);
+                          }}
+                          title="Copiar código de acesso"
+                        >
+                          <Badge variant="outline" className="text-[10px] gap-1 font-mono hover:bg-muted cursor-pointer">
+                            <Copy className="w-3 h-3" /> {cohort.access_code}
+                          </Badge>
+                        </button>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1">
