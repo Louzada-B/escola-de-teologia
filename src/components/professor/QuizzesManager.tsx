@@ -73,21 +73,31 @@ export default function QuizzesManager({ userId }: { userId: string }) {
   const [selectedStudent, setSelectedStudent] = useState<{ id: string; name: string } | null>(null);
 
   const load = async () => {
+    let moduleIds: string[] = [];
+    if (selectedCohort?.course_id) {
+      const { data: mods } = await supabase.from("modules").select("id").eq("course_id", selectedCohort.course_id);
+      moduleIds = (mods || []).map((m) => m.id);
+    }
+
     const [quizzesRes, lessonsRes, responsesRes, profilesRes] = await Promise.all([
       supabase.from("quizzes").select("*, quiz_questions(id), lessons(title, scheduled_date)").order("created_at"),
-      supabase.from("lessons").select("id, title, scheduled_date, module_id").order("scheduled_date"),
+      moduleIds.length > 0
+        ? supabase.from("lessons").select("id, title, scheduled_date, module_id").in("module_id", moduleIds).order("scheduled_date")
+        : Promise.resolve({ data: [] as any[] }),
       supabase.from("quiz_responses").select("quiz_id, user_id, score"),
       supabase.from("profiles").select("id, full_name, email").eq("role", "aluno"),
     ]);
     let quizData = quizzesRes.data || [];
     setAllLessons(lessonsRes.data || []);
 
-    // Filter by cohort dates
+    // Filtra por curso da turma selecionada (via aula -> módulo -> curso), não
+    // mais só por data -- data sozinha deixava passar aula de outro curso se
+    // as janelas coincidissem.
     if (selectedCohort) {
+      const lessonIdsInCourse = new Set((lessonsRes.data || []).map((l: any) => l.id));
       quizData = quizData.filter((q: any) => {
-        const lessonDate = q.lessons?.scheduled_date;
-        if (!lessonDate) return true;
-        return lessonDate >= selectedCohort.start_date && lessonDate <= selectedCohort.end_date;
+        if (!q.lesson_id) return true; // questionário sem aula vinculada continua visível em qualquer turma
+        return lessonIdsInCourse.has(q.lesson_id);
       });
     }
     setQuizzes(quizData);

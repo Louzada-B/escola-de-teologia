@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Plus, Trash2, FileText, Link as LinkIcon, Video, Upload, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useCohort } from "@/contexts/CohortContext";
 
 interface ExtraMaterial {
   id: string;
@@ -54,6 +55,7 @@ function sanitizeFileName(name: string): string {
 }
 
 export default function ExtraMaterialsManager({ userId }: { userId: string }) {
+  const { selectedCohort } = useCohort();
   const [materials, setMaterials] = useState<ExtraMaterial[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -70,12 +72,18 @@ export default function ExtraMaterialsManager({ userId }: { userId: string }) {
 
   useEffect(() => {
     fetchMaterials();
-  }, []);
+  }, [selectedCohort]);
 
   const fetchMaterials = async () => {
+    if (!selectedCohort?.course_id) {
+      setMaterials([]);
+      setLoading(false);
+      return;
+    }
     const { data } = await supabase
       .from("extra_materials")
       .select("*")
+      .eq("course_id", selectedCohort.course_id)
       .order("created_at", { ascending: false });
     setMaterials(data || []);
     setLoading(false);
@@ -94,6 +102,11 @@ export default function ExtraMaterialsManager({ userId }: { userId: string }) {
   const handleSubmit = async () => {
     if (!title.trim()) {
       toast.error("Título é obrigatório");
+      return;
+    }
+
+    if (!selectedCohort?.course_id) {
+      toast.error("Selecione uma turma primeiro — o material pertence ao curso dela.");
       return;
     }
 
@@ -151,6 +164,7 @@ export default function ExtraMaterialsManager({ userId }: { userId: string }) {
         category,
         created_by: userId,
         order_index: nextOrder,
+        course_id: selectedCohort.course_id,
       } as any);
 
       if (error) throw error;
