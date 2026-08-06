@@ -5,8 +5,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { UserCheck, Award, FileText, ClipboardCheck, Download, Loader2, ExternalLink, BookOpen } from "lucide-react";
+import { UserCheck, Award, FileText, ClipboardCheck, Download, Loader2, ExternalLink, BookOpen, CheckCircle } from "lucide-react";
 import jsPDF from "jspdf";
+import QuizAnswerDialog from "@/components/quiz/QuizAnswerDialog";
 
 interface JoinInfo {
   cohort_id: string;
@@ -26,13 +27,6 @@ interface Material {
   material_type: string;
   file_path: string | null;
   external_url: string | null;
-}
-
-interface QuizQuestion {
-  id: string;
-  question: string;
-  options: string[];
-  order_index: number;
 }
 
 function buildParticipationCertificatePdf(name: string, courseName: string, cohortName: string) {
@@ -109,10 +103,9 @@ export default function CodeCourseDayPage() {
 
   const [quizId, setQuizId] = useState<string | null>(null);
   const [quizTitle, setQuizTitle] = useState("");
-  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
-  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [quizQuestions, setQuizQuestions] = useState<any[]>([]);
   const [quizAnswered, setQuizAnswered] = useState(false);
-  const [quizLoading, setQuizLoading] = useState(false);
+  const [quizDialogOpen, setQuizDialogOpen] = useState(false);
   const [loadingQuiz, setLoadingQuiz] = useState(true);
 
   useEffect(() => {
@@ -205,30 +198,18 @@ export default function CodeCourseDayPage() {
 
       const { data: qs } = await supabase
         .from("quiz_questions")
-        .select("id, question, options, order_index")
+        .select("*")
         .eq("quiz_id", quiz.id)
         .order("order_index");
 
-      setQuestions((qs || []) as QuizQuestion[]);
+      setQuizQuestions(qs || []);
       setLoadingQuiz(false);
     })();
   }, [lessonId, info, user]);
 
-  const submitQuiz = async () => {
-    if (!quizId || !user) return;
-    if (Object.keys(answers).length < questions.length) {
-      toast.error("Responda todas as perguntas antes de enviar.");
-      return;
-    }
-    setQuizLoading(true);
-    const { error } = await supabase.from("quiz_responses").insert({ quiz_id: quizId, user_id: user.id, answers });
-    setQuizLoading(false);
-    if (error) {
-      toast.error("Erro ao enviar respostas: " + error.message);
-      return;
-    }
+  const handleQuizSubmitted = () => {
     setQuizAnswered(true);
-    toast.success("Respostas enviadas!");
+    setQuizDialogOpen(false);
   };
 
   const materialUrl = (m: Material) => {
@@ -311,51 +292,15 @@ export default function CodeCourseDayPage() {
             {quizAnswered ? (
               <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-3">
                 <div className="w-8 h-8 rounded-full bg-green-500/15 flex items-center justify-center shrink-0">
-                  <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                  </svg>
+                  <CheckCircle className="w-4 h-4 text-green-600" />
                 </div>
                 <p className="text-sm font-medium text-green-700">Respostas enviadas — obrigado!</p>
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-2">
                 <p className="text-sm font-medium text-foreground">{quizTitle}</p>
-                {questions.map((q, i) => (
-                  <div key={q.id} className="space-y-2.5">
-                    <p className="text-sm text-foreground">
-                      <span className="text-accent font-heading font-semibold mr-1.5">{i + 1}.</span>
-                      {q.question}
-                    </p>
-                    <div className="grid gap-2">
-                      {q.options.map((opt, oi) => {
-                        const selected = answers[q.id] === oi;
-                        return (
-                          <button
-                            key={oi}
-                            type="button"
-                            onClick={() => setAnswers((a) => ({ ...a, [q.id]: oi }))}
-                            className={`text-left text-sm rounded-lg border px-4 py-2.5 transition-colors ${
-                              selected
-                                ? "border-primary bg-primary/5 font-medium text-primary"
-                                : "border-border hover:bg-muted/60"
-                            }`}
-                          >
-                            <span
-                              className={`inline-flex items-center justify-center w-4 h-4 rounded-full border mr-2 align-middle ${
-                                selected ? "border-primary bg-primary" : "border-muted-foreground"
-                              }`}
-                            >
-                              {selected && <span className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />}
-                            </span>
-                            {opt}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-                <Button onClick={submitQuiz} disabled={quizLoading} className="w-full">
-                  {quizLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Enviar respostas"}
+                <Button onClick={() => setQuizDialogOpen(true)} className="w-full">
+                  Responder
                 </Button>
               </div>
             )}
@@ -409,6 +354,16 @@ export default function CodeCourseDayPage() {
           </Card>
         )}
       </div>
+
+      {quizId && (
+        <QuizAnswerDialog
+          open={quizDialogOpen}
+          onOpenChange={setQuizDialogOpen}
+          quiz={{ id: quizId, title: quizTitle }}
+          questions={quizQuestions}
+          onSubmitted={handleQuizSubmitted}
+        />
+      )}
     </div>
   );
 }
