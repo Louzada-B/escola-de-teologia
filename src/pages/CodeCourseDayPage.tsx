@@ -4,10 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { UserCheck, Award, FileText, ClipboardCheck, Download, Loader2, ExternalLink, BookOpen, CheckCircle } from "lucide-react";
 import jsPDF from "jspdf";
 import QuizAnswerDialog from "@/components/quiz/QuizAnswerDialog";
+import QuizGabarito from "@/components/quiz/QuizGabarito";
 
 interface JoinInfo {
   cohort_id: string;
@@ -106,6 +108,8 @@ export default function CodeCourseDayPage() {
   const [quizQuestions, setQuizQuestions] = useState<any[]>([]);
   const [quizAnswered, setQuizAnswered] = useState(false);
   const [quizDialogOpen, setQuizDialogOpen] = useState(false);
+  const [studentAnswers, setStudentAnswers] = useState<Record<string, any>>({});
+  const [gabaritoOpen, setGabaritoOpen] = useState(false);
   const [loadingQuiz, setLoadingQuiz] = useState(true);
 
   useEffect(() => {
@@ -183,19 +187,6 @@ export default function CodeCourseDayPage() {
       setQuizId(quiz.id);
       setQuizTitle(quiz.title);
 
-      const { data: existingResponse } = await supabase
-        .from("quiz_responses")
-        .select("id")
-        .eq("quiz_id", quiz.id)
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (existingResponse) {
-        setQuizAnswered(true);
-        setLoadingQuiz(false);
-        return;
-      }
-
       const { data: qs } = await supabase
         .from("quiz_questions")
         .select("*")
@@ -203,13 +194,28 @@ export default function CodeCourseDayPage() {
         .order("order_index");
 
       setQuizQuestions(qs || []);
+
+      const { data: existingResponse } = await supabase
+        .from("quiz_responses")
+        .select("answers")
+        .eq("quiz_id", quiz.id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (existingResponse) {
+        setQuizAnswered(true);
+        setStudentAnswers((existingResponse.answers as Record<string, any>) || {});
+      }
+
       setLoadingQuiz(false);
     })();
   }, [lessonId, info, user]);
 
-  const handleQuizSubmitted = () => {
+  const handleQuizSubmitted = (_quizId: string, _qs: any[], mergedAnswers: Record<string, any>) => {
     setQuizAnswered(true);
+    setStudentAnswers(mergedAnswers);
     setQuizDialogOpen(false);
+    setGabaritoOpen(true);
   };
 
   const materialUrl = (m: Material) => {
@@ -290,11 +296,16 @@ export default function CodeCourseDayPage() {
         {info.has_quizzes && lessonId && !loadingQuiz && quizId && (
           <SectionCard icon={ClipboardCheck} title="Questionário">
             {quizAnswered ? (
-              <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-3">
-                <div className="w-8 h-8 rounded-full bg-green-500/15 flex items-center justify-center shrink-0">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-3">
+                  <div className="w-8 h-8 rounded-full bg-green-500/15 flex items-center justify-center shrink-0">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  </div>
+                  <p className="text-sm font-medium text-green-700">Respostas enviadas — obrigado!</p>
                 </div>
-                <p className="text-sm font-medium text-green-700">Respostas enviadas — obrigado!</p>
+                <Button variant="outline" onClick={() => setGabaritoOpen(true)} className="w-full">
+                  Ver gabarito
+                </Button>
               </div>
             ) : (
               <div className="space-y-2">
@@ -363,6 +374,17 @@ export default function CodeCourseDayPage() {
           questions={quizQuestions}
           onSubmitted={handleQuizSubmitted}
         />
+      )}
+
+      {gabaritoOpen && (
+        <Dialog open={gabaritoOpen} onOpenChange={setGabaritoOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="font-heading">{quizTitle}</DialogTitle>
+            </DialogHeader>
+            <QuizGabarito questions={quizQuestions} studentAnswers={studentAnswers} />
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
