@@ -4,10 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { CheckCircle2, Download, Loader2, FileText, ExternalLink } from "lucide-react";
+import { UserCheck, Award, FileText, ClipboardCheck, Download, Loader2, ExternalLink, BookOpen } from "lucide-react";
 import jsPDF from "jspdf";
 
 interface JoinInfo {
@@ -78,12 +76,31 @@ function buildParticipationCertificatePdf(name: string, courseName: string, coho
   return doc;
 }
 
+function SectionCard({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: React.ElementType;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card className="card-academic">
+      <CardHeader className="flex flex-row items-center gap-2 pb-3">
+        <Icon className="w-5 h-5 text-accent" />
+        <CardTitle className="font-heading text-lg">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
+  );
+}
+
 export default function CodeCourseDayPage() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const [info, setInfo] = useState<JoinInfo | null>(null);
   const [lessonId, setLessonId] = useState<string | null>(null);
-  const [lessonTitle, setLessonTitle] = useState<string>("");
   const [checkedIn, setCheckedIn] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingLesson, setLoadingLesson] = useState(true);
@@ -125,7 +142,6 @@ export default function CodeCourseDayPage() {
 
         if (todayLessons && todayLessons.length > 0) {
           setLessonId(todayLessons[0].id);
-          setLessonTitle(todayLessons[0].title);
         }
       }
       setLoadingLesson(false);
@@ -205,11 +221,7 @@ export default function CodeCourseDayPage() {
       return;
     }
     setQuizLoading(true);
-    const { error } = await supabase.from("quiz_responses").insert({
-      quiz_id: quizId,
-      user_id: user.id,
-      answers,
-    });
+    const { error } = await supabase.from("quiz_responses").insert({ quiz_id: quizId, user_id: user.id, answers });
     setQuizLoading(false);
     if (error) {
       toast.error("Erro ao enviar respostas: " + error.message);
@@ -252,116 +264,145 @@ export default function CodeCourseDayPage() {
   if (!info) return null;
 
   return (
-    <div className="min-h-screen bg-background px-4 py-10">
-      <div className="max-w-md mx-auto space-y-6">
-        <div className="text-center">
-          <h1 className="text-xl font-heading font-bold">{info.course_name}</h1>
-          <p className="text-sm text-muted-foreground">{info.cohort_name}</p>
+    <div className="min-h-screen bg-background">
+      <div className="max-w-lg mx-auto px-4 py-10 space-y-6 font-body">
+        {/* Cabeçalho */}
+        <div className="text-center space-y-3 animate-in fade-in slide-in-from-top-4 duration-700">
+          <div className="mx-auto w-14 h-14 rounded-full bg-accent/15 border border-accent/30 flex items-center justify-center">
+            <BookOpen className="w-7 h-7 text-accent" />
+          </div>
+          <div>
+            <h1 className="font-heading text-2xl font-semibold text-foreground">{info.course_name}</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">{info.cohort_name}</p>
+          </div>
         </div>
 
+        {/* Presença */}
         {info.has_attendance && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Presença</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loadingLesson ? (
-                <p className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
-                </p>
-              ) : !lessonId ? (
-                <p className="text-sm text-muted-foreground">
-                  Nenhuma aula encontrada pra hoje nesse curso. Fale com a coordenação.
-                </p>
-              ) : checkedIn ? (
-                <p className="flex items-center gap-2 text-sm text-green-700">
-                  <CheckCircle2 className="w-4 h-4" /> Presença confirmada — {lessonTitle}
-                </p>
-              ) : (
-                <Button onClick={confirmPresence} disabled={loading} className="w-full">
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirmar presença"}
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {info.has_quizzes && lessonId && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Questionário</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loadingQuiz ? (
-                <p className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
-                </p>
-              ) : !quizId ? (
-                <p className="text-sm text-muted-foreground">Sem questionário pra essa aula.</p>
-              ) : quizAnswered ? (
-                <p className="flex items-center gap-2 text-sm text-green-700">
-                  <CheckCircle2 className="w-4 h-4" /> Respostas enviadas — obrigado!
-                </p>
-              ) : (
-                <div className="space-y-5">
-                  <p className="text-sm font-medium">{quizTitle}</p>
-                  {questions.map((q, i) => (
-                    <div key={q.id} className="space-y-2">
-                      <p className="text-sm">{i + 1}. {q.question}</p>
-                      <RadioGroup
-                        value={answers[q.id]?.toString() ?? ""}
-                        onValueChange={(v) => setAnswers((a) => ({ ...a, [q.id]: Number(v) }))}
-                      >
-                        {q.options.map((opt, oi) => (
-                          <div key={oi} className="flex items-center gap-2">
-                            <RadioGroupItem value={oi.toString()} id={`${q.id}-${oi}`} />
-                            <Label htmlFor={`${q.id}-${oi}`} className="text-sm font-normal">{opt}</Label>
-                          </div>
-                        ))}
-                      </RadioGroup>
-                    </div>
-                  ))}
-                  <Button onClick={submitQuiz} disabled={quizLoading} className="w-full">
-                    {quizLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Enviar respostas"}
-                  </Button>
+          <SectionCard icon={UserCheck} title="Presença">
+            {loadingLesson ? (
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
+              </p>
+            ) : !lessonId ? (
+              <p className="text-sm text-muted-foreground">
+                Nenhuma aula encontrada pra hoje nesse curso. Fale com a coordenação.
+              </p>
+            ) : checkedIn ? (
+              <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-3">
+                <div className="w-8 h-8 rounded-full bg-green-500/15 flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                <p className="text-sm font-medium text-green-700">Presença confirmada</p>
+              </div>
+            ) : (
+              <Button onClick={confirmPresence} disabled={loading} className="w-full">
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirmar presença"}
+              </Button>
+            )}
+          </SectionCard>
         )}
 
+        {/* Questionário */}
+        {info.has_quizzes && lessonId && !loadingQuiz && quizId && (
+          <SectionCard icon={ClipboardCheck} title="Questionário">
+            {quizAnswered ? (
+              <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-3">
+                <div className="w-8 h-8 rounded-full bg-green-500/15 flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <p className="text-sm font-medium text-green-700">Respostas enviadas — obrigado!</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <p className="text-sm font-medium text-foreground">{quizTitle}</p>
+                {questions.map((q, i) => (
+                  <div key={q.id} className="space-y-2.5">
+                    <p className="text-sm text-foreground">
+                      <span className="text-accent font-heading font-semibold mr-1.5">{i + 1}.</span>
+                      {q.question}
+                    </p>
+                    <div className="grid gap-2">
+                      {q.options.map((opt, oi) => {
+                        const selected = answers[q.id] === oi;
+                        return (
+                          <button
+                            key={oi}
+                            type="button"
+                            onClick={() => setAnswers((a) => ({ ...a, [q.id]: oi }))}
+                            className={`text-left text-sm rounded-lg border px-4 py-2.5 transition-colors ${
+                              selected
+                                ? "border-primary bg-primary/5 font-medium text-primary"
+                                : "border-border hover:bg-muted/60"
+                            }`}
+                          >
+                            <span
+                              className={`inline-flex items-center justify-center w-4 h-4 rounded-full border mr-2 align-middle ${
+                                selected ? "border-primary bg-primary" : "border-muted-foreground"
+                              }`}
+                            >
+                              {selected && <span className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />}
+                            </span>
+                            {opt}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                <Button onClick={submitQuiz} disabled={quizLoading} className="w-full">
+                  {quizLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Enviar respostas"}
+                </Button>
+              </div>
+            )}
+          </SectionCard>
+        )}
+
+        {/* Materiais */}
         {info.has_materials && materials.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Materiais</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
+          <SectionCard icon={FileText} title="Materiais">
+            <div className="grid gap-2">
               {materials.map((m) => (
                 <a
                   key={m.id}
                   href={materialUrl(m)}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-2 text-sm p-2 rounded-md border hover:bg-muted transition-colors"
+                  className="flex items-center gap-3 text-sm rounded-lg border border-border px-4 py-3 hover:bg-muted/60 hover:border-accent/40 transition-colors group"
                 >
-                  {m.material_type === "link" ? <ExternalLink className="w-4 h-4 shrink-0" /> : <FileText className="w-4 h-4 shrink-0" />}
-                  <span>{m.title}</span>
+                  <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center shrink-0 group-hover:bg-accent/20 transition-colors">
+                    {m.material_type === "link" ? (
+                      <ExternalLink className="w-4 h-4 text-accent" />
+                    ) : (
+                      <FileText className="w-4 h-4 text-accent" />
+                    )}
+                  </div>
+                  <span className="font-medium text-foreground">{m.title}</span>
                 </a>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </SectionCard>
         )}
 
+        {/* Certificado */}
         {info.has_certificates && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Certificado</CardTitle>
+          <Card className="card-academic border-accent/40 bg-accent/5">
+            <CardHeader className="flex flex-row items-center gap-2 pb-3">
+              <Award className="w-5 h-5 text-accent" />
+              <CardTitle className="font-heading text-lg">Certificado</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-3">
               <p className="text-xs text-muted-foreground">
-                Baixe agora — o certificado não é enviado por e-mail.
+                Baixe agora — o certificado não é enviado por e-mail, só fica disponível aqui.
               </p>
-              <Button variant="outline" onClick={downloadCertificate} className="w-full gap-2">
+              <Button
+                onClick={downloadCertificate}
+                className="w-full gap-2 bg-accent hover:bg-accent/90 text-white shadow-lg shadow-accent/20"
+              >
                 <Download className="w-4 h-4" /> Baixar certificado
               </Button>
             </CardContent>
