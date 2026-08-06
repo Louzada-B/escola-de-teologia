@@ -4,8 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { CheckCircle2, Download, Loader2 } from "lucide-react";
+import { CheckCircle2, Download, Loader2, FileText, ExternalLink } from "lucide-react";
 import jsPDF from "jspdf";
 
 interface JoinInfo {
@@ -14,7 +16,25 @@ interface JoinInfo {
   course_id: string;
   course_name: string;
   has_attendance: boolean;
+  has_quizzes: boolean;
+  has_materials: boolean;
   has_certificates: boolean;
+}
+
+interface Material {
+  id: string;
+  title: string;
+  description: string | null;
+  material_type: string;
+  file_path: string | null;
+  external_url: string | null;
+}
+
+interface QuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  order_index: number;
 }
 
 function buildParticipationCertificatePdf(name: string, courseName: string, cohortName: string) {
@@ -68,6 +88,16 @@ export default function CodeCourseDayPage() {
   const [loading, setLoading] = useState(false);
   const [loadingLesson, setLoadingLesson] = useState(true);
 
+  const [materials, setMaterials] = useState<Material[]>([]);
+
+  const [quizId, setQuizId] = useState<string | null>(null);
+  const [quizTitle, setQuizTitle] = useState("");
+  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [quizAnswered, setQuizAnswered] = useState(false);
+  const [quizLoading, setQuizLoading] = useState(false);
+  const [loadingQuiz, setLoadingQuiz] = useState(true);
+
   useEffect(() => {
     const raw = sessionStorage.getItem("codeAccessInfo");
     if (!raw) {
@@ -103,6 +133,15 @@ export default function CodeCourseDayPage() {
   }, [info]);
 
   useEffect(() => {
+    if (!info || !info.has_materials) return;
+    supabase
+      .from("extra_materials")
+      .select("id, title, description, material_type, file_path, external_url")
+      .eq("course_id", info.course_id)
+      .then(({ data }) => setMaterials(data || []));
+  }, [info]);
+
+  useEffect(() => {
     if (!lessonId || !user) return;
     supabase
       .from("attendance_records")
@@ -114,6 +153,77 @@ export default function CodeCourseDayPage() {
         if (data && data.length > 0) setCheckedIn(true);
       });
   }, [lessonId, user]);
+
+  useEffect(() => {
+    if (!lessonId || !info?.has_quizzes || !user) {
+      setLoadingQuiz(false);
+      return;
+    }
+    (async () => {
+      setLoadingQuiz(true);
+      const { data: quiz } = await supabase
+        .from("quizzes")
+        .select("id, title")
+        .eq("lesson_id", lessonId)
+        .maybeSingle();
+
+      if (!quiz) {
+        setLoadingQuiz(false);
+        return;
+      }
+      setQuizId(quiz.id);
+      setQuizTitle(quiz.title);
+
+      const { data: existingResponse } = await supabase
+        .from("quiz_responses")
+        .select("id")
+        .eq("quiz_id", quiz.id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (existingResponse) {
+        setQuizAnswered(true);
+        setLoadingQuiz(false);
+        return;
+      }
+
+      const { data: qs } = await supabase
+        .from("quiz_questions")
+        .select("id, question, options, order_index")
+        .eq("quiz_id", quiz.id)
+        .order("order_index");
+
+      setQuestions((qs || []) as QuizQuestion[]);
+      setLoadingQuiz(false);
+    })();
+  }, [lessonId, info, user]);
+
+  const submitQuiz = async () => {
+    if (!quizId || !user) return;
+    if (Object.keys(answers).length < questions.length) {
+      toast.error("Responda todas as perguntas antes de enviar.");
+      return;
+    }
+    setQuizLoading(true);
+    const { error } = await supabase.from("quiz_responses").insert({
+      quiz_id: quizId,
+      user_id: user.id,
+      answers,
+    });
+    setQuizLoading(false);
+    if (error) {
+      toast.error("Erro ao enviar respostas: " + error.message);
+      return;
+    }
+    setQuizAnswered(true);
+    toast.success("Respostas enviadas!");
+  };
+
+  const materialUrl = (m: Material) => {
+    if (m.external_url) return m.external_url;
+    if (m.file_path) return supabase.storage.from("course-files").getPublicUrl(m.file_path).data.publicUrl;
+    return "#";
+  };
 
   const confirmPresence = async () => {
     if (!lessonId || !user) return;
@@ -172,6 +282,72 @@ export default function CodeCourseDayPage() {
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirmar presença"}
                 </Button>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {info.has_quizzes && lessonId && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Questionário</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingQuiz ? (
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
+                </p>
+              ) : !quizId ? (
+                <p className="text-sm text-muted-foreground">Sem questionário pra essa aula.</p>
+              ) : quizAnswered ? (
+                <p className="flex items-center gap-2 text-sm text-green-700">
+                  <CheckCircle2 className="w-4 h-4" /> Respostas enviadas — obrigado!
+                </p>
+              ) : (
+                <div className="space-y-5">
+                  <p className="text-sm font-medium">{quizTitle}</p>
+                  {questions.map((q, i) => (
+                    <div key={q.id} className="space-y-2">
+                      <p className="text-sm">{i + 1}. {q.question}</p>
+                      <RadioGroup
+                        value={answers[q.id]?.toString() ?? ""}
+                        onValueChange={(v) => setAnswers((a) => ({ ...a, [q.id]: Number(v) }))}
+                      >
+                        {q.options.map((opt, oi) => (
+                          <div key={oi} className="flex items-center gap-2">
+                            <RadioGroupItem value={oi.toString()} id={`${q.id}-${oi}`} />
+                            <Label htmlFor={`${q.id}-${oi}`} className="text-sm font-normal">{opt}</Label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    </div>
+                  ))}
+                  <Button onClick={submitQuiz} disabled={quizLoading} className="w-full">
+                    {quizLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Enviar respostas"}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {info.has_materials && materials.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Materiais</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {materials.map((m) => (
+                <a
+                  key={m.id}
+                  href={materialUrl(m)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-2 text-sm p-2 rounded-md border hover:bg-muted transition-colors"
+                >
+                  {m.material_type === "link" ? <ExternalLink className="w-4 h-4 shrink-0" /> : <FileText className="w-4 h-4 shrink-0" />}
+                  <span>{m.title}</span>
+                </a>
+              ))}
             </CardContent>
           </Card>
         )}

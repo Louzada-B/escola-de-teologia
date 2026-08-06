@@ -30,13 +30,15 @@ interface Course {
 
 type FeatureKey = "has_attendance" | "has_quizzes" | "has_tcc" | "has_materials" | "has_testimonials" | "has_certificates";
 
-const FEATURES: { key: FeatureKey; label: string }[] = [
-  { key: "has_attendance", label: "Presença" },
-  { key: "has_quizzes", label: "Questionários" },
-  { key: "has_tcc", label: "TCC" },
-  { key: "has_materials", label: "Materiais Extras" },
-  { key: "has_testimonials", label: "Testemunhos" },
-  { key: "has_certificates", label: "Certificados" },
+// Curso sem conta (access_model = 'code') só oferece essas 4 -- TCC e
+// Testemunhos não fazem sentido pra um curso de 1 dia sem conta de verdade.
+const FEATURES: { key: FeatureKey; label: string; codeCourse: boolean }[] = [
+  { key: "has_attendance", label: "Presença", codeCourse: true },
+  { key: "has_quizzes", label: "Questionários", codeCourse: true },
+  { key: "has_tcc", label: "TCC", codeCourse: false },
+  { key: "has_materials", label: "Materiais Extras", codeCourse: true },
+  { key: "has_testimonials", label: "Testemunhos", codeCourse: false },
+  { key: "has_certificates", label: "Certificados", codeCourse: true },
 ];
 
 const emptyForm = {
@@ -191,7 +193,16 @@ export default function CoursesManager() {
               <Label>Modelo de acesso</Label>
               <select
                 value={form.access_model}
-                onChange={(e) => setForm((f) => ({ ...f, access_model: e.target.value as "account" | "code" }))}
+                onChange={(e) => {
+                  const access_model = e.target.value as "account" | "code";
+                  setForm((f) => ({
+                    ...f,
+                    access_model,
+                    // Curso sem conta não tem TCC nem Testemunhos -- reseta se estava ligado
+                    has_tcc: access_model === "code" ? false : f.has_tcc,
+                    has_testimonials: access_model === "code" ? false : f.has_testimonials,
+                  }));
+                }}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="account">Com conta (convite por e-mail + senha)</option>
@@ -202,7 +213,7 @@ export default function CoursesManager() {
             <div>
               <Label className="mb-2 block">Funcionalidades</Label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {FEATURES.map(({ key, label }) => (
+                {FEATURES.filter((f) => form.access_model === "account" || f.codeCourse).map(({ key, label }) => (
                   <label key={key} className="flex items-center gap-2 text-sm">
                     <Switch
                       checked={form[key]}
@@ -212,6 +223,11 @@ export default function CoursesManager() {
                   </label>
                 ))}
               </div>
+              {form.access_model === "code" && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Curso sem conta não tem TCC nem Testemunhos — só as 4 funcionalidades acima.
+                </p>
+              )}
             </div>
 
             {form.has_certificates && (

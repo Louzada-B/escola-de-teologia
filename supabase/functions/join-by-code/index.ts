@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
 
     const { data: cohort, error: cohortError } = await adminClient
       .from("cohorts")
-      .select("id, name, course_id, courses(id, name, access_model, has_attendance, has_certificates)")
+      .select("id, name, course_id, courses(id, name, access_model, has_attendance, has_quizzes, has_materials, has_certificates)")
       .eq("access_code", cleanCode)
       .maybeSingle();
 
@@ -98,6 +98,8 @@ Deno.serve(async (req) => {
         course_id: course.id,
         course_name: course.name,
         has_attendance: course.has_attendance,
+        has_quizzes: course.has_quizzes,
+        has_materials: course.has_materials,
         has_certificates: course.has_certificates,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
