@@ -6,7 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import {
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  ResponsiveContainer, Cell, Tooltip,
+} from 'recharts';
 import { Users, BookOpen, UserCheck, ClipboardList, AlertTriangle, Star, FileCheck, LogIn, Clock } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { useCohort } from '@/contexts/CohortContext';
 
 const RISK_CRITERIA = [
@@ -139,6 +145,84 @@ export default function AnalyticsPage() {
 
   const pastAulas = useMemo(() => pastLessons.filter(l => l.event_type !== 'aula_especial'), [pastLessons]);
   const pastEspeciais = useMemo(() => pastLessons.filter(l => l.event_type === 'aula_especial'), [pastLessons]);
+
+  // ── Aba Presença ──
+  const attendanceEvolution = useMemo(() => {
+    return pastLessons
+      .sort((a, b) => (a.scheduled_date! > b.scheduled_date! ? 1 : -1))
+      .map((l) => ({
+        name: format(parseISO(l.scheduled_date!), 'dd/MM', { locale: ptBR }),
+        title: l.title,
+        presentes: attendanceRecords.filter((a) => a.lesson_id === l.id).length,
+      }));
+  }, [pastLessons, attendanceRecords]);
+
+  const lessonAttendance = useMemo(() => {
+    return pastLessons.map((l) => ({
+      name: l.title.length > 15 ? l.title.slice(0, 15) + '…' : l.title,
+      presentes: attendanceRecords.filter((a) => a.lesson_id === l.id).length,
+      id: l.id,
+    }));
+  }, [pastLessons, attendanceRecords]);
+
+  const minAttendance = useMemo(
+    () => Math.min(...lessonAttendance.map((l) => l.presentes), Infinity),
+    [lessonAttendance]
+  );
+  const maxAttendance = useMemo(
+    () => Math.max(...lessonAttendance.map((l) => l.presentes), -Infinity),
+    [lessonAttendance]
+  );
+
+  // Presença por aluno (base pra risco detalhado e distribuição)
+  const studentAttendanceStats = useMemo(() => {
+    return students.map((s) => {
+      const presAula = pastAulas.filter((l) =>
+        attendanceRecords.some((a) => a.lesson_id === l.id && a.user_id === s.id)
+      ).length;
+      const presEsp = pastEspeciais.filter((l) =>
+        attendanceRecords.some((a) => a.lesson_id === l.id && a.user_id === s.id)
+      ).length;
+      const pctAula = pastAulas.length ? Math.round((presAula / pastAulas.length) * 100) : 100;
+      const pctEsp = pastEspeciais.length ? Math.round((presEsp / pastEspeciais.length) * 100) : 100;
+      const faltasAula = pastAulas.length - presAula;
+      const faltasEsp = pastEspeciais.length - presEsp;
+      return {
+        name: s.full_name || s.email,
+        pctAula, pctEsp, faltasAula, faltasEsp,
+        riscoAula: pctAula < 75,
+        riscoEsp: pctEsp < 20,
+      };
+    });
+  }, [students, pastAulas, pastEspeciais, attendanceRecords]);
+
+  const atRiskStudents = useMemo(() => {
+    return studentAttendanceStats
+      .filter((s) => s.riscoAula || s.riscoEsp)
+      .sort((a, b) => a.pctAula - b.pctAula);
+  }, [studentAttendanceStats]);
+
+  // Distribuição da turma por faixa de presença (aula regular)
+  const attendanceDistribution = useMemo(() => {
+    const buckets = [
+      { label: '≥ 90%', min: 90, max: 101, color: 'hsl(142, 71%, 45%)' },
+      { label: '75% – 89%', min: 75, max: 90, color: 'hsl(var(--primary))' },
+      { label: '50% – 74%', min: 50, max: 75, color: 'hsl(38, 92%, 50%)' },
+      { label: '< 50%', min: -1, max: 50, color: 'hsl(0, 72%, 51%)' },
+    ];
+    return buckets.map((b) => ({
+      ...b,
+      count: studentAttendanceStats.filter((s) => s.pctAula >= b.min && s.pctAula < b.max).length,
+    }));
+  }, [studentAttendanceStats]);
+
+  const zeroAttendanceStudents = useMemo(() => {
+    const pastLessonIds = new Set(pastLessons.map(l => l.id));
+    const studentIdsWithAttendance = new Set(
+      attendanceRecords.filter(a => pastLessonIds.has(a.lesson_id)).map(a => a.user_id)
+    );
+    return students.filter((s) => !studentIdsWithAttendance.has(s.id));
+  }, [students, attendanceRecords, pastLessons]);
 
   // Risco combinado (presença aula + presença especial + questionário) — visão geral
   const combinedRiskStudents = useMemo(() => {
@@ -337,7 +421,149 @@ export default function AnalyticsPage() {
 
         {/* ═══════════════════ PRESENÇA ═══════════════════ */}
         <TabsContent value="presenca" className="space-y-6 mt-6">
-          <p className="text-sm text-muted-foreground">Em breve.</p>
+          {attendanceEvolution.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Evolução da Presença</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={attendanceEvolution}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="name" className="text-xs fill-muted-foreground" tick={{ fontSize: 11 }} />
+                      <YAxis className="text-xs fill-muted-foreground" tick={{ fontSize: 11 }} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
+                        formatter={(value: number) => [`${value} alunos`, 'Presentes']}
+                        labelFormatter={(label, payload) => payload?.[0]?.payload?.title || label}
+                      />
+                      <Line type="monotone" dataKey="presentes" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {lessonAttendance.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Presença por Aula</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={lessonAttendance}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="name" tick={{ fontSize: 10 }} className="fill-muted-foreground" angle={-30} textAnchor="end" height={60} />
+                      <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
+                        formatter={(value: number) => [`${value} alunos`, 'Presentes']}
+                      />
+                      <Bar dataKey="presentes" radius={[4, 4, 0, 0]}>
+                        {lessonAttendance.map((entry, i) => (
+                          <Cell
+                            key={i}
+                            fill={
+                              entry.presentes === minAttendance && lessonAttendance.length > 1
+                                ? 'hsl(0, 72%, 51%)'
+                                : entry.presentes === maxAttendance && lessonAttendance.length > 1
+                                ? 'hsl(142, 71%, 45%)'
+                                : 'hsl(var(--primary))'
+                            }
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Distribuição da Turma</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">Por faixa de presença em aula regular</p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {attendanceDistribution.map((b) => (
+                  <div key={b.label} className="rounded-lg border border-border p-3 text-center">
+                    <p className="text-2xl font-bold" style={{ color: b.color }}>{b.count}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{b.label}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-destructive" />
+                  Detalhamento — Alunos em Risco (Presença)
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">Aula: abaixo de 75% · Aula Especial: abaixo de 20%</p>
+              </CardHeader>
+              <CardContent>
+                {atRiskStudents.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum aluno em risco.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="text-left py-2 text-muted-foreground font-medium">Nome</th>
+                          <th className="text-center py-2 text-muted-foreground font-medium">% Aula</th>
+                          <th className="text-center py-2 text-muted-foreground font-medium">Faltas Aula</th>
+                          <th className="text-center py-2 text-muted-foreground font-medium">% Especial</th>
+                          <th className="text-center py-2 text-muted-foreground font-medium">Faltas Esp.</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {atRiskStudents.map((s, i) => (
+                          <tr key={i} className="border-b border-border/50">
+                            <td className="py-2 flex items-center gap-2">
+                              {s.riscoAula && <Badge variant="destructive" className="text-[10px] px-1.5 py-0">A</Badge>}
+                              {s.riscoEsp && <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-destructive text-destructive">E</Badge>}
+                              {s.name}
+                            </td>
+                            <td className={`text-center py-2 ${s.riscoAula ? 'text-destructive font-semibold' : ''}`}>{s.pctAula}%</td>
+                            <td className="text-center py-2">{s.faltasAula}</td>
+                            <td className={`text-center py-2 ${s.riscoEsp ? 'text-destructive font-semibold' : ''}`}>{s.pctEsp}%</td>
+                            <td className="text-center py-2">{s.faltasEsp}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Nunca Registraram Presença</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {zeroAttendanceStudents.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Todos os alunos registraram presença ao menos uma vez.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {zeroAttendanceStudents.map((s) => (
+                      <Badge key={s.id} variant="outline" className="text-sm">
+                        {s.full_name || s.email}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* ═══════════════════ QUESTIONÁRIOS ═══════════════════ */}
