@@ -111,11 +111,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           const nowIso = new Date().toISOString();
           const { data: quizzes } = await supabase
-            .from('quizzes').select('id').lte('available_from', nowIso);
-          const totalQuiz = (quizzes || []).length;
+            .from('quizzes').select('id, counts_for_completion').lte('available_from', nowIso);
+          const countingQuizzes = (quizzes || []).filter((q: any) => q.counts_for_completion !== false);
+          const totalQuiz = countingQuizzes.length;
           const { data: responses } = await supabase
             .from('quiz_responses').select('quiz_id').eq('user_id', userId);
-          const answeredIds = new Set((responses || []).map((r: any) => r.quiz_id));
+          const countingQuizIds = new Set(countingQuizzes.map((q: any) => q.id));
+          const answeredIds = new Set((responses || []).map((r: any) => r.quiz_id).filter((id: string) => countingQuizIds.has(id)));
           const quizPct = totalQuiz > 0 ? (answeredIds.size / totalQuiz) * 100 : 100;
 
           // Verifica TCC aprovado

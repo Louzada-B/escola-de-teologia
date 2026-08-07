@@ -69,14 +69,16 @@ export default function CourseCompletionPage() {
     const now = new Date().toISOString();
     const { data: quizzes } = await supabase
       .from('quizzes')
-      .select('id, available_from')
+      .select('id, available_from, counts_for_completion')
       .lte('available_from', now);
-    const totalQuiz = (quizzes || []).length;
+    const countingQuizzes = (quizzes || []).filter((q: any) => q.counts_for_completion !== false);
+    const totalQuiz = countingQuizzes.length;
     const { data: responses } = await supabase
       .from('quiz_responses')
       .select('quiz_id')
       .eq('user_id', user.id);
-    const answeredIds = new Set((responses || []).map((r: any) => r.quiz_id));
+    const countingQuizIds = new Set(countingQuizzes.map((q: any) => q.id));
+    const answeredIds = new Set((responses || []).map((r: any) => r.quiz_id).filter((id: string) => countingQuizIds.has(id)));
     const quizPct = totalQuiz > 0 ? Math.round((answeredIds.size / totalQuiz) * 100) : 100;
 
     // TCC

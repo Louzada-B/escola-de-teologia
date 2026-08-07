@@ -389,7 +389,7 @@ export default function CertificatesManager() {
 
     const { data: quizzes }   = await supabase
       .from("quizzes")
-      .select("id, available_from, available_until")
+      .select("id, available_from, available_until, counts_for_completion")
       .gte("available_from", "1900-01-01"); // busca todos
 
     // Último available_until entre os questionários da turma
@@ -410,9 +410,9 @@ export default function CertificatesManager() {
     const latestDate = [lastRegularDate, lastSpecialDate, lastQuizDate?.slice(0, 10)]
       .filter(Boolean).sort().pop() ?? null;
     setCourseEndDate(latestDate);
-    // Denominador: só quizzes já abertos (mesma lógica do dashboard e analytics)
+    // Denominador: só quizzes já abertos E que contam pra conclusão (mesma lógica do dashboard e analytics)
     const openedQuizzes = (quizzes || []).filter(
-      (q: any) => !q.available_from || q.available_from <= now
+      (q: any) => (!q.available_from || q.available_from <= now) && q.counts_for_completion !== false
     );
     const totalQuiz = openedQuizzes.length;
     const openedQuizIds = new Set(openedQuizzes.map((q: any) => q.id));

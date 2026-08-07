@@ -85,10 +85,10 @@ export default function AnalyticsPage() {
     return allQuizResponses.filter(r => studentIds.has(r.user_id));
   }, [allQuizResponses, selectedCohortId, studentIds]);
 
-  // Quizzes já abertos (available_from <= now ou sem data) — denominador correto
+  // Quizzes já abertos (available_from <= now ou sem data) e que contam pra conclusão — denominador correto
   const now = new Date().toISOString();
   const openedQuizzes = useMemo(() =>
-    quizzes.filter((q: any) => !q.available_from || q.available_from <= now),
+    quizzes.filter((q: any) => (!q.available_from || q.available_from <= now) && q.counts_for_completion !== false),
     [quizzes]
   );
   const openedQuizIds = useMemo(() => new Set(openedQuizzes.map((q: any) => q.id)), [openedQuizzes]);

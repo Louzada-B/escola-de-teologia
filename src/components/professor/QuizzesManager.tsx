@@ -46,6 +46,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
   const [availableFrom, setAvailableFrom] = useState("");
   const [availableUntil, setAvailableUntil] = useState("");
   const [lessonId, setLessonId] = useState("");
+  const [countsForCompletion, setCountsForCompletion] = useState(true);
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [allLessons, setAllLessons] = useState<any[]>([]);
   const [selectedQuiz, setSelectedQuiz] = useState("");
@@ -59,6 +60,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
   const [editFrom, setEditFrom] = useState("");
   const [editUntil, setEditUntil] = useState("");
   const [editLessonId, setEditLessonId] = useState("");
+  const [editCountsForCompletion, setEditCountsForCompletion] = useState(true);
 
   // Questions listing & editing
   const [quizQuestions, setQuizQuestions] = useState<Record<string, any[]>>({});
@@ -155,6 +157,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
       available_from: toLocalISO(availableFrom),
       available_until: toLocalISO(availableUntil),
       lesson_id: lessonId || null,
+      counts_for_completion: countsForCompletion,
     });
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
@@ -164,6 +167,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
     setAvailableFrom("");
     setAvailableUntil("");
     setLessonId("");
+    setCountsForCompletion(true);
     load();
     toast({ title: "Questionário criado!" });
   };
@@ -177,6 +181,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
         available_from: toLocalISO(editFrom),
         available_until: toLocalISO(editUntil),
         lesson_id: editLessonId || null,
+        counts_for_completion: editCountsForCompletion,
       })
       .eq("id", editing.id);
     if (error) {
@@ -207,6 +212,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
     setEditFrom(toDatetimeLocal(q.available_from));
     setEditUntil(toDatetimeLocal(q.available_until));
     setEditLessonId(q.lesson_id || "");
+    setEditCountsForCompletion(q.counts_for_completion !== false);
     setEditing(q);
   };
 
@@ -368,6 +374,12 @@ export default function QuizzesManager({ userId }: { userId: string }) {
               <Input type="datetime-local" value={availableUntil} onChange={(e) => setAvailableUntil(e.target.value)} />
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            <Switch checked={countsForCompletion} onCheckedChange={setCountsForCompletion} id="counts-new" />
+            <Label htmlFor="counts-new" className="cursor-pointer">
+              Conta para os 75% obrigatórios de questionários
+            </Label>
+          </div>
           <Button onClick={createQuiz}>
             <Plus className="w-4 h-4 mr-1" /> Criar
           </Button>
@@ -434,6 +446,9 @@ export default function QuizzesManager({ userId }: { userId: string }) {
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <span className="font-body font-medium">{q.title}</span>
+                  {q.counts_for_completion === false && (
+                    <Badge variant="outline" className="ml-2 text-[10px] align-middle">Não conta p/ 75%</Badge>
+                  )}
                   <p className="text-sm text-muted-foreground">
                     {q.quiz_questions?.length || 0} perguntas · De {formatDate(q.available_from)} até{" "}
                     {formatDate(q.available_until)}
@@ -531,6 +546,12 @@ export default function QuizzesManager({ userId }: { userId: string }) {
                 <Label>Encerra em</Label>
                 <Input type="datetime-local" value={editUntil} onChange={(e) => setEditUntil(e.target.value)} />
               </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={editCountsForCompletion} onCheckedChange={setEditCountsForCompletion} id="counts-edit" />
+              <Label htmlFor="counts-edit" className="cursor-pointer">
+                Conta para os 75% obrigatórios de questionários
+              </Label>
             </div>
             <Button onClick={updateQuiz}>Salvar</Button>
           </div>
