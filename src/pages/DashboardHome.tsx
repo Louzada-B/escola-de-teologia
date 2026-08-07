@@ -137,7 +137,7 @@ export default function DashboardHome() {
         supabase.from("modules").select("id"),
         supabase.from("announcements").select("id, scheduled_at, cohort_id"),
         supabase.from("calendar_events").select("id, event_date"),
-        supabase.from("quizzes").select("id, available_from, available_until, lessons(scheduled_date)"),
+        supabase.from("quizzes").select("id, available_from, available_until, counts_for_completion, lessons(scheduled_date)"),
       ]);
 
       const allEvents = eRes.data || [];
@@ -267,9 +267,9 @@ export default function DashboardHome() {
       const now = new Date().toISOString();
       const { data: quizResponses } = await supabase.from("quiz_responses").select("quiz_id").eq("user_id", user.id);
       const answeredIds = new Set((quizResponses || []).map((r) => r.quiz_id));
-      // Denominador: só quizzes já abertos (available_from <= now ou sem data)
+      // Denominador: só quizzes já abertos (available_from <= now ou sem data) e que contam pra conclusão
       const openedQuizzes = filteredQuizzes.filter((q: any) =>
-        !q.available_from || q.available_from <= now
+        (!q.available_from || q.available_from <= now) && q.counts_for_completion !== false
       );
       const answered = openedQuizzes.filter((q: any) => answeredIds.has(q.id)).length;
       const available = openedQuizzes.length - answered;
