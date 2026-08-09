@@ -93,6 +93,49 @@ function emailWrap(body: string) {
 </div>`;
 }
 
+// Monta um índice das turmas ativas + quem está matriculado em cada uma.
+// Usado pra resolver "quais alunos realmente enxergam essa aula/questionário",
+// em vez de mandar lembrete pra qualquer aluno de qualquer turma ativa —
+// isso evita notificar aluno de uma turma sobre conteúdo de outra turma
+// (fica mais crítico ainda quando existir mais de uma turma ativa ao mesmo
+// tempo, ou cursos diferentes).
+async function buildCohortIndex(admin: ReturnType<typeof createClient>) {
+  const { data: activeCohorts } = await admin
+    .from("cohorts").select("id, start_date, end_date").eq("is_active", true);
+
+  const { data: cohortStudents } = await admin
+    .from("cohort_students").select("user_id, cohort_id");
+
+  const activeCohortIds = new Set((activeCohorts || []).map((c: any) => c.id));
+  const studentsByCohort: Record<string, Set<string>> = {};
+  (cohortStudents || []).forEach((cs: any) => {
+    if (!activeCohortIds.has(cs.cohort_id)) return;
+    if (!studentsByCohort[cs.cohort_id]) studentsByCohort[cs.cohort_id] = new Set();
+    studentsByCohort[cs.cohort_id].add(cs.user_id);
+  });
+
+  const allActiveStudentIds = new Set<string>();
+  Object.values(studentsByCohort).forEach((set) => set.forEach((id) => allActiveStudentIds.add(id)));
+
+  // Pra uma data (scheduled_date de aula), devolve o conjunto de alunos das
+  // turmas ativas cujo período cobre essa data. Sem data (ex: quiz não
+  // vinculado a nenhuma aula), cai no comportamento antigo: todo mundo de
+  // turma ativa -- não dá pra restringir melhor sem uma data de referência.
+  function studentsForDate(dateStr: string | null): Set<string> {
+    if (!dateStr) return allActiveStudentIds;
+    const relevantCohortIds = (activeCohorts || [])
+      .filter((c: any) => dateStr >= c.start_date && dateStr <= c.end_date)
+      .map((c: any) => c.id);
+    const result = new Set<string>();
+    relevantCohortIds.forEach((cid: string) => {
+      (studentsByCohort[cid] || new Set()).forEach((id) => result.add(id));
+    });
+    return result;
+  }
+
+  return { allActiveStudentIds, studentsForDate };
+}
+
 // ── LEMBRETE 1: Questionário fechando hoje às 9h ─────────────────
 async function remindQuizzes(admin: ReturnType<typeof createClient>) {
   const now = new Date();
@@ -101,7 +144,7 @@ async function remindQuizzes(admin: ReturnType<typeof createClient>) {
   // Quizzes cujo available_until é hoje
   const { data: quizzes } = await admin
     .from("quizzes")
-    .select("id, title, available_until")
+    .select("id, title, available_until, lesson_id")
     .gte("available_until", `${todayStr}T00:00:00`)
     .lte("available_until", `${todayStr}T23:59:59`);
 
@@ -118,24 +161,40 @@ async function remindQuizzes(admin: ReturnType<typeof createClient>) {
     answeredMap[r.quiz_id].add(r.user_id);
   });
 
-  // Alunos ativos em turmas ativas
-  const { data: cohortStudents } = await admin
-    .from("cohort_students")
-    .select("user_id, cohorts!inner(is_active)")
-    .eq("cohorts.is_active", true);
+  // Data da aula de cada quiz (pra resolver a turma certa) -- quiz sem
+  // lesson_id fica sem data, cai no fallback "todo mundo" do helper.
+  const lessonIds = [...new Set(quizzes.filter((q: any) => q.lesson_id).map((q: any) => q.lesson_id))];
+  const { data: lessonsData } = lessonIds.length
+    ? await admin.from("lessons").select("id, scheduled_date").in("id", lessonIds)
+    : { data: [] as any[] };
+  const lessonDateMap: Record<string, string> = {};
+  (lessonsData || []).forEach((l: any) => { lessonDateMap[l.id] = l.scheduled_date; });
 
-  const activeStudentIds = [...new Set((cohortStudents || []).map((cs: any) => cs.user_id))];
-  if (!activeStudentIds.length) return { sent: 0 };
+  const { allActiveStudentIds, studentsForDate } = await buildCohortIndex(admin);
+  if (!allActiveStudentIds.size) return { sent: 0 };
 
+  // Perfis de todo mundo que pode ser relevante em algum dos quizzes de hoje
+  const relevantIdsUnion = new Set<string>();
+  for (const quiz of quizzes) {
+    const dateStr = quiz.lesson_id ? lessonDateMap[quiz.lesson_id] : null;
+    studentsForDate(dateStr).forEach((id) => relevantIdsUnion.add(id));
+  }
   const { data: profiles } = await admin
-    .from("profiles").select("id, full_name, email").in("id", activeStudentIds);
+    .from("profiles").select("id, full_name, email").in("id", [...relevantIdsUnion]);
+  const profileById: Record<string, any> = {};
+  (profiles || []).forEach((p: any) => { profileById[p.id] = p; });
 
   let sent = 0;
   const emailsSent: string[] = [];
   for (const quiz of quizzes) {
     const answeredIds = answeredMap[quiz.id] || new Set();
     const deadline = new Date(quiz.available_until).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    const pendingProfiles = (profiles || []).filter((p: any) => !answeredIds.has(p.id));
+    const dateStr = quiz.lesson_id ? lessonDateMap[quiz.lesson_id] : null;
+    const relevantIds = studentsForDate(dateStr);
+    const pendingProfiles = [...relevantIds]
+      .filter((id) => !answeredIds.has(id))
+      .map((id) => profileById[id])
+      .filter(Boolean);
 
     for (const profile of pendingProfiles) {
       if (!profile.email) continue;
@@ -194,13 +253,11 @@ async function remindAttendance(admin: ReturnType<typeof createClient>, force = 
 
   const lessonIds = targetLessons.map((l: any) => l.id);
 
-  // Alunos em turmas ativas
-  const { data: cohortStudents } = await admin
-    .from("cohort_students")
-    .select("user_id, cohorts!inner(is_active)")
-    .eq("cohorts.is_active", true);
-
-  const activeStudentIds = [...new Set((cohortStudents || []).map((cs: any) => cs.user_id))];
+  // Alunos das turmas ativas cujo período cobre a data de hoje (mesma lógica
+  // do Lembrete 1) -- como toda aula desse laço é de hoje, o conjunto é o
+  // mesmo pra todas elas, calculado uma vez só.
+  const { studentsForDate } = await buildCohortIndex(admin);
+  const activeStudentIds = [...studentsForDate(todayStr)];
   if (!activeStudentIds.length) return { sent: 0 };
 
   // Quem já registrou presença
