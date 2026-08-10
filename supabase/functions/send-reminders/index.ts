@@ -222,7 +222,7 @@ async function remindQuizzes(admin: ReturnType<typeof createClient>, testEmail?:
           Ol\u00e1, <strong style="color:#1a2e52;">${profile.full_name || "aluno(a)"}</strong>!
         </p>
         <p style="color:#4a5568;font-size:15px;line-height:1.7;margin:0 0 16px;">
-          O question\u00e1rio <strong>${quiz.title}</strong> fecha hoje \u00e0s <strong>${deadline}</strong>.
+          O <strong>${quiz.title}</strong> fecha hoje \u00e0s <strong>${deadline}</strong>.
           Voc\u00ea ainda n\u00e3o respondeu — acesse o portal antes que o prazo encerre.
         </p>
         <div style="text-align:center;margin:24px 0;">
