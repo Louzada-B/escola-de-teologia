@@ -28,12 +28,6 @@ async function getRawPrivateKey(): Promise<string> {
 const vapidEmail  = `mailto:${Deno.env.get("SMTP_USER")}`;
 
 
-const btoaSafe = (str: string) => {
-  const bytes = new TextEncoder().encode(str);
-  let bin = ""; bytes.forEach(b => bin += String.fromCharCode(b));
-  return btoa(bin);
-};
-
 async function sendPush(admin: ReturnType<typeof createClient>, userIds: string[], title: string, body: string, url: string) {
   if (!vapidPriv) return;
   const { data: subs } = await admin
@@ -71,7 +65,12 @@ async function sendEmail(to: string, subject: string, html: string) {
   await client.send({
     from: `Forma\u00e7\u00e3o Teol\u00f3gica <${smtpUser}>`,
     to,
-    subject: `=?UTF-8?B?${btoaSafe(subject)}?=`,
+    // String simples (a lib codifica RFC 2047 sozinha, como já funciona em
+    // send-certificate/invite-student/_shared/notify.ts). A versão anterior
+    // montava manualmente "=?UTF-8?B?<base64>?=" sem dobrar a linha -- assunto
+    // longo/acentuado (comum aqui, ex: nome de questionário) passava de ~75
+    // caracteres e chegava corrompido em alguns clientes de e-mail.
+    subject,
     html,
   });
   await client.close();
