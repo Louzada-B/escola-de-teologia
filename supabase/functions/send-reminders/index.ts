@@ -150,17 +150,33 @@ async function buildCohortIndex(admin: ReturnType<typeof createClient>) {
   return { allActiveStudentIds, studentsForDate };
 }
 
+// O servidor (Deno Deploy) roda em UTC por padrão -- new Date().getHours()/
+// toISOString() sem conversão explícita dão a hora ERRADA pra qualquer
+// lógica que dependa do horário local (GMT-3). Esse helper pega a data e a
+// hora reais de São Paulo, não a hora crua do servidor.
+function nowInSaoPaulo(): { dateStr: string; minutesSinceMidnight: number } {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  }).formatToParts(new Date());
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "00";
+  return {
+    dateStr: `${get("year")}-${get("month")}-${get("day")}`,
+    minutesSinceMidnight: Number(get("hour")) * 60 + Number(get("minute")),
+  };
+}
+
 // ── LEMBRETE 1: Questionário fechando hoje às 9h ─────────────────
 async function remindQuizzes(admin: ReturnType<typeof createClient>, client: SMTPClient, testEmail?: string) {
-  const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
+  const { dateStr: todayStr } = nowInSaoPaulo();
 
   // Quizzes cujo available_until é hoje
   const { data: quizzes } = await admin
     .from("quizzes")
     .select("id, title, available_until, lesson_id")
-    .gte("available_until", `${todayStr}T00:00:00`)
-    .lte("available_until", `${todayStr}T23:59:59`);
+    .gte("available_until", `${todayStr}T00:00:00-03:00`)
+    .lte("available_until", `${todayStr}T23:59:59-03:00`);
 
   if (!quizzes?.length) return { sent: 0 };
 
@@ -248,9 +264,7 @@ async function remindQuizzes(admin: ReturnType<typeof createClient>, client: SMT
 
 // ── LEMBRETE 2: Presença pendente 1h após início da aula ─────────
 async function remindAttendance(admin: ReturnType<typeof createClient>, client: SMTPClient, force = false, testEmail?: string) {
-  const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
-  const nowMins  = now.getHours() * 60 + now.getMinutes();
+  const { dateStr: todayStr, minutesSinceMidnight: nowMins } = nowInSaoPaulo();
 
   // Aulas de hoje com start_time definido
   const { data: lessons } = await admin
