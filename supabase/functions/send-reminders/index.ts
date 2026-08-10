@@ -57,37 +57,21 @@ async function sendPush(admin: ReturnType<typeof createClient>, userIds: string[
   }
 }
 
-// Codifica o Subject como um único encoded-word RFC 2047 (Base64).
-// Não dá mais pra confiar na codificação automática do denomailer pra
-// assunto longo/acentuado -- corrompeu de novo mesmo depois de trocar pra
-// string simples (confirmado em teste real). Em vez de tentar acertar a
-// dobra de múltiplas palavras (frágil de garantir via SMTP), o assunto
-// simplesmente precisa ficar curto o bastante pra caber numa palavra só —
-// por isso os assuntos abaixo ficaram mais enxutos.
+// Assunto sem acento, sem nenhuma codificação MIME. Depois de várias
+// tentativas de codificar corretamente (deixar a lib codificar sozinha,
+// RFC 2047 manual, reforço via header -- nenhuma funcionou, confirmado em
+// teste real), o caminho seguro é não precisar de codificação nenhuma.
 
-async function sendEmail(to: string, subject: string, html: string) {
-  const client = new SMTPClient({
-    connection: { hostname: smtpHost, port: smtpPort, tls: true,
-      auth: { username: smtpUser, password: smtpPass } },
-    debug: { encodeLB: true },
-  });
+async function sendEmail(client: SMTPClient, to: string, subject: string, html: string) {
   await client.send({
     from: `Forma\u00e7\u00e3o Teol\u00f3gica <${smtpUser}>`,
     to,
-    // Assunto sem acento, string simples, sem NENHUMA codificação MIME --
-    // depois de três tentativas de codificar corretamente (deixar a lib
-    // codificar sozinha, codificar manualmente com RFC 2047, header
-    // duplicado como reforço) sem sucesso, o caminho mais seguro é evitar
-    // o mecanismo de encoding por completo. Texto puramente ASCII não
-    // precisa de encoded-word nenhum -- zero chance de vir corrompido.
-    // O corpo do e-mail continua com acentuação normal, sem problema.
     // ATENÇÃO: toAsciiSubject removido de propósito, teste combinado com o
     // Bruno pra confirmar se assunto acentuado funciona agora. Reavaliar
     // depois do teste -- se corromper de novo, volta o toAsciiSubject aqui.
     subject,
     html,
   });
-  await client.close();
 }
 
 function emailWrap(body: string) {
@@ -150,7 +134,7 @@ async function buildCohortIndex(admin: ReturnType<typeof createClient>) {
 }
 
 // ── LEMBRETE 1: Questionário fechando hoje às 9h ─────────────────
-async function remindQuizzes(admin: ReturnType<typeof createClient>, testEmail?: string) {
+async function remindQuizzes(admin: ReturnType<typeof createClient>, client: SMTPClient, testEmail?: string) {
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
 
@@ -231,17 +215,22 @@ async function remindQuizzes(admin: ReturnType<typeof createClient>, testEmail?:
             Responder agora
           </a>
         </div>`;
-      await sendEmail(profile.email, "Lembrete: question\u00e1rio fecha hoje", emailWrap(body));
-      await sendPush(admin, [profile.id], "Questionário fecha hoje!", `${quiz.title} — encerra às ${deadline}`, "https://formacaoteologica.brasachurch.com/dashboard/questionarios");
-      sent++;
-      emailsSent.push(profile.email);
+      try {
+        await sendEmail(client, profile.email, "Lembrete: question\u00e1rio fecha hoje", emailWrap(body));
+        await sendPush(admin, [profile.id], "Questionário fecha hoje!", `${quiz.title} — encerra às ${deadline}`, "https://formacaoteologica.brasachurch.com/dashboard/questionarios");
+        sent++;
+        emailsSent.push(profile.email);
+      } catch (err: any) {
+        // Isola a falha -- um envio ruim não pode travar o resto da fila
+        console.error("[remindQuizzes] falha ao enviar pra", profile.email, ":", err?.message);
+      }
     }
   }
   return { sent, emails: emailsSent };
 }
 
 // ── LEMBRETE 2: Presença pendente 1h após início da aula ─────────
-async function remindAttendance(admin: ReturnType<typeof createClient>, force = false, testEmail?: string) {
+async function remindAttendance(admin: ReturnType<typeof createClient>, client: SMTPClient, force = false, testEmail?: string) {
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
   const nowMins  = now.getHours() * 60 + now.getMinutes();
@@ -315,17 +304,21 @@ async function remindAttendance(admin: ReturnType<typeof createClient>, force = 
             Registrar presen\u00e7a
           </a>
         </div>`;
-      await sendEmail(profile.email, "Lembrete: registre sua presenca", emailWrap(body));
-      await sendPush(admin, [profile.id], "Registre sua presen\u00e7a!", lesson.title, "https://formacaoteologica.brasachurch.com/dashboard/presenca");
-      sent++;
-      emailsSent.push(profile.email);
+      try {
+        await sendEmail(client, profile.email, "Lembrete: registre sua presenca", emailWrap(body));
+        await sendPush(admin, [profile.id], "Registre sua presen\u00e7a!", lesson.title, "https://formacaoteologica.brasachurch.com/dashboard/presenca");
+        sent++;
+        emailsSent.push(profile.email);
+      } catch (err: any) {
+        console.error("[remindAttendance] falha ao enviar pra", profile.email, ":", err?.message);
+      }
     }
   }
   return { sent, emails: emailsSent };
 }
 
 // ── LEMBRETE 3: TCC 4h antes do deadline ─────────────────────────
-async function remindTCC(admin: ReturnType<typeof createClient>) {
+async function remindTCC(admin: ReturnType<typeof createClient>, client: SMTPClient) {
   const now = new Date();
 
   const { data: settings } = await admin
@@ -383,10 +376,14 @@ async function remindTCC(admin: ReturnType<typeof createClient>) {
           Enviar TCC
         </a>
       </div>`;
-    await sendEmail(profile.email, "Lembrete: prazo do TCC em 4 horas!", emailWrap(body));
-    await sendPush(admin, [profile.id], "TCC: prazo em 4 horas!", `Encerra ${deadlineFmt}`, "https://formacaoteologica.brasachurch.com/dashboard/tcc");
-    sent++;
-    emailsSent.push(profile.email);
+    try {
+      await sendEmail(client, profile.email, "Lembrete: prazo do TCC em 4 horas!", emailWrap(body));
+      await sendPush(admin, [profile.id], "TCC: prazo em 4 horas!", `Encerra ${deadlineFmt}`, "https://formacaoteologica.brasachurch.com/dashboard/tcc");
+      sent++;
+      emailsSent.push(profile.email);
+    } catch (err: any) {
+      console.error("[remindTCC] falha ao enviar pra", profile.email, ":", err?.message);
+    }
   }
   return { sent, emails: emailsSent };
 }
@@ -452,18 +449,29 @@ async function notifyAnnouncement(admin: ReturnType<typeof createClient>, announ
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  // Uma conexão SMTP só, reaproveitada por todos os e-mails desse disparo --
+  // antes, cada e-mail abria/fechava sua própria conexão, e com muitos
+  // alunos pendentes isso derrubava a conexão no meio do lote ("connection
+  // reset"), travando a function inteira e deixando o resto da fila sem
+  // receber. fechada de propósito no finally, mesmo se algo der errado.
+  const client = new SMTPClient({
+    connection: { hostname: smtpHost, port: smtpPort, tls: true,
+      auth: { username: smtpUser, password: smtpPass } },
+    debug: { encodeLB: true },
+  });
+
   try {
     const body = await req.json().catch(() => ({ type: "all" }));
     const { type, title: annTitle, announcement_id: annId, force, test_email: testEmail } = body;
     const admin = createClient(supabaseUrl, serviceKey);
     const results: Record<string, any> = {};
 
-    if (type === "quiz"       || type === "all") results.quiz       = await remindQuizzes(admin, testEmail);
+    if (type === "quiz"       || type === "all") results.quiz       = await remindQuizzes(admin, client, testEmail);
     if (type === "attendance" || type === "all") {
-      results.attendance = await remindAttendance(admin, force === true, testEmail);
+      results.attendance = await remindAttendance(admin, client, force === true, testEmail);
       results.scheduledAnnouncements = await remindScheduledAnnouncements(admin);
     }
-    if (type === "tcc"        || type === "all") results.tcc        = await remindTCC(admin);
+    if (type === "tcc"        || type === "all") results.tcc        = await remindTCC(admin, client);
     if (type === "announcement") {
       results.announcement = await notifyAnnouncement(admin, annId || "", annTitle || "");
     }
@@ -499,5 +507,11 @@ Deno.serve(async (req) => {
     console.error("[send-reminders] erro:", err?.message);
     return new Response(JSON.stringify({ error: err?.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  } finally {
+    try {
+      await client.close();
+    } catch (_) {
+      // conexão já pode estar fechada/quebrada nesse ponto -- ignora
+    }
   }
 });
