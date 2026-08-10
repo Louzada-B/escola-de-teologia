@@ -63,7 +63,7 @@ async function sendPush(admin: ReturnType<typeof createClient>, userIds: string[
 // teste real), o caminho seguro é não precisar de codificação nenhuma.
 
 async function sendEmail(client: SMTPClient, to: string, subject: string, html: string) {
-  await client.send({
+  const params = {
     from: `Forma\u00e7\u00e3o Teol\u00f3gica <${smtpUser}>`,
     to,
     // ATENÇÃO: toAsciiSubject removido de propósito, teste combinado com o
@@ -71,7 +71,24 @@ async function sendEmail(client: SMTPClient, to: string, subject: string, html: 
     // depois do teste -- se corromper de novo, volta o toAsciiSubject aqui.
     subject,
     html,
-  });
+  };
+  try {
+    await client.send(params);
+  } catch (err: any) {
+    const msg = String(err?.message || "");
+    // Código 4xx = erro temporário do lado do servidor (o próprio SMTP pede
+    // pra tentar de novo depois), diferente de 5xx (rejeição definitiva,
+    // não adianta tentar de novo). Uma nova tentativa, com pausa curta,
+    // cobre uma instabilidade passageira do servidor sem precisar de
+    // reinvocação manual.
+    if (/\b4\d{2}\b/.test(msg)) {
+      console.warn(`[sendEmail] erro temporário pra ${to}, tentando de novo em 3s:`, msg);
+      await new Promise((r) => setTimeout(r, 3000));
+      await client.send(params);
+    } else {
+      throw err;
+    }
+  }
 }
 
 function emailWrap(body: string) {
