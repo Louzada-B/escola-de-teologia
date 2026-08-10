@@ -85,11 +85,6 @@ async function sendEmail(to: string, subject: string, html: string) {
     from: `Forma\u00e7\u00e3o Teol\u00f3gica <${smtpUser}>`,
     to,
     subject: encodedSubject,
-    // Reforço: também manda o mesmo valor via headers customizado. Se o
-    // campo "subject" dedicado passar por algum processamento próprio da
-    // lib que esteja corrompendo, isso dá uma segunda chance de o cabeçalho
-    // sair correto.
-    headers: { Subject: encodedSubject },
     html,
   });
   await client.close();
