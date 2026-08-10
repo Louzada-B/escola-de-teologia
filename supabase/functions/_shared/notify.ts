@@ -53,6 +53,13 @@ export async function notifyAdmin(subject: string, htmlBody: string) {
   }
 }
 
+// Remove linhas que só têm espaço em branco -- sobra da indentação dos
+// template literals no código. Isso vira "=20" (espaço em quoted-printable)
+// na codificação do e-mail e aparece como texto literal em alguns clientes.
+export function cleanHtml(html: string): string {
+  return html.replace(/^[ \t]+$/gm, "").replace(/\n{3,}/g, "\n\n");
+}
+
 export function notifyEmailWrap(body: string) {
   return `
 <div style="font-family:Arial,Helvetica,sans-serif;background:#f0f4f8;padding:24px;">
@@ -61,7 +68,7 @@ export function notifyEmailWrap(body: string) {
     <h1 style="color:#ffffff;font-size:18px;font-weight:700;margin:0;">Formação Teológica</h1>
     <p style="color:#8fabd4;font-size:11px;margin:4px 0 0;letter-spacing:1px;text-transform:uppercase;">Notificação administrativa</p>
   </div>
-  <div style="padding:28px 40px;">${body}</div>
+  <div style="padding:28px 40px;">${cleanHtml(body)}</div>
 </div>
 </div>`;
 }

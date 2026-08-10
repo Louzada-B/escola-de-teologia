@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { sendWebPush } from "./webpush.ts";
-import { notifyAdmin, notifyEmailWrap, toAsciiSubject } from "../_shared/notify.ts";
+import { notifyAdmin, notifyEmailWrap, toAsciiSubject, cleanHtml } from "../_shared/notify.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -98,7 +98,7 @@ function emailWrap(body: string) {
     <h1 style="color:#fff;font-size:18px;font-weight:700;margin:0;">Forma\u00e7\u00e3o Teol\u00f3gica</h1>
     <p style="color:#8fabd4;font-size:11px;margin:4px 0 0;letter-spacing:1px;text-transform:uppercase;">Portal Acad\u00eamico</p>
   </div>
-  <div style="padding:32px 40px;">${body}</div>
+  <div style="padding:32px 40px;">${cleanHtml(body)}</div>
   <div style="background:#f8f9fb;border-top:1px solid #e8ecf1;padding:16px 40px;text-align:center;">
     <p style="color:#8a9ab0;font-size:11px;margin:0;">Este \u00e9 um e-mail autom\u00e1tico, por favor n\u00e3o responda.</p>
   </div>

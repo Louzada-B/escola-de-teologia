@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { notifyAdmin, notifyEmailWrap, toAsciiSubject } from "../_shared/notify.ts";
+import { notifyAdmin, notifyEmailWrap, toAsciiSubject, cleanHtml } from "../_shared/notify.ts";
 
 const btoaSafe = (str: string) => {
   const bytes = new TextEncoder().encode(str);
@@ -78,7 +78,7 @@ serve(async (req: Request) => {
       from: `Escola de Teologia Brasa Church <${smtpUser}>`,
       to: studentEmail,
       subject,
-      html: emailHtml,
+      html: cleanHtml(emailHtml),
       attachments: [
         {
           filename: pdfFilename,
