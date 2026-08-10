@@ -81,7 +81,10 @@ async function sendEmail(to: string, subject: string, html: string) {
     // o mecanismo de encoding por completo. Texto puramente ASCII não
     // precisa de encoded-word nenhum -- zero chance de vir corrompido.
     // O corpo do e-mail continua com acentuação normal, sem problema.
-    subject: toAsciiSubject(subject),
+    // ATENÇÃO: toAsciiSubject removido de propósito, teste combinado com o
+    // Bruno pra confirmar se assunto acentuado funciona agora. Reavaliar
+    // depois do teste -- se corromper de novo, volta o toAsciiSubject aqui.
+    subject,
     html,
   });
   await client.close();
@@ -228,7 +231,7 @@ async function remindQuizzes(admin: ReturnType<typeof createClient>, testEmail?:
             Responder agora
           </a>
         </div>`;
-      await sendEmail(profile.email, "Lembrete: questionario fecha hoje", emailWrap(body));
+      await sendEmail(profile.email, "Lembrete: question\u00e1rio fecha hoje", emailWrap(body));
       await sendPush(admin, [profile.id], "Questionário fecha hoje!", `${quiz.title} — encerra às ${deadline}`, "https://formacaoteologica.brasachurch.com/dashboard/questionarios");
       sent++;
       emailsSent.push(profile.email);
