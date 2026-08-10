@@ -64,27 +64,24 @@ async function sendPush(admin: ReturnType<typeof createClient>, userIds: string[
 // dobra de múltiplas palavras (frágil de garantir via SMTP), o assunto
 // simplesmente precisa ficar curto o bastante pra caber numa palavra só —
 // por isso os assuntos abaixo ficaram mais enxutos.
-function encodeSubject(subject: string): string {
-  const bytes = new TextEncoder().encode(subject);
-  let bin = "";
-  bytes.forEach((b) => (bin += String.fromCharCode(b)));
-  return `=?UTF-8?B?${btoa(bin)}?=`;
-}
 
 async function sendEmail(to: string, subject: string, html: string) {
   const client = new SMTPClient({
     connection: { hostname: smtpHost, port: smtpPort, tls: true,
       auth: { username: smtpUser, password: smtpPass } },
-    // encodeLB: flag de troubleshooting documentada pelo próprio denomailer
-    // pra "problemas com quebra de linha na codificação do e-mail" -- é
-    // exatamente a classe de sintoma que estamos vendo no assunto.
     debug: { encodeLB: true },
   });
-  const encodedSubject = encodeSubject(subject);
   await client.send({
     from: `Forma\u00e7\u00e3o Teol\u00f3gica <${smtpUser}>`,
     to,
-    subject: encodedSubject,
+    // Assunto sem acento, string simples, sem NENHUMA codificação MIME --
+    // depois de três tentativas de codificar corretamente (deixar a lib
+    // codificar sozinha, codificar manualmente com RFC 2047, header
+    // duplicado como reforço) sem sucesso, o caminho mais seguro é evitar
+    // o mecanismo de encoding por completo. Texto puramente ASCII não
+    // precisa de encoded-word nenhum -- zero chance de vir corrompido.
+    // O corpo do e-mail continua com acentuação normal, sem problema.
+    subject,
     html,
   });
   await client.close();
@@ -231,7 +228,7 @@ async function remindQuizzes(admin: ReturnType<typeof createClient>, testEmail?:
             Responder agora
           </a>
         </div>`;
-      await sendEmail(profile.email, "Lembrete: question\u00e1rio fecha hoje", emailWrap(body));
+      await sendEmail(profile.email, "Lembrete: questionario fecha hoje", emailWrap(body));
       await sendPush(admin, [profile.id], "Questionário fecha hoje!", `${quiz.title} — encerra às ${deadline}`, "https://formacaoteologica.brasachurch.com/dashboard/questionarios");
       sent++;
       emailsSent.push(profile.email);
@@ -315,7 +312,7 @@ async function remindAttendance(admin: ReturnType<typeof createClient>, force = 
             Registrar presen\u00e7a
           </a>
         </div>`;
-      await sendEmail(profile.email, "Lembrete: registre sua presen\u00e7a", emailWrap(body));
+      await sendEmail(profile.email, "Lembrete: registre sua presenca", emailWrap(body));
       await sendPush(admin, [profile.id], "Registre sua presen\u00e7a!", lesson.title, "https://formacaoteologica.brasachurch.com/dashboard/presenca");
       sent++;
       emailsSent.push(profile.email);
