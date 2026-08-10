@@ -62,7 +62,24 @@ async function sendPush(admin: ReturnType<typeof createClient>, userIds: string[
 // RFC 2047 manual, reforço via header -- nenhuma funcionou, confirmado em
 // teste real), o caminho seguro é não precisar de codificação nenhuma.
 
-async function sendEmail(client: SMTPClient, to: string, subject: string, html: string) {
+// Guarda a conexão SMTP atual num objeto mutável, não numa variável comum --
+// assim, quando uma falha exige trocar de conexão no meio do lote, TODOS os
+// envios seguintes (não só a própria tentativa que falhou) já usam a nova,
+// em vez de continuar em cima de uma conexão que pode ter ficado num estado
+// ruim.
+interface ConnHolder {
+  client: SMTPClient;
+}
+
+function newSmtpClient(): SMTPClient {
+  return new SMTPClient({
+    connection: { hostname: smtpHost, port: smtpPort, tls: true,
+      auth: { username: smtpUser, password: smtpPass } },
+    debug: { encodeLB: true },
+  });
+}
+
+async function sendEmail(conn: ConnHolder, to: string, subject: string, html: string) {
   const params = {
     from: `Forma\u00e7\u00e3o Teol\u00f3gica <${smtpUser}>`,
     to,
@@ -73,18 +90,20 @@ async function sendEmail(client: SMTPClient, to: string, subject: string, html: 
     html,
   };
   try {
-    await client.send(params);
+    await conn.client.send(params);
   } catch (err: any) {
     const msg = String(err?.message || "");
     // Código 4xx = erro temporário do lado do servidor (o próprio SMTP pede
-    // pra tentar de novo depois), diferente de 5xx (rejeição definitiva,
-    // não adianta tentar de novo). Uma nova tentativa, com pausa curta,
-    // cobre uma instabilidade passageira do servidor sem precisar de
-    // reinvocação manual.
+    // pra tentar de novo depois). Depois de UMA falha no meio do envio, a
+    // conexão pode ficar num estado inconsistente pra reuso ("datamode ...
+    // connection not recoverable", visto em teste real) -- por isso a nova
+    // tentativa abre uma conexão de verdade nova, não reaproveita a mesma.
     if (/\b4\d{2}\b/.test(msg)) {
-      console.warn(`[sendEmail] erro temporário pra ${to}, tentando de novo em 3s:`, msg);
+      console.warn(`[sendEmail] erro tempor\u00e1rio pra ${to}, abrindo conex\u00e3o nova e tentando de novo em 3s:`, msg);
+      try { await conn.client.close(); } catch (_) { /* já pode estar quebrada */ }
       await new Promise((r) => setTimeout(r, 3000));
-      await client.send(params);
+      conn.client = newSmtpClient();
+      await conn.client.send(params);
     } else {
       throw err;
     }
@@ -168,7 +187,7 @@ function nowInSaoPaulo(): { dateStr: string; minutesSinceMidnight: number } {
 }
 
 // ── LEMBRETE 1: Questionário fechando hoje às 9h ─────────────────
-async function remindQuizzes(admin: ReturnType<typeof createClient>, client: SMTPClient, testEmail?: string) {
+async function remindQuizzes(admin: ReturnType<typeof createClient>, conn: ConnHolder, testEmail?: string) {
   const { dateStr: todayStr } = nowInSaoPaulo();
 
   // Quizzes cujo available_until é hoje
@@ -249,7 +268,7 @@ async function remindQuizzes(admin: ReturnType<typeof createClient>, client: SMT
           </a>
         </div>`;
       try {
-        await sendEmail(client, profile.email, "Lembrete: question\u00e1rio fecha hoje", emailWrap(body));
+        await sendEmail(conn, profile.email, "Lembrete: question\u00e1rio fecha hoje", emailWrap(body));
         await sendPush(admin, [profile.id], "Questionário fecha hoje!", `${quiz.title} — encerra às ${deadline}`, "https://formacaoteologica.brasachurch.com/dashboard/questionarios");
         sent++;
         emailsSent.push(profile.email);
@@ -263,7 +282,7 @@ async function remindQuizzes(admin: ReturnType<typeof createClient>, client: SMT
 }
 
 // ── LEMBRETE 2: Presença pendente 1h após início da aula ─────────
-async function remindAttendance(admin: ReturnType<typeof createClient>, client: SMTPClient, force = false, testEmail?: string) {
+async function remindAttendance(admin: ReturnType<typeof createClient>, conn: ConnHolder, force = false, testEmail?: string) {
   const { dateStr: todayStr, minutesSinceMidnight: nowMins } = nowInSaoPaulo();
 
   // Aulas de hoje com start_time definido
@@ -336,7 +355,7 @@ async function remindAttendance(admin: ReturnType<typeof createClient>, client: 
           </a>
         </div>`;
       try {
-        await sendEmail(client, profile.email, "Lembrete: registre sua presenca", emailWrap(body));
+        await sendEmail(conn, profile.email, "Lembrete: registre sua presenca", emailWrap(body));
         await sendPush(admin, [profile.id], "Registre sua presen\u00e7a!", lesson.title, "https://formacaoteologica.brasachurch.com/dashboard/presenca");
         sent++;
         emailsSent.push(profile.email);
@@ -349,7 +368,7 @@ async function remindAttendance(admin: ReturnType<typeof createClient>, client: 
 }
 
 // ── LEMBRETE 3: TCC 4h antes do deadline ─────────────────────────
-async function remindTCC(admin: ReturnType<typeof createClient>, client: SMTPClient) {
+async function remindTCC(admin: ReturnType<typeof createClient>, conn: ConnHolder) {
   const now = new Date();
 
   const { data: settings } = await admin
@@ -408,7 +427,7 @@ async function remindTCC(admin: ReturnType<typeof createClient>, client: SMTPCli
         </a>
       </div>`;
     try {
-      await sendEmail(client, profile.email, "Lembrete: prazo do TCC em 4 horas!", emailWrap(body));
+      await sendEmail(conn, profile.email, "Lembrete: prazo do TCC em 4 horas!", emailWrap(body));
       await sendPush(admin, [profile.id], "TCC: prazo em 4 horas!", `Encerra ${deadlineFmt}`, "https://formacaoteologica.brasachurch.com/dashboard/tcc");
       sent++;
       emailsSent.push(profile.email);
@@ -484,12 +503,10 @@ Deno.serve(async (req) => {
   // antes, cada e-mail abria/fechava sua própria conexão, e com muitos
   // alunos pendentes isso derrubava a conexão no meio do lote ("connection
   // reset"), travando a function inteira e deixando o resto da fila sem
-  // receber. fechada de propósito no finally, mesmo se algo der errado.
-  const client = new SMTPClient({
-    connection: { hostname: smtpHost, port: smtpPort, tls: true,
-      auth: { username: smtpUser, password: smtpPass } },
-    debug: { encodeLB: true },
-  });
+  // receber. Guardada num "holder" mutável porque, se um envio falhar, a
+  // conexão pode precisar ser trocada no meio do lote (ver sendEmail) --
+  // fechada de propósito no finally, mesmo se algo der errado.
+  const conn: ConnHolder = { client: newSmtpClient() };
 
   try {
     const body = await req.json().catch(() => ({ type: "all" }));
@@ -497,12 +514,12 @@ Deno.serve(async (req) => {
     const admin = createClient(supabaseUrl, serviceKey);
     const results: Record<string, any> = {};
 
-    if (type === "quiz"       || type === "all") results.quiz       = await remindQuizzes(admin, client, testEmail);
+    if (type === "quiz"       || type === "all") results.quiz       = await remindQuizzes(admin, conn, testEmail);
     if (type === "attendance" || type === "all") {
-      results.attendance = await remindAttendance(admin, client, force === true, testEmail);
+      results.attendance = await remindAttendance(admin, conn, force === true, testEmail);
       results.scheduledAnnouncements = await remindScheduledAnnouncements(admin);
     }
-    if (type === "tcc"        || type === "all") results.tcc        = await remindTCC(admin, client);
+    if (type === "tcc"        || type === "all") results.tcc        = await remindTCC(admin, conn);
     if (type === "announcement") {
       results.announcement = await notifyAnnouncement(admin, annId || "", annTitle || "");
     }
@@ -540,7 +557,7 @@ Deno.serve(async (req) => {
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } finally {
     try {
-      await client.close();
+      await conn.client.close();
     } catch (_) {
       // conexão já pode estar fechada/quebrada nesse ponto -- ignora
     }
