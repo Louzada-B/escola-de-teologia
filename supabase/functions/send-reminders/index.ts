@@ -136,7 +136,7 @@ async function buildCohortIndex(admin: ReturnType<typeof createClient>) {
 }
 
 // ── LEMBRETE 1: Questionário fechando hoje às 9h ─────────────────
-async function remindQuizzes(admin: ReturnType<typeof createClient>) {
+async function remindQuizzes(admin: ReturnType<typeof createClient>, testEmail?: string) {
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
 
@@ -190,10 +190,16 @@ async function remindQuizzes(admin: ReturnType<typeof createClient>) {
     const deadline = new Date(quiz.available_until).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
     const dateStr = quiz.lesson_id ? lessonDateMap[quiz.lesson_id] : null;
     const relevantIds = studentsForDate(dateStr);
-    const pendingProfiles = [...relevantIds]
+    let pendingProfiles = [...relevantIds]
       .filter((id) => !answeredIds.has(id))
       .map((id) => profileById[id])
       .filter(Boolean);
+
+    // Modo de teste: mesma lógica de "quem está pendente" de sempre, só que
+    // restrito a um único e-mail -- não dispara pra mais ninguém da turma.
+    if (testEmail) {
+      pendingProfiles = pendingProfiles.filter((p: any) => p.email?.toLowerCase() === testEmail.toLowerCase());
+    }
 
     for (const profile of pendingProfiles) {
       if (!profile.email) continue;
@@ -221,7 +227,7 @@ async function remindQuizzes(admin: ReturnType<typeof createClient>) {
 }
 
 // ── LEMBRETE 2: Presença pendente 1h após início da aula ─────────
-async function remindAttendance(admin: ReturnType<typeof createClient>, force = false) {
+async function remindAttendance(admin: ReturnType<typeof createClient>, force = false, testEmail?: string) {
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
   const nowMins  = now.getHours() * 60 + now.getMinutes();
@@ -274,9 +280,12 @@ async function remindAttendance(admin: ReturnType<typeof createClient>, force = 
   let sent = 0;
   const emailsSent: string[] = [];
   for (const lesson of targetLessons) {
-    const pendingProfiles = (profiles || []).filter(
+    let pendingProfiles = (profiles || []).filter(
       (p: any) => !attendedSet.has(`${p.id}:${lesson.id}`) && p.email
     );
+    if (testEmail) {
+      pendingProfiles = pendingProfiles.filter((p: any) => p.email?.toLowerCase() === testEmail.toLowerCase());
+    }
     for (const profile of pendingProfiles) {
       const body = `
         <p style="color:#4a5568;font-size:15px;line-height:1.7;margin:0 0 16px;">
@@ -431,13 +440,13 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({ type: "all" }));
-    const { type, title: annTitle, announcement_id: annId, force } = body;
+    const { type, title: annTitle, announcement_id: annId, force, test_email: testEmail } = body;
     const admin = createClient(supabaseUrl, serviceKey);
     const results: Record<string, any> = {};
 
-    if (type === "quiz"       || type === "all") results.quiz       = await remindQuizzes(admin);
+    if (type === "quiz"       || type === "all") results.quiz       = await remindQuizzes(admin, testEmail);
     if (type === "attendance" || type === "all") {
-      results.attendance = await remindAttendance(admin, force === true);
+      results.attendance = await remindAttendance(admin, force === true, testEmail);
       results.scheduledAnnouncements = await remindScheduledAnnouncements(admin);
     }
     if (type === "tcc"        || type === "all") results.tcc        = await remindTCC(admin);
