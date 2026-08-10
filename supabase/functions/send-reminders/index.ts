@@ -57,6 +57,20 @@ async function sendPush(admin: ReturnType<typeof createClient>, userIds: string[
   }
 }
 
+// Codifica o Subject como um único encoded-word RFC 2047 (Base64).
+// Não dá mais pra confiar na codificação automática do denomailer pra
+// assunto longo/acentuado -- corrompeu de novo mesmo depois de trocar pra
+// string simples (confirmado em teste real). Em vez de tentar acertar a
+// dobra de múltiplas palavras (frágil de garantir via SMTP), o assunto
+// simplesmente precisa ficar curto o bastante pra caber numa palavra só —
+// por isso os assuntos abaixo ficaram mais enxutos.
+function encodeSubject(subject: string): string {
+  const bytes = new TextEncoder().encode(subject);
+  let bin = "";
+  bytes.forEach((b) => (bin += String.fromCharCode(b)));
+  return `=?UTF-8?B?${btoa(bin)}?=`;
+}
+
 async function sendEmail(to: string, subject: string, html: string) {
   const client = new SMTPClient({
     connection: { hostname: smtpHost, port: smtpPort, tls: true,
@@ -65,12 +79,7 @@ async function sendEmail(to: string, subject: string, html: string) {
   await client.send({
     from: `Forma\u00e7\u00e3o Teol\u00f3gica <${smtpUser}>`,
     to,
-    // String simples (a lib codifica RFC 2047 sozinha, como já funciona em
-    // send-certificate/invite-student/_shared/notify.ts). A versão anterior
-    // montava manualmente "=?UTF-8?B?<base64>?=" sem dobrar a linha -- assunto
-    // longo/acentuado (comum aqui, ex: nome de questionário) passava de ~75
-    // caracteres e chegava corrompido em alguns clientes de e-mail.
-    subject,
+    subject: encodeSubject(subject),
     html,
   });
   await client.close();
@@ -187,7 +196,7 @@ async function remindQuizzes(admin: ReturnType<typeof createClient>, testEmail?:
   const emailsSent: string[] = [];
   for (const quiz of quizzes) {
     const answeredIds = answeredMap[quiz.id] || new Set();
-    const deadline = new Date(quiz.available_until).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const deadline = new Date(quiz.available_until).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
     const dateStr = quiz.lesson_id ? lessonDateMap[quiz.lesson_id] : null;
     const relevantIds = studentsForDate(dateStr);
     let pendingProfiles = [...relevantIds]
@@ -217,7 +226,7 @@ async function remindQuizzes(admin: ReturnType<typeof createClient>, testEmail?:
             Responder agora
           </a>
         </div>`;
-      await sendEmail(profile.email, `Lembrete: questionário fecha hoje — ${quiz.title}`, emailWrap(body));
+      await sendEmail(profile.email, "Lembrete: question\u00e1rio fecha hoje", emailWrap(body));
       await sendPush(admin, [profile.id], "Questionário fecha hoje!", `${quiz.title} — encerra às ${deadline}`, "https://formacaoteologica.brasachurch.com/dashboard/questionarios");
       sent++;
       emailsSent.push(profile.email);
@@ -301,7 +310,7 @@ async function remindAttendance(admin: ReturnType<typeof createClient>, force = 
             Registrar presen\u00e7a
           </a>
         </div>`;
-      await sendEmail(profile.email, `Lembrete: registre sua presen\u00e7a — ${lesson.title}`, emailWrap(body));
+      await sendEmail(profile.email, "Lembrete: registre sua presen\u00e7a", emailWrap(body));
       await sendPush(admin, [profile.id], "Registre sua presen\u00e7a!", lesson.title, "https://formacaoteologica.brasachurch.com/dashboard/presenca");
       sent++;
       emailsSent.push(profile.email);
@@ -348,7 +357,7 @@ async function remindTCC(admin: ReturnType<typeof createClient>) {
     .from("profiles").select("id, full_name, email").in("id", pendingStudentIds);
 
   const deadlineFmt = deadline.toLocaleString("pt-BR", {
-    day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit",
+    day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo",
   });
 
   let sent = 0;
