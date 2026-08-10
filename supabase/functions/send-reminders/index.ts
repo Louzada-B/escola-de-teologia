@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { sendWebPush } from "./webpush.ts";
-import { notifyAdmin, notifyEmailWrap } from "../_shared/notify.ts";
+import { notifyAdmin, notifyEmailWrap, toAsciiSubject } from "../_shared/notify.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -81,7 +81,7 @@ async function sendEmail(to: string, subject: string, html: string) {
     // o mecanismo de encoding por completo. Texto puramente ASCII não
     // precisa de encoded-word nenhum -- zero chance de vir corrompido.
     // O corpo do e-mail continua com acentuação normal, sem problema.
-    subject,
+    subject: toAsciiSubject(subject),
     html,
   });
   await client.close();

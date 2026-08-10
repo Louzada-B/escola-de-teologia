@@ -7,6 +7,23 @@ import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 // não misturar notificação de teste com a caixa real de produção.
 const NOTIFY_EMAIL = Deno.env.get("ADMIN_NOTIFY_EMAIL") || "escoladeteologia@brasachurch.com";
 
+// Assunto vai sem acento nem nenhum outro caractere fora do ASCII (incluindo
+// travessão "—", que também não é ASCII), sem nenhuma codificação MIME.
+// Depois de várias tentativas de fazer o denomailer codificar direito um
+// assunto com caractere especial (deixar a lib decidir sozinha, RFC 2047
+// manual, reforço via header -- nenhuma funcionou, confirmado em teste real
+// com corrupção visível em mais de um destinatário), o caminho seguro é não
+// precisar de codificação nenhuma: texto ASCII puro no cabeçalho nunca
+// corrompe. Qualquer caractere que sobrar fora do ASCII é removido, não só
+// os acentos -- pra não repetir o mesmo erro com outro símbolo no futuro.
+export function toAsciiSubject(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // acentos (combining marks)
+    .replace(/[\u2013\u2014]/g, "-") // en-dash/em-dash -> hífen simples
+    .replace(/[^\x00-\x7F]/g, "");   // qualquer outro caractere fora do ASCII
+}
+
 export async function notifyAdmin(subject: string, htmlBody: string) {
   try {
     const smtpUser = Deno.env.get("SMTP_USER")!;
@@ -21,12 +38,13 @@ export async function notifyAdmin(subject: string, htmlBody: string) {
         tls: true,
         auth: { username: smtpUser, password: smtpPass },
       },
+      debug: { encodeLB: true },
     });
 
     await client.send({
-      from: `Formação Teológica <${smtpUser}>`,
+      from: `Forma\u00e7\u00e3o Teol\u00f3gica <${smtpUser}>`,
       to: NOTIFY_EMAIL,
-      subject,
+      subject: toAsciiSubject(subject),
       html: htmlBody,
     });
     await client.close();

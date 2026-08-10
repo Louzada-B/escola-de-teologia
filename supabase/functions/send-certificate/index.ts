@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { notifyAdmin, notifyEmailWrap } from "../_shared/notify.ts";
+import { notifyAdmin, notifyEmailWrap, toAsciiSubject } from "../_shared/notify.ts";
 
 const btoaSafe = (str: string) => {
   const bytes = new TextEncoder().encode(str);
@@ -39,7 +39,7 @@ serve(async (req: Request) => {
       },
     });
 
-    const subject = `Certificado de Conclus\u00e3o \u2014 Escola de Teologia Brasa Church`;
+    const subject = toAsciiSubject(`Certificado de Conclus\u00e3o \u2014 Escola de Teologia Brasa Church`);
     const pdfFilename = `Certificado_${studentName.replace(/\s+/g, "_")}.pdf`;
 
     const emailHtml = `

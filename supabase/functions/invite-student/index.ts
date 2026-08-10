@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { notifyAdmin, notifyEmailWrap } from "../_shared/notify.ts";
+import { notifyAdmin, notifyEmailWrap, toAsciiSubject } from "../_shared/notify.ts";
 
 // Convites antigos (magic link via inviteUserByEmail) continuam funcionando
 // normalmente pra quem já recebeu esse e-mail — essa function não mexe nisso,
@@ -63,7 +63,7 @@ async function sendWelcomeEmail(email: string, fullName: string, password: strin
   await client.send({
     from: `Formação Teológica <${smtpUser}>`,
     to: email,
-    subject: "Bem-vindo(a) à Formação Teológica — seus dados de acesso",
+    subject: toAsciiSubject("Bem-vindo(a) a Formacao Teologica - seus dados de acesso"),
     html,
   });
   await client.close();
