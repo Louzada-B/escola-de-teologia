@@ -75,11 +75,21 @@ async function sendEmail(to: string, subject: string, html: string) {
   const client = new SMTPClient({
     connection: { hostname: smtpHost, port: smtpPort, tls: true,
       auth: { username: smtpUser, password: smtpPass } },
+    // encodeLB: flag de troubleshooting documentada pelo próprio denomailer
+    // pra "problemas com quebra de linha na codificação do e-mail" -- é
+    // exatamente a classe de sintoma que estamos vendo no assunto.
+    debug: { encodeLB: true },
   });
+  const encodedSubject = encodeSubject(subject);
   await client.send({
     from: `Forma\u00e7\u00e3o Teol\u00f3gica <${smtpUser}>`,
     to,
-    subject: encodeSubject(subject),
+    subject: encodedSubject,
+    // Reforço: também manda o mesmo valor via headers customizado. Se o
+    // campo "subject" dedicado passar por algum processamento próprio da
+    // lib que esteja corrompendo, isso dá uma segunda chance de o cabeçalho
+    // sair correto.
+    headers: { Subject: encodedSubject },
     html,
   });
   await client.close();
