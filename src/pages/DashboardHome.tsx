@@ -292,21 +292,23 @@ export default function DashboardHome() {
         { name: "Disponíveis", value: availPerc, qty: available },
       ]);
 
-      // Leituras obrigatórias — conta toda aula com leitura cadastrada na
-      // turma (igual questionário conta pelo "já abriu", não pelo "já
-      // fechou"). Sem isso, uma leitura confirmada adiantada (pra aula que
-      // ainda não chegou) ficava fora da conta inteira -- nem contava no
-      // total, nem como feita.
+      // Leituras obrigatórias — só aulas cujo prazo (início da própria aula)
+      // já passou entram no denominador. Uma leitura confirmada adiantada
+      // (pra aula que ainda não chegou) só entra na conta depois que a aula
+      // dela realmente ocorrer -- comportamento intencional, explicado no
+      // "?" do card.
       const { data: readingLessonsRaw } = await supabase
         .from("lessons")
         .select("id, scheduled_date, start_time, required_reading")
         .not("required_reading", "is", null);
+      const nowDate = new Date();
       const readingLessons = (readingLessonsRaw || []).filter((l: any) => {
         if (!l.scheduled_date) return false;
         if (cohortStart && cohortEnd) {
           if (l.scheduled_date < cohortStart || l.scheduled_date > cohortEnd) return false;
         }
-        return true;
+        const dt = new Date(`${l.scheduled_date}T${l.start_time || "23:59"}`);
+        return dt <= nowDate;
       });
       const { data: readingConfs } = await supabase
         .from("reading_confirmations")
@@ -531,7 +533,7 @@ export default function DashboardHome() {
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="max-w-xs text-xs p-3">
-                    Percentual de leituras obrigatórias confirmadas em relação às aulas cujo prazo (início da aula) já venceu.
+                    Percentual de leituras obrigatórias confirmadas em relação às aulas cujo prazo (início da aula) já venceu. Se você confirmar uma leitura antes da aula dela acontecer, ela só entra nessa conta depois que a aula ocorrer — confirmar adiantado não altera o percentual na hora.
                 </PopoverContent>
               </Popover>
             </CardHeader>
