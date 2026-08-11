@@ -121,6 +121,7 @@ export default function DashboardHome() {
   const [mainReadingPerc, setMainReadingPerc] = useState(0);
   const [pendingLesson, setPendingLesson] = useState<any>(null);
   const [pendingQuizCount, setPendingQuizCount] = useState(0);
+  const [pendingReading, setPendingReading] = useState<{ title: string; requiredReading: string } | null>(null);
   const [tccStatus, setTccStatus] = useState<"none"|"pending"|"approved"|"rejected"|"hidden">("hidden");
   const [isWithinTime, setIsWithinTime] = useState(true);
 
@@ -325,6 +326,29 @@ export default function DashboardHome() {
         { name: "Pendentes", value: readingAvailPerc, qty: readingPending },
       ]);
 
+      // Próxima leitura ainda dentro do prazo (aula ainda não começou) e não
+      // confirmada -- pro banner de alerta, mesmo padrão do de presença/quiz.
+      const { data: allReadingLessonsRaw } = await supabase
+        .from("lessons")
+        .select("id, title, scheduled_date, start_time, required_reading")
+        .not("required_reading", "is", null)
+        .order("scheduled_date")
+        .order("start_time");
+      const upcomingReadingLessons = (allReadingLessonsRaw || []).filter((l: any) => {
+        if (!l.scheduled_date) return false;
+        if (cohortStart && cohortEnd) {
+          if (l.scheduled_date < cohortStart || l.scheduled_date > cohortEnd) return false;
+        }
+        const dt = new Date(`${l.scheduled_date}T${l.start_time || "23:59"}`);
+        return dt >= nowDate;
+      });
+      if (upcomingReadingLessons.length > 0) {
+        const next = upcomingReadingLessons[0];
+        if (!confirmedReadingIds.has(next.id)) {
+          setPendingReading({ title: next.title, requiredReading: next.required_reading });
+        }
+      }
+
       // TCC: só para alunos, após abertura do período
       if (profile?.role === "aluno" && selectedCohort) {
         const { data: tccSettings } = await supabase
@@ -406,6 +430,31 @@ export default function DashboardHome() {
             </div>
             <Button className="w-full sm:w-auto font-body px-6" onClick={() => navigate("/dashboard/questionarios")}>
               Responder Agora <ArrowRight className="ml-2 w-4 h-4" />
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ALERTA DE LEITURA PENDENTE — TEMPORÁRIO: só Aluno teste, aba ainda não liberada geral */}
+      {pendingReading && profile?.role === "aluno" && profile?.email?.toLowerCase() === "brunoelias.louzada@gmail.com" && (
+        <Card className="mb-8 border-accent/40 bg-accent/5 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-700">
+          <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-5">
+            <div className="flex items-center gap-4 text-center sm:text-left">
+              <div className="bg-accent/20 p-3 rounded-full hidden sm:block">
+                <BookOpenCheck className="w-6 h-6 text-accent animate-pulse" />
+              </div>
+              <div>
+                <h3 className="font-heading font-bold text-lg text-foreground">Você tem uma leitura pendente!</h3>
+                <p className="text-sm text-muted-foreground font-body">
+                  Confirme antes do início da aula: <span className="text-foreground font-medium">{pendingReading.title}</span>.
+                </p>
+              </div>
+            </div>
+            <Button
+              className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-white font-body px-6 shadow-lg shadow-accent/20"
+              onClick={() => navigate("/dashboard/leitura")}
+            >
+              Confirmar Agora <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
           </CardContent>
         </Card>
