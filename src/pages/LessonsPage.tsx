@@ -6,6 +6,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Button } from "@/components/ui/button";
 import { Download, Play, FileText, CheckCircle2, Circle, BookOpen } from "lucide-react";
 import { useCohort } from "@/contexts/CohortContext";
+import { getLocalToday } from "@/lib/cohortDateUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -103,7 +104,11 @@ export default function LessonsPage() {
     if (!lesson.scheduled_date) return false;
     const now = new Date();
     const lessonDate = lesson.scheduled_date;
-    const today = now.toISOString().split('T')[0];
+    // getLocalToday() usa a data local de verdade -- toISOString() sempre
+    // devolve UTC, o que dava data errada à noite (aula de hoje à noite
+    // no Brasil já contava como "amanhã" em UTC, marcando a aula como
+    // "ainda não passou" incorretamente, ou o oposto dependendo do caso).
+    const today = getLocalToday();
 
     if (lessonDate > today) return false;
     if (lessonDate < today) return true;
@@ -126,7 +131,7 @@ export default function LessonsPage() {
       {/* Progresso geral — só para alunos */}
       {(() => {
         const allML = modules.flatMap(m => m.lessons.filter(l => l.mandatory_attendance && (l as any).event_type === 'aula'));
-        const att = allML.filter(l => attendedIds.has(l.id)).length;
+        const realizadas = allML.filter(l => lessonHasPassed(l)).length;
         const tot = allML.length;
         if (!isStudent || tot === 0) return null;
         return (
@@ -140,11 +145,11 @@ export default function LessonsPage() {
                 <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
                   <div
                     className="h-full rounded-full bg-primary transition-all"
-                    style={{ width: `${Math.round((att / tot) * 100)}%` }}
+                    style={{ width: `${Math.round((realizadas / tot) * 100)}%` }}
                   />
                 </div>
                 <span className="text-xs text-muted-foreground whitespace-nowrap font-body">
-                  {att} de {tot} aulas assistidas
+                  {realizadas} de {tot} aulas já realizadas
                 </span>
               </div>
             </div>
