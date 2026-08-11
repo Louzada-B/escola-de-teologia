@@ -48,8 +48,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const navItems = [
     { to: "/dashboard", label: "Painel", icon: LayoutDashboard },
     { to: "/dashboard/avisos", label: "Avisos", icon: MessageSquare },
-    { to: "/dashboard/presenca", label: "Presença", icon: UserCheck },
     { to: "/dashboard/aulas", label: "Aulas", icon: BookOpen },
+    { to: "/dashboard/presenca", label: "Presença", icon: UserCheck },
     { to: "/dashboard/leitura", label: "Leitura", icon: BookOpenCheck },
     { to: "/dashboard/questionarios", label: "Questionários", icon: ClipboardList },
     { to: "/dashboard/calendario", label: "Calendário", icon: CalendarDays },
