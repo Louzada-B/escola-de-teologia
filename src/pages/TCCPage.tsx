@@ -143,13 +143,13 @@ export default function TCCPage() {
   const downloadTemplate = async () => {
     if (!settings?.template_path) return;
     const { data } = supabase.storage.from("course-files").getPublicUrl(settings.template_path);
-    window.open(data.publicUrl, "_blank");
+    window.open(`${data.publicUrl}?download`, "_blank");
   };
 
   const downloadMyTcc = async () => {
     if (!submission?.file_path) return;
     const { data } = supabase.storage.from("course-files").getPublicUrl(submission.file_path);
-    window.open(data.publicUrl, "_blank");
+    window.open(`${data.publicUrl}?download`, "_blank");
   };
 
   const statusBadge = (status: string) => {

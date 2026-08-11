@@ -77,7 +77,10 @@ export default function ExtraMaterialsPage() {
     }
     if (material.file_path) {
       const { data } = supabase.storage.from("course-files").getPublicUrl(material.file_path);
-      window.open(data.publicUrl, "_blank");
+      // ?download força Content-Disposition: attachment -- sem isso, abrir
+      // e tentar exibir o arquivo falhava em alguns contextos (PWA instalado
+      // no celular, principalmente).
+      window.open(`${data.publicUrl}?download=${encodeURIComponent(material.title)}`, "_blank");
     }
   };
 

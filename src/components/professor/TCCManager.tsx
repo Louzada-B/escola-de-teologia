@@ -185,7 +185,7 @@ export default function TCCManager({ userId }: { userId: string }) {
 
   const downloadFile = (filePath: string) => {
     const { data } = supabase.storage.from("course-files").getPublicUrl(filePath);
-    window.open(data.publicUrl, "_blank");
+    window.open(`${data.publicUrl}?download`, "_blank");
   };
 
   const statusBadge = (status: string) => {

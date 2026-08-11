@@ -66,9 +66,15 @@ export default function LessonsPage() {
     load();
   }, [selectedCohort, isStudent]);
 
-  const getFileUrl = (path: string) => {
+  const getFileUrl = (path: string, fileName?: string) => {
     const { data } = supabase.storage.from("course-files").getPublicUrl(path);
-    return data.publicUrl;
+    // ?download força o Supabase a responder com Content-Disposition:
+    // attachment, garantindo download de verdade em vez de "abrir e tentar
+    // exibir" -- esse segundo comportamento é o que falhava (aba em branco,
+    // nada carrega) em alguns contextos, principalmente pra quem instalou
+    // o portal como app (PWA) no celular.
+    const downloadParam = fileName ? `download=${encodeURIComponent(fileName)}` : "download";
+    return `${data.publicUrl}?${downloadParam}`;
   };
 
   const getVideoEmbed = (url: string) => {
@@ -206,7 +212,8 @@ export default function LessonsPage() {
                             .map((file) => (
                               <a
                                 key={file.id}
-                                href={getFileUrl(file.file_path)}
+                                href={getFileUrl(file.file_path, file.file_name)}
+                                download={file.file_name}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 title={file.file_name}
