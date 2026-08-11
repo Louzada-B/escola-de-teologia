@@ -1,5 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import ModulesManager from "@/components/professor/ModulesManager";
+import ReadingsManager from "@/components/professor/ReadingsManager";
 import AnnouncementsManager from "@/components/professor/AnnouncementsManager";
 import EventsManager from "@/components/professor/EventsManager";
 import QuizzesManager from "@/components/professor/QuizzesManager";
@@ -27,6 +28,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Conteúdo",
     items: [
       { value: "modules",         label: "Módulos & Aulas" },
+      { value: "readings",        label: "Leituras Obrigatórias" },
       { value: "quizzes",         label: "Questionários" },
       { value: "books",           label: "Livros" },
       { value: "extra-materials", label: "Materiais Extras" },
@@ -63,6 +65,7 @@ const NAV_GROUPS: NavGroup[] = [
 function SectionContent({ value, userId }: { value: string; userId: string }) {
   switch (value) {
     case "modules":          return <ModulesManager userId={userId} />;
+    case "readings":         return <ReadingsManager />;
     case "announcements":    return <AnnouncementsManager userId={userId} />;
     case "events":           return <EventsManager userId={userId} />;
     case "quizzes":          return <QuizzesManager userId={userId} />;

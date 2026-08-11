@@ -21,6 +21,7 @@ import {
   FolderOpen,
   GraduationCap,
   ShieldCheck,
+  BookOpenCheck,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -40,6 +41,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isProfessor = profile?.role === "professor";
   const isAdmin = profile?.role === "admin";
   const isStudent = profile?.role === "aluno";
+  // Visibilidade temporária: só o Aluno teste vê essa aba, até aprovarmos
+  // e liberarmos pra todo mundo. Remover esse "if" quando aprovado.
+  const isTestStudent = profile?.email?.toLowerCase() === "brunoelias.louzada@gmail.com";
 
   const { selectedCohort } = useCohort();
   const studentCohortName = isStudent && selectedCohort ? selectedCohort.name : null;
@@ -49,6 +53,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { to: "/dashboard/avisos", label: "Avisos", icon: MessageSquare },
     { to: "/dashboard/presenca", label: "Presença", icon: UserCheck },
     { to: "/dashboard/aulas", label: "Aulas", icon: BookOpen },
+    ...(isTestStudent ? [{ to: "/dashboard/leitura", label: "Leitura", icon: BookOpenCheck }] : []),
     { to: "/dashboard/questionarios", label: "Questionários", icon: ClipboardList },
     { to: "/dashboard/calendario", label: "Calendário", icon: CalendarDays },
     { to: "/dashboard/livros", label: "Livros", icon: BookMarked },

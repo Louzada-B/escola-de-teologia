@@ -12,6 +12,7 @@ import AuthPage from "./pages/AuthPage";
 import DefinirSenhaPage from "./pages/DefinirSenhaPage";
 import DashboardHome from "./pages/DashboardHome";
 import LessonsPage from "./pages/LessonsPage";
+import ReadingPage from "./pages/ReadingPage";
 import AnnouncementsPage from "./pages/AnnouncementsPage";
 import CalendarPage from "./pages/CalendarPage";
 import QuizzesPage from "./pages/QuizzesPage";
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="/definir-senha" element={<DefinirSenhaPage />} />
               <Route path="/dashboard" element={<DashboardLayout><DashboardHome /></DashboardLayout>} />
               <Route path="/dashboard/aulas" element={<DashboardLayout><LessonsPage /></DashboardLayout>} />
+              <Route path="/dashboard/leitura" element={<DashboardLayout><ReadingPage /></DashboardLayout>} />
               <Route path="/dashboard/avisos" element={<DashboardLayout><AnnouncementsPage /></DashboardLayout>} />
               <Route path="/dashboard/calendario" element={<DashboardLayout><CalendarPage /></DashboardLayout>} />
               <Route path="/dashboard/questionarios" element={<DashboardLayout><QuizzesPage /></DashboardLayout>} />
