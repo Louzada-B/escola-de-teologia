@@ -281,6 +281,96 @@ async function remindQuizzes(admin: ReturnType<typeof createClient>, conn: ConnH
   return { sent, emails: emailsSent };
 }
 
+// ── LEMBRETE 4: Leitura pendente da aula de hoje ──────────────────
+// TEMPORÁRIO: restrito só ao Aluno teste -- a aba de Leitura ainda está
+// escondida do resto da turma (aguardando aprovação pra liberar geral).
+// Não faz sentido lembrar todo mundo de uma tela que ninguém mais
+// enxerga. Remover o filtro TEST_STUDENT_EMAIL_ONLY quando a aba for
+// liberada geral.
+const TEST_STUDENT_EMAIL_ONLY = "brunoelias.louzada@gmail.com";
+
+async function remindReading(admin: ReturnType<typeof createClient>, conn: ConnHolder, testEmail?: string) {
+  const { dateStr: todayStr } = nowInSaoPaulo();
+
+  // Aulas de hoje com leitura obrigatória cadastrada
+  const { data: lessons } = await admin
+    .from("lessons")
+    .select("id, title, required_reading, start_time")
+    .eq("scheduled_date", todayStr)
+    .not("required_reading", "is", null);
+
+  if (!lessons?.length) return { sent: 0 };
+
+  const lessonIds = lessons.map((l: any) => l.id);
+  const { data: confs } = await admin
+    .from("reading_confirmations")
+    .select("user_id, lesson_id")
+    .in("lesson_id", lessonIds);
+
+  const confirmedMap: Record<string, Set<string>> = {};
+  (confs || []).forEach((c: any) => {
+    if (!confirmedMap[c.lesson_id]) confirmedMap[c.lesson_id] = new Set();
+    confirmedMap[c.lesson_id].add(c.user_id);
+  });
+
+  const { allActiveStudentIds, studentsForDate } = await buildCohortIndex(admin);
+  if (!allActiveStudentIds.size) return { sent: 0 };
+
+  const relevantIds = studentsForDate(todayStr);
+  const { data: profiles } = await admin
+    .from("profiles").select("id, full_name, email").in("id", [...relevantIds]);
+  const profileById: Record<string, any> = {};
+  (profiles || []).forEach((p: any) => { profileById[p.id] = p; });
+
+  let sent = 0;
+  const emailsSent: string[] = [];
+  for (const lesson of lessons) {
+    const confirmedIds = confirmedMap[lesson.id] || new Set();
+    let pendingProfiles = [...relevantIds]
+      .filter((id) => !confirmedIds.has(id))
+      .map((id) => profileById[id])
+      .filter(Boolean);
+
+    pendingProfiles = pendingProfiles.filter(
+      (p: any) => p.email?.toLowerCase() === TEST_STUDENT_EMAIL_ONLY
+    );
+
+    if (testEmail) {
+      pendingProfiles = pendingProfiles.filter((p: any) => p.email?.toLowerCase() === testEmail.toLowerCase());
+    }
+
+    const deadline = lesson.start_time ? lesson.start_time.slice(0, 5) : null;
+
+    for (const profile of pendingProfiles) {
+      if (!profile.email) continue;
+      const body = `
+        <p style="color:#4a5568;font-size:15px;line-height:1.7;margin:0 0 16px;">
+          Ol\u00e1, <strong style="color:#1a2e52;">${profile.full_name || "aluno(a)"}</strong>!
+        </p>
+        <p style="color:#4a5568;font-size:15px;line-height:1.7;margin:0 0 16px;">
+          A leitura de hoje (<strong>${lesson.required_reading}</strong>) precisa ser confirmada
+          ${deadline ? `antes da aula come\u00e7ar, \u00e0s <strong>${deadline}</strong>` : "antes do in\u00edcio da aula"}.
+          Voc\u00ea ainda n\u00e3o confirmou — acesse o portal e marque como lida.
+        </p>
+        <div style="text-align:center;margin:24px 0;">
+          <a href="https://formacaoteologica.brasachurch.com/dashboard/leitura"
+             style="background:#1a2e52;color:#fff;padding:12px 32px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;">
+            Confirmar leitura
+          </a>
+        </div>`;
+      try {
+        await sendEmail(conn, profile.email, "Lembrete: confirme sua leitura de hoje", emailWrap(body));
+        await sendPush(admin, [profile.id], "Confirme sua leitura!", lesson.required_reading, "https://formacaoteologica.brasachurch.com/dashboard/leitura");
+        sent++;
+        emailsSent.push(profile.email);
+      } catch (err: any) {
+        console.error("[remindReading] falha ao enviar pra", profile.email, ":", err?.message);
+      }
+    }
+  }
+  return { sent, emails: emailsSent };
+}
+
 // ── LEMBRETE 2: Presença pendente 1h após início da aula ─────────
 async function remindAttendance(admin: ReturnType<typeof createClient>, conn: ConnHolder, force = false, testEmail?: string) {
   const { dateStr: todayStr, minutesSinceMidnight: nowMins } = nowInSaoPaulo();
@@ -515,6 +605,7 @@ Deno.serve(async (req) => {
     const results: Record<string, any> = {};
 
     if (type === "quiz"       || type === "all") results.quiz       = await remindQuizzes(admin, conn, testEmail);
+    if (type === "reading"    || type === "all") results.reading    = await remindReading(admin, conn, testEmail);
     if (type === "attendance" || type === "all") {
       results.attendance = await remindAttendance(admin, conn, force === true, testEmail);
       results.scheduledAnnouncements = await remindScheduledAnnouncements(admin);
@@ -530,6 +621,7 @@ Deno.serve(async (req) => {
     // (não a cada verificação vazia do cron rodando em vazio).
     const groups: { label: string; emails: string[] }[] = [];
     if (results.quiz?.emails?.length) groups.push({ label: "Questionário fechando", emails: results.quiz.emails });
+    if (results.reading?.emails?.length) groups.push({ label: "Leitura pendente", emails: results.reading.emails });
     if (results.attendance?.emails?.length) groups.push({ label: "Presença pendente", emails: results.attendance.emails });
     if (results.tcc?.emails?.length) groups.push({ label: "TCC — prazo próximo", emails: results.tcc.emails });
 
