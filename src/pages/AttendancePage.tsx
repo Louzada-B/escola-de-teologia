@@ -243,7 +243,19 @@ export default function AttendancePage() {
       </p>
 
 
-      {!settings && (
+      {/* Aviso fixo: aparece sempre, independente do modo de GPS estar
+          ligado ou desligado pra essa turma -- o aluno não tem como saber
+          qual dos dois modos está ativo. */}
+      <Card className="card-academic mb-6 border-primary/20 bg-primary/5">
+        <CardContent className="flex items-center gap-3 py-4">
+          <MapPin className="w-5 h-5 text-primary shrink-0" />
+          <p className="text-sm font-body text-foreground">
+            Sua presença é verificada — é necessário estar no local da aula para confirmar.
+          </p>
+        </CardContent>
+      </Card>
+
+      {selectedCohort?.gps_obrigatorio === true && !settings && (
         <Card className="card-academic mb-6 border-destructive/30 bg-destructive/5">
           <CardContent className="flex items-center gap-3 py-4">
             <AlertTriangle className="w-5 h-5 text-destructive" />
