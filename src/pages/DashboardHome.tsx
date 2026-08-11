@@ -19,6 +19,7 @@ import {
   MapPin,
   ArrowRight,
   Star,
+  BookOpenCheck,
 } from "lucide-react";
 import { ChartTooltip } from "@/components/ui/chart";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
@@ -116,6 +117,8 @@ export default function DashboardHome() {
   const [aulaEspecialHasStarted, setAulaEspecialHasStarted] = useState(false);
   const [quizData, setQuizData] = useState<ChartEntry[]>([]);
   const [mainQuizPerc, setMainQuizPerc] = useState(0);
+  const [readingData, setReadingData] = useState<ChartEntry[]>([]);
+  const [mainReadingPerc, setMainReadingPerc] = useState(0);
   const [pendingLesson, setPendingLesson] = useState<any>(null);
   const [pendingQuizCount, setPendingQuizCount] = useState(0);
   const [tccStatus, setTccStatus] = useState<"none"|"pending"|"approved"|"rejected"|"hidden">("hidden");
@@ -289,6 +292,36 @@ export default function DashboardHome() {
         { name: "Disponíveis", value: availPerc, qty: available },
       ]);
 
+      // Leituras obrigatórias — mesmo raciocínio: só aulas cujo prazo (início
+      // da própria aula) já passou entram no denominador
+      const { data: readingLessonsRaw } = await supabase
+        .from("lessons")
+        .select("id, scheduled_date, start_time, required_reading")
+        .not("required_reading", "is", null);
+      const nowDate = new Date();
+      const readingLessons = (readingLessonsRaw || []).filter((l: any) => {
+        if (!l.scheduled_date) return false;
+        if (cohortStart && cohortEnd) {
+          if (l.scheduled_date < cohortStart || l.scheduled_date > cohortEnd) return false;
+        }
+        const dt = new Date(`${l.scheduled_date}T${l.start_time || "23:59"}`);
+        return dt <= nowDate;
+      });
+      const { data: readingConfs } = await supabase
+        .from("reading_confirmations")
+        .select("lesson_id")
+        .eq("user_id", user.id);
+      const confirmedReadingIds = new Set((readingConfs || []).map((r: any) => r.lesson_id));
+      const readingConfirmed = readingLessons.filter((l: any) => confirmedReadingIds.has(l.id)).length;
+      const readingPending = readingLessons.length - readingConfirmed;
+      const readingPerc = readingLessons.length > 0 ? Math.round((readingConfirmed / readingLessons.length) * 100) : 0;
+      const readingAvailPerc = readingLessons.length > 0 ? 100 - readingPerc : 0;
+      setMainReadingPerc(readingPerc);
+      setReadingData([
+        { name: "Confirmadas", value: readingPerc, qty: readingConfirmed },
+        { name: "Pendentes", value: readingAvailPerc, qty: readingPending },
+      ]);
+
       // TCC: só para alunos, após abertura do período
       if (profile?.role === "aluno" && selectedCohort) {
         const { data: tccSettings } = await supabase
@@ -321,6 +354,7 @@ export default function DashboardHome() {
 
   const attendanceColorFn = (name: string) => (name === "Presenças" ? COLORS.present : COLORS.absent);
   const quizColorFn = (name: string) => (name === "Respondidos" ? COLORS.answered : COLORS.available);
+  const readingColorFn = (name: string) => (name === "Confirmadas" ? COLORS.answered : COLORS.available);
 
   return (
     <div className="page-container pb-10">
@@ -397,7 +431,7 @@ export default function DashboardHome() {
 
       {/* GRÁFICOS */}
       {profile?.role === "aluno" && (
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-6">
           <Card className="card-academic">
             <CardHeader className="flex flex-row items-center gap-2">
               <UserCheck className="w-5 h-5 text-accent" />
@@ -480,6 +514,35 @@ export default function DashboardHome() {
                   centerLabel="Total"
                   centerValue={`${mainQuizPerc}%`}
                   colorFn={quizColorFn}
+                />
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="card-academic">
+            <CardHeader className="flex flex-row items-center gap-2">
+              <BookOpenCheck className="w-5 h-5 text-accent" />
+              <CardTitle className="font-heading text-lg">Status das Leituras</CardTitle>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button type="button" className="ml-auto">
+                    <HelpCircle className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="max-w-xs text-xs p-3">
+                    Percentual de leituras obrigatórias confirmadas em relação às aulas cujo prazo (início da aula) já venceu.
+                </PopoverContent>
+              </Popover>
+            </CardHeader>
+            <CardContent>
+              {readingData.length === 0 || (readingData[0].qty === 0 && readingData[1].qty === 0) ? (
+                <p className="text-center py-10 text-muted-foreground font-body">Sem dados de leitura.</p>
+              ) : (
+                <DonutChart
+                  data={readingData}
+                  centerLabel="Total"
+                  centerValue={`${mainReadingPerc}%`}
+                  colorFn={readingColorFn}
                 />
               )}
             </CardContent>

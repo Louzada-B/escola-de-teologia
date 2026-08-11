@@ -8,6 +8,7 @@ interface CompletionStats {
   cohortName: string;
   attendanceRegular: number;
   quizCompletion: number;
+  readingCompletion: number;
   tccSubmitted: boolean;
   certificateIssued: boolean;
   eligible: boolean;
@@ -81,6 +82,26 @@ export default function CourseCompletionPage() {
     const answeredIds = new Set((responses || []).map((r: any) => r.quiz_id).filter((id: string) => countingQuizIds.has(id)));
     const quizPct = totalQuiz > 0 ? Math.round((answeredIds.size / totalQuiz) * 100) : 100;
 
+    // Leituras obrigatórias já vencidas
+    const { data: readingLessons } = await supabase
+      .from('lessons')
+      .select('id, scheduled_date, start_time, required_reading')
+      .gte('scheduled_date', cohort.start_date)
+      .lte('scheduled_date', cohort.end_date)
+      .not('required_reading', 'is', null);
+    const nowDate = new Date();
+    const pastReadingLessons = (readingLessons || []).filter((l: any) => {
+      if (!l.scheduled_date) return false;
+      const dt = new Date(`${l.scheduled_date}T${l.start_time || '23:59'}`);
+      return dt <= nowDate;
+    });
+    const totalReadings = pastReadingLessons.length;
+    const readingLessonIds = pastReadingLessons.map((l: any) => l.id);
+    const { data: readingConfs } = readingLessonIds.length
+      ? await supabase.from('reading_confirmations').select('lesson_id').eq('user_id', user.id).in('lesson_id', readingLessonIds)
+      : { data: [] as any[] };
+    const readingPct = totalReadings > 0 ? Math.round(((readingConfs || []).length / totalReadings) * 100) : 100;
+
     // TCC
     const { data: tcc } = await supabase
       .from('tcc_submissions')
@@ -98,12 +119,13 @@ export default function CourseCompletionPage() {
       .maybeSingle();
 
     // Verifica se atingiu os critérios mínimos
-    const eligible = attReg >= 75 && quizPct >= 75;
+    const eligible = attReg >= 75 && quizPct >= 75 && readingPct >= 75;
 
     setStats({
       cohortName: cohort.name,
       attendanceRegular: attReg,
       quizCompletion: quizPct,
+      readingCompletion: readingPct,
       tccSubmitted: !!(tcc && (tcc as any).status === 'approved'),
       certificateIssued: !!cert,
       eligible,
@@ -139,7 +161,7 @@ export default function CourseCompletionPage() {
 
             {/* Stats */}
             {stats && (
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="bg-card border border-border rounded-xl p-3">
                   <p className={`text-xl font-semibold ${stats.attendanceRegular >= 75 ? 'text-green-600' : 'text-destructive'}`}>
                     {stats.attendanceRegular}%
@@ -151,6 +173,12 @@ export default function CourseCompletionPage() {
                     {stats.quizCompletion}%
                   </p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">Questionários</p>
+                </div>
+                <div className="bg-card border border-border rounded-xl p-3">
+                  <p className={`text-xl font-semibold ${stats.readingCompletion >= 75 ? 'text-green-600' : 'text-destructive'}`}>
+                    {stats.readingCompletion}%
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Leituras</p>
                 </div>
                 <div className="bg-card border border-border rounded-xl p-3">
                   <p className={`text-xl font-semibold ${stats.tccSubmitted ? 'text-green-600' : 'text-muted-foreground'}`}>

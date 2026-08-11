@@ -17,6 +17,7 @@ interface StudentEligibility {
   attendanceRegular: number;
   attendanceSpecial: number;
   quizCompletion: number;
+  readingCompletion: number;
   tccApproved: boolean;
   eligible: boolean;
 }
@@ -392,6 +393,28 @@ export default function CertificatesManager() {
       .select("id, available_from, available_until, counts_for_completion")
       .gte("available_from", "1900-01-01"); // busca todos
 
+    // Leituras obrigatórias: aulas com required_reading definido, cujo prazo
+    // (início da própria aula) já passou -- mesmo raciocínio de "só conta o
+    // que já venceu" usado pros outros critérios.
+    const { data: readingLessons } = await supabase
+      .from("lessons")
+      .select("id, scheduled_date, start_time, required_reading")
+      .gte("scheduled_date", selectedCohort.start_date)
+      .lte("scheduled_date", selectedCohort.end_date)
+      .not("required_reading", "is", null);
+    const pastReadingLessons = (readingLessons || []).filter((l: any) => {
+      if (!l.scheduled_date) return false;
+      const dt = new Date(`${l.scheduled_date}T${l.start_time || "23:59"}`);
+      return dt <= new Date(now);
+    });
+    const totalReadings = pastReadingLessons.length;
+    const readingLessonIds = pastReadingLessons.map((l: any) => l.id);
+    const { data: readingConfs } = await supabase
+      .from("reading_confirmations")
+      .select("user_id, lesson_id")
+      .in("user_id", ids)
+      .in("lesson_id", readingLessonIds.length ? readingLessonIds : ["none"]);
+
     // Último available_until entre os questionários da turma
     const cohortQuizIds = new Set((quizzes || []).map((q: any) => q.id));
     const lastQuizDate = (quizzes || [])
@@ -447,8 +470,12 @@ export default function CertificatesManager() {
           .map((r: any) => r.quiz_id)
       );
       const quizPct = totalQuiz > 0 ? (quizSet.size / totalQuiz) * 100 : 100;
+      const readingSet = new Set(
+        (readingConfs || []).filter((r: any) => r.user_id === uid).map((r: any) => r.lesson_id)
+      );
+      const readingPct = totalReadings > 0 ? (readingSet.size / totalReadings) * 100 : 100;
       const tccApproved = approvedTccIds.has(uid);
-      const eligible = courseComplete && attReg >= 75 && attSpe >= 20 && quizPct >= 75 && tccApproved;
+      const eligible = courseComplete && attReg >= 75 && attSpe >= 20 && quizPct >= 75 && readingPct >= 75 && tccApproved;
 
       return {
         userId: uid,
@@ -457,6 +484,7 @@ export default function CertificatesManager() {
         attendanceRegular: Math.round(attReg),
         attendanceSpecial: Math.round(attSpe),
         quizCompletion:    Math.round(quizPct),
+        readingCompletion: Math.round(readingPct),
         tccApproved,
         eligible,
       };
@@ -572,9 +600,9 @@ export default function CertificatesManager() {
     const eligible = students.filter(s => s.eligible);
     if (!eligible.length) return;
     const rows = eligible.map(s =>
-      `"${s.fullName}","${s.email}",${s.attendanceRegular},${s.attendanceSpecial},${s.quizCompletion}`
+      `"${s.fullName}","${s.email}",${s.attendanceRegular},${s.attendanceSpecial},${s.quizCompletion},${s.readingCompletion}`
     );
-    const csv  = ["Nome,Email,Presença Aulas (%),Presença Especiais (%),Questionários (%)", ...rows].join("\n");
+    const csv  = ["Nome,Email,Presença Aulas (%),Presença Especiais (%),Questionários (%),Leituras (%)", ...rows].join("\n");
     const url  = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
     const a    = document.createElement("a");
     a.href     = url;
@@ -664,6 +692,7 @@ export default function CertificatesManager() {
                     <th className="text-center p-3 font-medium">Aulas</th>
                     <th className="text-center p-3 font-medium">Especiais</th>
                     <th className="text-center p-3 font-medium">Quiz</th>
+                    <th className="text-center p-3 font-medium">Leitura</th>
                     <th className="text-center p-3 font-medium">TCC</th>
                     <th className="text-center p-3 font-medium">Status</th>
                     <th className="text-center p-3 font-medium">Ações</th>
@@ -689,6 +718,11 @@ export default function CertificatesManager() {
                       <td className="text-center p-3">
                         <Badge variant={s.quizCompletion >= 75 ? "default" : "destructive"}>
                           {s.quizCompletion}%
+                        </Badge>
+                      </td>
+                      <td className="text-center p-3">
+                        <Badge variant={s.readingCompletion >= 75 ? "default" : "destructive"}>
+                          {s.readingCompletion}%
                         </Badge>
                       </td>
                       <td className="text-center p-3">

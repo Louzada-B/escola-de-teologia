@@ -10,7 +10,7 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   ResponsiveContainer, Cell, Tooltip,
 } from 'recharts';
-import { Users, BookOpen, UserCheck, ClipboardList, AlertTriangle, Star, FileCheck, LogIn, Clock } from 'lucide-react';
+import { Users, BookOpen, UserCheck, ClipboardList, AlertTriangle, Star, FileCheck, LogIn, Clock, BookOpenCheck } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useCohort } from '@/contexts/CohortContext';
@@ -19,6 +19,7 @@ const RISK_CRITERIA = [
   { key: 'aula', icon: UserCheck, label: 'Aula' },
   { key: 'especial', icon: Star, label: 'Especial' },
   { key: 'quiz', icon: ClipboardList, label: 'Questionário' },
+  { key: 'leitura', icon: BookOpenCheck, label: 'Leitura' },
 ] as const;
 
 export default function AnalyticsPage() {
@@ -79,6 +80,14 @@ export default function AnalyticsPage() {
     },
   });
 
+  const { data: allReadingConfirmations = [] } = useQuery({
+    queryKey: ['analytics-reading-confirmations'],
+    queryFn: async () => {
+      const { data } = await supabase.from('reading_confirmations').select('user_id, lesson_id');
+      return data || [];
+    },
+  });
+
   // Status de confirmação (já acessou / nunca acessou) -- via service role,
   // igual a tela de Alunos já usa pra "Reenviar Convites Pendentes"
   const { data: accessStatuses = {} } = useQuery({
@@ -113,6 +122,10 @@ export default function AnalyticsPage() {
     if (!selectedCohortId) return allTccSubmissions.filter(t => studentIds.has(t.user_id));
     return allTccSubmissions.filter(t => t.cohort_id === selectedCohortId);
   }, [allTccSubmissions, selectedCohortId, studentIds]);
+  const readingConfirmations = useMemo(() => {
+    if (!selectedCohortId) return allReadingConfirmations;
+    return allReadingConfirmations.filter(r => studentIds.has(r.user_id));
+  }, [allReadingConfirmations, selectedCohortId, studentIds]);
 
   // Quizzes já abertos (available_from <= now ou sem data) e que contam pra conclusão — denominador correto
   const now = new Date().toISOString();
@@ -129,6 +142,23 @@ export default function AnalyticsPage() {
   const closedQuizzesCount = useMemo(
     () => quizzes.filter((q: any) => q.available_until && q.available_until < now).length,
     [quizzes]
+  );
+
+  // Leituras obrigatórias já vencidas (aula com required_reading cujo início já passou)
+  const pastReadingLessons = useMemo(() => {
+    const nowDate = new Date();
+    return lessons.filter((l: any) => {
+      if (!l.required_reading || !l.scheduled_date) return false;
+      if (cohortStart && l.scheduled_date < cohortStart) return false;
+      if (cohortEnd && l.scheduled_date > cohortEnd) return false;
+      const dt = new Date(`${l.scheduled_date}T${l.start_time || '23:59'}`);
+      return dt <= nowDate;
+    });
+  }, [lessons, cohortStart, cohortEnd]);
+  const pastReadingLessonIds = useMemo(() => new Set(pastReadingLessons.map((l: any) => l.id)), [pastReadingLessons]);
+  const confirmedReadingsCount = useMemo(
+    () => readingConfirmations.filter(r => pastReadingLessonIds.has(r.lesson_id)).length,
+    [readingConfirmations, pastReadingLessonIds]
   );
 
   const pastLessons = useMemo(() => {
@@ -224,7 +254,7 @@ export default function AnalyticsPage() {
     return students.filter((s) => !studentIdsWithAttendance.has(s.id));
   }, [students, attendanceRecords, pastLessons]);
 
-  // Risco combinado (presença aula + presença especial + questionário) — visão geral
+  // Risco combinado (presença aula + presença especial + questionário + leitura) — visão geral
   const combinedRiskStudents = useMemo(() => {
     return students
       .map((s) => {
@@ -240,17 +270,22 @@ export default function AnalyticsPage() {
           filteredQuizResponses.some((r) => r.quiz_id === q.id && r.user_id === s.id)
         ).length;
         const pctQuiz = openedQuizzes.length ? Math.round((answeredQuiz / openedQuizzes.length) * 100) : 100;
+        const confirmedReadings = pastReadingLessons.filter((l: any) =>
+          readingConfirmations.some((r) => r.lesson_id === l.id && r.user_id === s.id)
+        ).length;
+        const pctLeitura = pastReadingLessons.length ? Math.round((confirmedReadings / pastReadingLessons.length) * 100) : 100;
 
         const risco = {
           aula: pctAula < 75,
           especial: pctEsp < 20,
           quiz: pctQuiz < 75,
+          leitura: pctLeitura < 75,
         };
-        return { name: s.full_name || s.email, pctAula, pctEsp, pctQuiz, risco };
+        return { name: s.full_name || s.email, pctAula, pctEsp, pctQuiz, pctLeitura, risco };
       })
-      .filter((s) => s.risco.aula || s.risco.especial || s.risco.quiz)
+      .filter((s) => s.risco.aula || s.risco.especial || s.risco.quiz || s.risco.leitura)
       .sort((a, b) => a.pctAula - b.pctAula);
-  }, [students, pastAulas, pastEspeciais, attendanceRecords, openedQuizzes, filteredQuizResponses]);
+  }, [students, pastAulas, pastEspeciais, attendanceRecords, openedQuizzes, filteredQuizResponses, pastReadingLessons, readingConfirmations]);
 
   // Confirmação de acesso (já logou ao menos uma vez) — exclui nomes de teste
   const accessConfirmation = useMemo(() => {
@@ -268,6 +303,8 @@ export default function AnalyticsPage() {
 
   const progressPct = totalLessons ? Math.round((totalPastLessons / totalLessons) * 100) : 0;
   const tccPct = totalStudents ? Math.round((tccSubmissions.length / totalStudents) * 100) : 0;
+  const totalPossibleReadings = totalStudents * pastReadingLessons.length;
+  const readingCompletionPct = totalPossibleReadings ? Math.round((confirmedReadingsCount / totalPossibleReadings) * 100) : 0;
 
   const isDataLoading = cohortLoading || studentsLoading || lessonsLoading || attendanceLoading;
 
@@ -294,7 +331,7 @@ export default function AnalyticsPage() {
 
         {/* ═══════════════════ VISÃO GERAL ═══════════════════ */}
         <TabsContent value="geral" className="space-y-6 mt-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Alunos Vinculados</CardTitle>
@@ -333,6 +370,19 @@ export default function AnalyticsPage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Leituras</CardTitle>
+                <BookOpenCheck className="w-4 h-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold text-foreground">
+                  {confirmedReadingsCount}<span className="text-lg text-muted-foreground"> / {totalPossibleReadings}</span>
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">{readingCompletionPct}% confirmadas</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">TCC</CardTitle>
                 <FileCheck className="w-4 h-4 text-muted-foreground" />
               </CardHeader>
@@ -353,7 +403,7 @@ export default function AnalyticsPage() {
                   Alunos em Risco
                 </CardTitle>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Aula: abaixo de 75% · Especial: abaixo de 20% · Questionário: abaixo de 75%
+                  Aula: abaixo de 75% · Especial: abaixo de 20% · Questionário: abaixo de 75% · Leitura: abaixo de 75%
                 </p>
               </CardHeader>
               <CardContent>

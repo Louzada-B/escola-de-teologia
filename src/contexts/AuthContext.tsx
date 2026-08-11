@@ -120,6 +120,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const answeredIds = new Set((responses || []).map((r: any) => r.quiz_id).filter((id: string) => countingQuizIds.has(id)));
           const quizPct = totalQuiz > 0 ? (answeredIds.size / totalQuiz) * 100 : 100;
 
+          // Leituras obrigatórias já vencidas (mesmo raciocínio: só o que já passou do prazo)
+          const { data: readingLessons } = await supabase
+            .from('lessons')
+            .select('id, scheduled_date, start_time, required_reading')
+            .gte('scheduled_date', cohortInfo.start_date)
+            .lte('scheduled_date', cohortInfo.end_date)
+            .not('required_reading', 'is', null);
+          const nowDate = new Date();
+          const pastReadingLessons = (readingLessons || []).filter((l: any) => {
+            if (!l.scheduled_date) return false;
+            const dt = new Date(`${l.scheduled_date}T${l.start_time || '23:59'}`);
+            return dt <= nowDate;
+          });
+          const totalReadings = pastReadingLessons.length;
+          const readingLessonIds = pastReadingLessons.map((l: any) => l.id);
+          const { data: readingConfs } = readingLessonIds.length
+            ? await supabase.from('reading_confirmations').select('lesson_id').eq('user_id', userId).in('lesson_id', readingLessonIds)
+            : { data: [] as any[] };
+          const readingPct = totalReadings > 0 ? ((readingConfs || []).length / totalReadings) * 100 : 100;
+
           // Verifica TCC aprovado
           const { data: tccData } = await supabase
             .from('tcc_submissions')
@@ -130,7 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .maybeSingle();
           const tccApproved = !!tccData;
 
-          setHasEligibleCompletion(attReg >= 75 && quizPct >= 75 && tccApproved);
+          setHasEligibleCompletion(attReg >= 75 && quizPct >= 75 && readingPct >= 75 && tccApproved);
         }
       } else {
         setHasEligibleCompletion(false);
