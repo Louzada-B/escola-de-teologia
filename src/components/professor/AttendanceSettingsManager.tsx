@@ -247,7 +247,9 @@ export default function AttendanceSettingsManager({ userId }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Settings Card */}
+      {/* Settings Card -- só aparece se a turma selecionada exigir GPS.
+          Default é false: presença "de boa fé", sem checagem de local. */}
+      {selectedCohort?.gps_obrigatorio === true && (
       <Card className="card-academic">
         <CardHeader>
           <CardTitle className="font-heading text-lg">Local da Aula</CardTitle>
@@ -306,6 +308,7 @@ export default function AttendanceSettingsManager({ userId }: Props) {
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* Summary Table */}
       <Card className="card-academic">

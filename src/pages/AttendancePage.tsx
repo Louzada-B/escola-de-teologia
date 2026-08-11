@@ -91,7 +91,9 @@ export default function AttendancePage() {
   };
 
   const handleCheckIn = async (lessonId: string, lesson?: any) => {
-    if (!settings) {
+    const gpsRequired = selectedCohort?.gps_obrigatorio === true;
+
+    if (gpsRequired && !settings) {
       toast({ title: "Erro", description: "Local da aula não configurado pelo professor.", variant: "destructive" });
       return;
     }
@@ -109,12 +111,42 @@ export default function AttendancePage() {
       return;
     }
 
-    if (!navigator.geolocation) {
-      toast({ title: "Erro", description: "Seu navegador não suporta geolocalização.", variant: "destructive" });
+    setGpsLoading(lessonId);
+
+    // Turma sem GPS obrigatório: registra direto, sem pedir localização
+    // nenhuma (nem chega a abrir o balão do navegador pedindo permissão).
+    if (!gpsRequired) {
+      const { error } = await supabase.from("attendance_records").insert({
+        user_id: user!.id,
+        lesson_id: lessonId,
+        latitude: 0,
+        longitude: 0,
+      });
+      if (error) {
+        if (error.code === "23505") {
+          toast({ title: "Aviso", description: "Presença já registrada para esta aula." });
+        } else {
+          toast({ title: "Erro", description: error.message, variant: "destructive" });
+        }
+      } else {
+        setCheckedIn((prev) => new Set(prev).add(lessonId));
+        const allLessons = [...(todayLessons || []), ...(pastLessons || [])];
+        const foundLesson = allLessons.find((l: any) => l.id === lessonId);
+        setSuccessLesson({
+          title: foundLesson?.title || "Aula",
+          date: foundLesson?.scheduled_date ? new Date(foundLesson.scheduled_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" }) : "",
+        });
+        setTimeout(() => setSuccessLesson(null), 4000);
+      }
+      setGpsLoading(null);
       return;
     }
 
-    setGpsLoading(lessonId);
+    if (!navigator.geolocation) {
+      toast({ title: "Erro", description: "Seu navegador não suporta geolocalização.", variant: "destructive" });
+      setGpsLoading(null);
+      return;
+    }
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -251,10 +283,16 @@ export default function AttendancePage() {
                 ) : (
                   <Button
                     onClick={() => handleCheckIn(lesson.id, lesson)}
-                    disabled={!isLessonOpen(lesson) || !settings || gpsLoading === lesson.id}
+                    disabled={
+                      !isLessonOpen(lesson) ||
+                      (selectedCohort?.gps_obrigatorio === true && !settings) ||
+                      gpsLoading === lesson.id
+                    }
                   >
                     <MapPin className="w-4 h-4 mr-2" />
-                    {gpsLoading === lesson.id ? "Verificando localização..." : "Registrar Presença"}
+                    {gpsLoading === lesson.id
+                      ? (selectedCohort?.gps_obrigatorio === true ? "Verificando localização..." : "Registrando...")
+                      : "Registrar Presença"}
                   </Button>
                 )}
               </CardContent>
