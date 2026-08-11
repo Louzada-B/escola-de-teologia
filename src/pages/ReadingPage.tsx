@@ -4,8 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCohort } from '@/contexts/CohortContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { BookOpen, CheckCircle2, Loader2 } from 'lucide-react';
+import { BookOpen, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 
 interface NextReading {
   lessonId: string;
@@ -14,11 +15,21 @@ interface NextReading {
   requiredReading: string;
 }
 
+interface HistoryReading {
+  lessonId: string;
+  title: string;
+  scheduledDate: string | null;
+  requiredReading: string;
+  confirmed: boolean;
+  byProfessor: boolean;
+}
+
 export default function ReadingPage() {
   const { user } = useAuth();
   const { selectedCohort } = useCohort();
   const [next, setNext] = useState<NextReading | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [history, setHistory] = useState<HistoryReading[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -38,39 +49,61 @@ export default function ReadingPage() {
       .order('start_time');
 
     const now = new Date();
-    const upcoming = (lessons || [])
-      .filter((l: any) => {
-        if (selectedCohort && l.scheduled_date) {
-          if (l.scheduled_date < selectedCohort.start_date || l.scheduled_date > selectedCohort.end_date) return false;
-        }
-        if (!l.scheduled_date) return false;
-        const lessonDateTime = new Date(`${l.scheduled_date}T${l.start_time || '23:59'}`);
-        return lessonDateTime >= now;
-      })
-      .sort((a: any, b: any) => (a.scheduled_date + (a.start_time || '')) > (b.scheduled_date + (b.start_time || '')) ? 1 : -1);
-
-    if (!upcoming.length) {
-      setNext(null);
-      setLoading(false);
-      return;
-    }
-
-    const lesson = upcoming[0];
-    setNext({
-      lessonId: lesson.id,
-      title: lesson.title,
-      scheduledDate: lesson.scheduled_date,
-      requiredReading: lesson.required_reading,
+    const cohortFiltered = (lessons || []).filter((l: any) => {
+      if (!l.scheduled_date) return false;
+      if (selectedCohort) {
+        if (l.scheduled_date < selectedCohort.start_date || l.scheduled_date > selectedCohort.end_date) return false;
+      }
+      return true;
     });
 
-    const { data: existing } = await supabase
-      .from('reading_confirmations')
-      .select('id')
-      .eq('lesson_id', lesson.id)
-      .eq('user_id', user.id)
-      .maybeSingle();
+    const withDateTime = cohortFiltered.map((l: any) => ({
+      ...l,
+      dateTime: new Date(`${l.scheduled_date}T${l.start_time || '23:59'}`),
+    }));
 
-    setConfirmed(!!existing);
+    const upcoming = withDateTime
+      .filter((l) => l.dateTime >= now)
+      .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime());
+    const past = withDateTime
+      .filter((l) => l.dateTime < now)
+      .sort((a, b) => b.dateTime.getTime() - a.dateTime.getTime()); // mais recente primeiro
+
+    const allLessonIds = withDateTime.map((l: any) => l.id);
+    const { data: confs } = allLessonIds.length
+      ? await supabase
+          .from('reading_confirmations')
+          .select('lesson_id, confirmed_by_professor')
+          .eq('user_id', user.id)
+          .in('lesson_id', allLessonIds)
+      : { data: [] as any[] };
+    const confMap = new Map((confs || []).map((c: any) => [c.lesson_id, c]));
+
+    if (upcoming.length) {
+      const lesson = upcoming[0];
+      setNext({
+        lessonId: lesson.id,
+        title: lesson.title,
+        scheduledDate: lesson.scheduled_date,
+        requiredReading: lesson.required_reading,
+      });
+      setConfirmed(confMap.has(lesson.id));
+    } else {
+      setNext(null);
+      setConfirmed(false);
+    }
+
+    setHistory(
+      past.map((l: any) => ({
+        lessonId: l.id,
+        title: l.title,
+        scheduledDate: l.scheduled_date,
+        requiredReading: l.required_reading,
+        confirmed: confMap.has(l.id),
+        byProfessor: confMap.get(l.id)?.confirmed_by_professor || false,
+      }))
+    );
+
     setLoading(false);
   };
 
@@ -102,6 +135,11 @@ export default function ReadingPage() {
     setSaving(false);
   };
 
+  const formatDate = (d: string | null) =>
+    d
+      ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })
+      : '';
+
   if (loading) {
     return (
       <div className="page-container">
@@ -113,8 +151,8 @@ export default function ReadingPage() {
   }
 
   return (
-    <div className="page-container max-w-lg">
-      <h1 className="section-title mb-6">Leitura</h1>
+    <div className="page-container max-w-lg space-y-6">
+      <h1 className="section-title">Leitura</h1>
 
       {!next ? (
         <Card className="card-academic">
@@ -128,14 +166,7 @@ export default function ReadingPage() {
             <BookOpen className="w-5 h-5 text-accent" />
             <div>
               <CardTitle className="font-heading text-lg">{next.title}</CardTitle>
-              {next.scheduledDate && (
-                <p className="text-xs text-muted-foreground">
-                  {new Date(next.scheduledDate + 'T12:00:00').toLocaleDateString('pt-BR', {
-                    day: '2-digit',
-                    month: 'long',
-                  })}
-                </p>
-              )}
+              {next.scheduledDate && <p className="text-xs text-muted-foreground">{formatDate(next.scheduledDate)}</p>}
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -162,6 +193,33 @@ export default function ReadingPage() {
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {history.length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Histórico</h2>
+          <div className="space-y-2">
+            {history.map((h) => (
+              <Card key={h.lessonId} className="card-academic">
+                <CardContent className="py-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{h.title}</p>
+                    <p className="text-xs text-muted-foreground">{formatDate(h.scheduledDate)}</p>
+                  </div>
+                  {h.confirmed ? (
+                    <Badge variant="outline" className="text-[10px] gap-1 border-green-500/40 text-green-700 shrink-0">
+                      <CheckCircle2 className="w-3 h-3" /> Confirmada{h.byProfessor ? ' (manual)' : ''}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px] gap-1 border-destructive/40 text-destructive shrink-0">
+                      <XCircle className="w-3 h-3" /> Não confirmada
+                    </Badge>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
