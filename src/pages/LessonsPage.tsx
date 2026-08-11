@@ -214,8 +214,6 @@ export default function LessonsPage() {
                                 key={file.id}
                                 href={getFileUrl(file.file_path, file.file_name)}
                                 download={file.file_name}
-                                target="_blank"
-                                rel="noopener noreferrer"
                                 title={file.file_name}
                                 className="block max-w-full"
                               >
