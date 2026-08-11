@@ -282,13 +282,6 @@ async function remindQuizzes(admin: ReturnType<typeof createClient>, conn: ConnH
 }
 
 // ── LEMBRETE 4: Leitura pendente da aula de hoje ──────────────────
-// TEMPORÁRIO: restrito só ao Aluno teste -- a aba de Leitura ainda está
-// escondida do resto da turma (aguardando aprovação pra liberar geral).
-// Não faz sentido lembrar todo mundo de uma tela que ninguém mais
-// enxerga. Remover o filtro TEST_STUDENT_EMAIL_ONLY quando a aba for
-// liberada geral.
-const TEST_STUDENT_EMAIL_ONLY = "brunoelias.louzada@gmail.com";
-
 async function remindReading(admin: ReturnType<typeof createClient>, conn: ConnHolder, testEmail?: string) {
   const { dateStr: todayStr } = nowInSaoPaulo();
 
@@ -330,10 +323,6 @@ async function remindReading(admin: ReturnType<typeof createClient>, conn: ConnH
       .filter((id) => !confirmedIds.has(id))
       .map((id) => profileById[id])
       .filter(Boolean);
-
-    pendingProfiles = pendingProfiles.filter(
-      (p: any) => p.email?.toLowerCase() === TEST_STUDENT_EMAIL_ONLY
-    );
 
     if (testEmail) {
       pendingProfiles = pendingProfiles.filter((p: any) => p.email?.toLowerCase() === testEmail.toLowerCase());

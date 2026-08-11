@@ -435,8 +435,8 @@ export default function DashboardHome() {
         </Card>
       )}
 
-      {/* ALERTA DE LEITURA PENDENTE — TEMPORÁRIO: só Aluno teste, aba ainda não liberada geral */}
-      {pendingReading && profile?.role === "aluno" && profile?.email?.toLowerCase() === "brunoelias.louzada@gmail.com" && (
+      {/* ALERTA DE LEITURA PENDENTE */}
+      {pendingReading && profile?.role === "aluno" && (
         <Card className="mb-8 border-accent/40 bg-accent/5 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-700">
           <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-5">
             <div className="flex items-center gap-4 text-center sm:text-left">
