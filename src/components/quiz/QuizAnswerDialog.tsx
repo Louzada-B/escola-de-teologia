@@ -27,6 +27,41 @@ export default function QuizAnswerDialog({ open, onOpenChange, quiz, questions, 
   const [matchAnswers, setMatchAnswers] = useState<Record<string, Record<string, string>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showBlankConfirm, setShowBlankConfirm] = useState(false);
+  const [blankCount, setBlankCount] = useState(0);
+
+  const isQuestionBlank = (q: any): boolean => {
+    const qType = q.question_type || 'objetiva';
+    if (qType === 'dissertativa') {
+      return !textAnswers[q.id]?.trim();
+    }
+    if (qType === 'objetiva') {
+      return !answers[q.id];
+    }
+    if (qType === 'verdadeiro_falso') {
+      const phrases = Array.isArray(q.options) ? q.options : [];
+      const studentVf = vfAnswers[q.id] || {};
+      return phrases.length === 0 || !phrases.every((_: any, i: number) => !!studentVf[String(i)]);
+    }
+    if (qType === 'ligar_colunas') {
+      const pairs = Array.isArray(q.options) ? q.options : [];
+      const studentMatch = matchAnswers[q.id] || {};
+      return pairs.length === 0 || !pairs.every((_: any, i: number) => !!studentMatch[String(i)]);
+    }
+    return true;
+  };
+
+  const countBlankQuestions = () => questions.filter(isQuestionBlank).length;
+
+  // Usado tanto pro aviso de sair sem salvar quanto pra descrição desse
+  // aviso -- checa os quatro tipos de pergunta, não só objetiva (o aviso
+  // de sair já existia, mas só olhava "answers", perdendo progresso em
+  // dissertativa/V-F/ligar colunas).
+  const hasAnyProgress = () =>
+    Object.keys(answers).length > 0 ||
+    Object.values(textAnswers).some((v) => v?.trim()) ||
+    Object.keys(vfAnswers).length > 0 ||
+    Object.keys(matchAnswers).length > 0;
 
   const shuffledRights = useMemo(() => {
     const map: Record<string, string[]> = {};
@@ -39,7 +74,18 @@ export default function QuizAnswerDialog({ open, onOpenChange, quiz, questions, 
     return map;
   }, [questions]);
 
-  const handleSubmit = async () => {
+  const handleSubmitClick = () => {
+    const blank = countBlankQuestions();
+    if (blank > 0) {
+      setBlankCount(blank);
+      setShowBlankConfirm(true);
+    } else {
+      doSubmit();
+    }
+  };
+
+  const doSubmit = async () => {
+    setShowBlankConfirm(false);
     setSubmitting(true);
     const mergedAnswers: Record<string, any> = {};
     let score = 0;
@@ -105,7 +151,7 @@ export default function QuizAnswerDialog({ open, onOpenChange, quiz, questions, 
           <AlertDialogHeader>
             <AlertDialogTitle>Sair do questionário?</AlertDialogTitle>
             <AlertDialogDescription>
-              Você respondeu {Object.keys(answers).length} de {questions.length} {questions.length === 1 ? "pergunta" : "perguntas"}. Suas respostas não serão salvas.
+              Você respondeu {questions.length - countBlankQuestions()} de {questions.length} {questions.length === 1 ? "pergunta" : "perguntas"}. Suas respostas não serão salvas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col gap-2">
@@ -114,7 +160,21 @@ export default function QuizAnswerDialog({ open, onOpenChange, quiz, questions, 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <Dialog open={open} onOpenChange={(val) => { if (!val && Object.keys(answers).length > 0 && !submitting) { setShowExitConfirm(true); } else { onOpenChange(val); } }}>
+      <AlertDialog open={showBlankConfirm} onOpenChange={setShowBlankConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Enviar com perguntas em branco?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você deixou {blankCount} {blankCount === 1 ? "pergunta" : "perguntas"} sem resposta. Depois de enviado, não será possível voltar e responder essas perguntas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2">
+            <AlertDialogAction onClick={doSubmit}>Enviar mesmo assim</AlertDialogAction>
+            <AlertDialogCancel onClick={() => setShowBlankConfirm(false)}>Voltar e responder</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <Dialog open={open} onOpenChange={(val) => { if (!val && hasAnyProgress() && !submitting) { setShowExitConfirm(true); } else { onOpenChange(val); } }}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-heading text-xl">{quiz.title}</DialogTitle>
@@ -200,7 +260,7 @@ export default function QuizAnswerDialog({ open, onOpenChange, quiz, questions, 
             );
           })}
 
-          <Button onClick={handleSubmit} disabled={submitting} className="w-full">
+          <Button onClick={handleSubmitClick} disabled={submitting} className="w-full">
             {submitting ? 'Enviando...' : 'Enviar Respostas'}
           </Button>
         </div>
