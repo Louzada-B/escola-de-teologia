@@ -67,24 +67,66 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="h-screen flex flex-col lg:flex-row bg-background overflow-hidden">
       {/* Mobile header */}
-      <header className="lg:hidden flex items-center justify-between p-4 border-b bg-card">
+      <header className="lg:hidden flex items-center justify-between p-4 border-b bg-card relative z-40">
         <div className="flex items-center gap-2">
           <BookOpen className="w-5 h-5 text-primary" />
           <span className="font-heading font-semibold text-foreground">Formação Teológica</span>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => setMobileOpen(!mobileOpen)}>
-          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </Button>
+        <button
+          type="button"
+          onClick={() => setMobileOpen(!mobileOpen)}
+          aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
+          className="w-9 h-9 rounded-full bg-accent flex items-center justify-center text-accent-foreground shrink-0"
+        >
+          {mobileOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+        </button>
       </header>
 
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          "w-64 bg-sidebar text-sidebar-foreground flex-shrink-0 flex flex-col border-r border-sidebar-border h-full",
-          "lg:flex",
-          mobileOpen ? "flex fixed z-50 inset-0 lg:relative lg:inset-auto" : "hidden",
-        )}
-      >
+      {/* Menu mobile em cascata -- substitui a tela cheia antiga só no mobile;
+          desktop continua usando o <aside> de sempre, sem alteração. */}
+      {mobileOpen && (
+        <>
+          <div
+            className="lg:hidden fixed inset-0 bg-black/20 z-30"
+            onClick={() => setMobileOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="lg:hidden fixed right-4 top-16 z-40 flex flex-col items-end gap-1.5 max-h-[calc(100vh-80px)] overflow-y-auto pb-2">
+            {navItems.map((item, i) => {
+              const active = location.pathname === item.to;
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  onClick={() => setMobileOpen(false)}
+                  className={cn(
+                    "flex items-center gap-2 pl-3 pr-4 py-2 rounded-full text-sm shadow-md border animate-in fade-in slide-in-from-right-2",
+                    active
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-card text-foreground border-border"
+                  )}
+                  style={{ animationDelay: `${i * 20}ms`, animationDuration: "180ms" }}
+                >
+                  <item.icon className="w-4 h-4 shrink-0" />
+                  <span className="whitespace-nowrap">{item.label}</span>
+                </Link>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => { setMobileOpen(false); signOut(); }}
+              className="flex items-center gap-2 pl-3 pr-4 py-2 rounded-full text-sm shadow-md border bg-card text-destructive border-border animate-in fade-in slide-in-from-right-2"
+              style={{ animationDelay: `${navItems.length * 20}ms`, animationDuration: "180ms" }}
+            >
+              <LogOut className="w-4 h-4 shrink-0" />
+              <span className="whitespace-nowrap">Sair</span>
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Sidebar -- desktop apenas; mobile usa o menu em cascata acima */}
+      <aside className="hidden lg:flex w-64 bg-sidebar text-sidebar-foreground flex-shrink-0 flex-col border-r border-sidebar-border h-full">
         <div className="p-6 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
             <div className={cn(
