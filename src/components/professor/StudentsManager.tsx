@@ -12,10 +12,16 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { UserPlus, Upload, Download, CheckCircle, AlertCircle, Loader2, Send, Search } from "lucide-react";
+import { UserPlus, Upload, Download, CheckCircle, AlertCircle, Loader2, Send, Search, UserCog } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useImpersonation } from "@/contexts/ImpersonationContext";
 
 export default function StudentsManager() {
   const queryClient = useQueryClient();
+  const { profile } = useAuth();
+  const { startImpersonation } = useImpersonation();
+  const isSuperAdmin = profile?.is_super_admin === true;
+  const [impersonatingId, setImpersonatingId] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [cohortId, setCohortId] = useState("");
@@ -25,6 +31,17 @@ export default function StudentsManager() {
   const [bulkResult, setBulkResult] = useState<{ successCount: number; errorCount: number; results: any[] } | null>(null);
   const [bulkImporting, setBulkImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleImpersonate = async (studentId: string, studentName: string) => {
+    setImpersonatingId(studentId);
+    const { error } = await startImpersonation(studentId);
+    if (error) {
+      toast.error(`Não foi possível virar ${studentName}: ${error}`);
+      setImpersonatingId(null);
+    }
+    // Em caso de sucesso, a página recarrega sozinha (startImpersonation
+    // já faz isso), então não precisa resetar o loading aqui.
+  };
 
   const [resendCohortId, setResendCohortId] = useState("");
   const [pendingList, setPendingList] = useState<{ id: string; email: string; full_name: string }[] | null>(null);
@@ -540,6 +557,7 @@ export default function StudentsManager() {
                       <TableHead>Nome</TableHead>
                       <TableHead>E-mail</TableHead>
                       <TableHead>Turma(s)</TableHead>
+                      {isSuperAdmin && <TableHead className="text-right">Simular</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -559,6 +577,24 @@ export default function StudentsManager() {
                             ))}
                           </div>
                         </TableCell>
+                        {isSuperAdmin && (
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs gap-1"
+                              disabled={impersonatingId === s.id}
+                              onClick={() => handleImpersonate(s.id, s.full_name || s.email)}
+                            >
+                              {impersonatingId === s.id ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <UserCog className="w-3 h-3" />
+                              )}
+                              Virar
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
