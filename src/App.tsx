@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CohortProvider } from "@/contexts/CohortContext";
+import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
 import { ProtectedRoute, ProfessorRoute, AdminRoute } from "@/components/ProtectedRoute";
 import AppLayout from "@/components/AppLayout";
 import Index from "./pages/Index";
@@ -40,6 +41,7 @@ const App = () => (
     <TooltipProvider>
       <AuthProvider>
         <CohortProvider>
+          <ImpersonationProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -77,6 +79,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
+          </ImpersonationProvider>
         </CohortProvider>
       </AuthProvider>
     </TooltipProvider>

@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -33,6 +34,7 @@ import { HelpCircle } from "lucide-react";
 import { useCohort } from "@/contexts/CohortContext";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const { isImpersonating, impersonatedName, stopImpersonation } = useImpersonation();
   const { profile, signOut } = useAuth();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -65,7 +67,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <div className="h-screen flex flex-col lg:flex-row bg-background overflow-hidden">
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
+      {isImpersonating && (
+        <div className="bg-amber-500 text-amber-950 px-4 py-2 flex items-center justify-between gap-3 text-sm font-medium shrink-0 z-50">
+          <span>Você está vendo como <strong>{impersonatedName}</strong></span>
+          <button
+            type="button"
+            onClick={() => stopImpersonation()}
+            className="underline font-semibold shrink-0 whitespace-nowrap"
+          >
+            Voltar a ser admin
+          </button>
+        </div>
+      )}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
       {/* Mobile header */}
       <header className="lg:hidden flex items-center justify-between p-4 border-b bg-card relative z-40">
         <div className="flex items-center gap-2">
@@ -243,6 +258,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
         <HelpDrawer open={helpOpen} onClose={() => setHelpOpen(false)} content={helpContent} />
+      </div>
       </div>
     </div>
   );
