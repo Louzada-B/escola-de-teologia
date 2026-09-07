@@ -11,6 +11,13 @@ import { BookOpen, Download } from 'lucide-react';
 
 function getErrorMessage(error: any): string {
   const raw = error?.message;
+  // Erro de rede (conexão caiu, sem internet) chega como mensagem técnica
+  // em inglês, e varia por navegador: Safari diz "Load failed", Chrome diz
+  // "Failed to fetch", Firefox diz "NetworkError...". Detecta esse padrão
+  // e mostra algo que o aluno realmente entende, em vez do erro cru.
+  if (raw && /load failed|failed to fetch|networkerror/i.test(raw)) {
+    return 'Falha de conexão. Verifique sua internet e tente novamente.';
+  }
   // Alguns erros de auth chegam sem mensagem útil (ex: "{}") — nesses casos,
   // mostra algo acionável em vez do erro cru.
   if (!raw || raw === '{}' || raw === '[object Object]') {
