@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { isDateWithinCohortPeriod } from '@/lib/cohortDateUtils';
+import { isDateWithinCohortPeriod, lessonHasPassed } from '@/lib/cohortDateUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -79,6 +79,17 @@ export default function AnalyticsPage() {
       return data || [];
     },
   });
+
+  // TCC só entra no painel depois que o período de entrega abriu -- mesma
+  // regra usada no DashboardHome (tcc_settings.accept_from).
+  const { data: tccSettings } = useQuery({
+    queryKey: ['analytics-tcc-settings'],
+    queryFn: async () => {
+      const { data } = await supabase.from('tcc_settings').select('accept_from').limit(1).maybeSingle();
+      return data as { accept_from: string | null } | null;
+    },
+  });
+  const tccOpen = Boolean(tccSettings?.accept_from && new Date(tccSettings.accept_from) <= new Date());
 
   const { data: allReadingConfirmations = [] } = useQuery({
     queryKey: ['analytics-reading-confirmations'],
@@ -161,9 +172,12 @@ export default function AnalyticsPage() {
     [readingConfirmations, pastReadingLessonIds]
   );
 
+  // "Realizada" = dentro do período da turma E o horário da aula já passou
+  // (isDateWithinCohortPeriod sozinho deixava passar aulas de HOJE que ainda
+  // nem começaram, contando como "realizadas" antes da hora).
   const pastLessons = useMemo(() => {
     return lessons.filter((l) => {
-      return isDateWithinCohortPeriod(l.scheduled_date, cohortStart, effectiveCutoffDate);
+      return isDateWithinCohortPeriod(l.scheduled_date, cohortStart, effectiveCutoffDate) && lessonHasPassed(l);
     });
   }, [lessons, effectiveCutoffDate, cohortStart]);
 
@@ -331,7 +345,7 @@ export default function AnalyticsPage() {
 
         {/* ═══════════════════ VISÃO GERAL ═══════════════════ */}
         <TabsContent value="geral" className="space-y-6 mt-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${tccOpen ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Alunos Vinculados</CardTitle>
@@ -381,18 +395,20 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">TCC</CardTitle>
-                <FileCheck className="w-4 h-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold text-foreground">
-                  {tccSubmissions.length}<span className="text-lg text-muted-foreground"> / {totalStudents}</span>
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">{tccPct}% entregues</p>
-              </CardContent>
-            </Card>
+            {tccOpen && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">TCC</CardTitle>
+                  <FileCheck className="w-4 h-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold text-foreground">
+                    {tccSubmissions.length}<span className="text-lg text-muted-foreground"> / {totalStudents}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">{tccPct}% entregues</p>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

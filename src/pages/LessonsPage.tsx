@@ -6,7 +6,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Button } from "@/components/ui/button";
 import { Download, Play, FileText, CheckCircle2, Circle, BookOpen } from "lucide-react";
 import { useCohort } from "@/contexts/CohortContext";
-import { getLocalToday } from "@/lib/cohortDateUtils";
+import { getLocalToday, lessonHasPassed } from "@/lib/cohortDateUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -99,31 +99,8 @@ export default function LessonsPage() {
   }
 
 
-  // Verifica se a aula já ocorreu (após end_time ou após o dia se sem horário)
-  const lessonHasPassed = (lesson: any): boolean => {
-    if (!lesson.scheduled_date) return false;
-    const now = new Date();
-    const lessonDate = lesson.scheduled_date;
-    // getLocalToday() usa a data local de verdade -- toISOString() sempre
-    // devolve UTC, o que dava data errada à noite (aula de hoje à noite
-    // no Brasil já contava como "amanhã" em UTC, marcando a aula como
-    // "ainda não passou" incorretamente, ou o oposto dependendo do caso).
-    const today = getLocalToday();
-
-    if (lessonDate > today) return false;
-    if (lessonDate < today) return true;
-
-    // Mesmo dia: verifica end_time
-    if ((lesson as any).end_time) {
-      const [h, m] = ((lesson as any).end_time as string).split(':').map(Number);
-      const endMins = h * 60 + m;
-      const nowMins = now.getHours() * 60 + now.getMinutes();
-      return nowMins > endMins;
-    }
-
-    // Sem end_time: considera passada após o dia
-    return lessonDate < today;
-  };
+  // lessonHasPassed agora vem de @/lib/cohortDateUtils -- mesma lógica
+  // reaproveitada na AnalyticsPage pra "aulas realizadas" não divergir daqui.
 
   return (
     <div className="page-container">
