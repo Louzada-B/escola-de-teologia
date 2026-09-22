@@ -109,9 +109,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const attDone = regular.filter((l: any) => attIds.has(l.id)).length;
           const attReg = regular.length > 0 ? (attDone / regular.length) * 100 : 100;
 
+          // Só quizzes já VENCIDOS (available_until já passou) entram na
+          // conta, igual Leitura -- ainda dentro do prazo não pesa contra.
           const nowIso = new Date().toISOString();
           const { data: quizzes } = await supabase
-            .from('quizzes').select('id, counts_for_completion').lte('available_from', nowIso);
+            .from('quizzes').select('id, counts_for_completion')
+            .lt('available_until', nowIso).not('available_until', 'is', null);
           const countingQuizzes = (quizzes || []).filter((q: any) => q.counts_for_completion !== false);
           const totalQuiz = countingQuizzes.length;
           const { data: responses } = await supabase

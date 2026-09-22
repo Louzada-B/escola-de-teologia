@@ -271,12 +271,21 @@ export default function DashboardHome() {
       const now = new Date().toISOString();
       const { data: quizResponses } = await supabase.from("quiz_responses").select("quiz_id").eq("user_id", user.id);
       const answeredIds = new Set((quizResponses || []).map((r) => r.quiz_id));
-      // Denominador: só quizzes já abertos (available_from <= now ou sem data) e que contam pra conclusão
+      // Quizzes já abertos (available_from <= now ou sem data) e que contam
+      // pra conclusão -- usado só pra achar os "pendentes dentro do prazo"
+      // do banner de aviso, não pro percentual principal.
       const openedQuizzes = filteredQuizzes.filter((q: any) =>
         (!q.available_from || q.available_from <= now) && q.counts_for_completion !== false
       );
-      const answered = openedQuizzes.filter((q: any) => answeredIds.has(q.id)).length;
-      const available = openedQuizzes.length - answered;
+
+      // Denominador do percentual: só quizzes já VENCIDOS (available_until já
+      // passou) -- mesma regra da Leitura (Analises > Visão Geral). Um
+      // questionário ainda dentro do prazo não deve puxar o percentual pra
+      // baixo só porque ainda não foi respondido; sem available_until, ele
+      // nunca "vence" sozinho e não entra aqui.
+      const dueQuizzes = openedQuizzes.filter((q: any) => q.available_until && q.available_until < now);
+      const answered = dueQuizzes.filter((q: any) => answeredIds.has(q.id)).length;
+      const available = dueQuizzes.length - answered;
 
       // Pending open quizzes (abertos, não respondidos, dentro do prazo)
       const openUnanswered = openedQuizzes.filter((q: any) => {
@@ -285,8 +294,8 @@ export default function DashboardHome() {
         return true;
       });
       setPendingQuizCount(openUnanswered.length);
-      const ansPerc = openedQuizzes.length > 0 ? Math.round((answered / openedQuizzes.length) * 100) : 0;
-      const availPerc = openedQuizzes.length > 0 ? 100 - ansPerc : 0;
+      const ansPerc = dueQuizzes.length > 0 ? Math.round((answered / dueQuizzes.length) * 100) : 100;
+      const availPerc = dueQuizzes.length > 0 ? 100 - ansPerc : 0;
       setMainQuizPerc(ansPerc);
       setQuizData([
         { name: "Respondidos", value: ansPerc, qty: answered },
@@ -553,7 +562,7 @@ export default function DashboardHome() {
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="max-w-xs text-xs p-3">
-                    Percentual de questionários respondidos em relação aos já disponíveis (abertos ou encerrados). Questionários futuros não são contabilizados.
+                    Percentual de questionários respondidos em relação aos que já venceram o prazo. Questionários ainda dentro do prazo (mesmo já abertos) só entram na conta depois que o prazo passar.
                 </PopoverContent>
               </Popover>
             </CardHeader>

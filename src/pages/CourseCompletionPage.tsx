@@ -66,12 +66,15 @@ export default function CourseCompletionPage() {
     const attDone = regular.filter((l: any) => attIds.has(l.id)).length;
     const attReg = regular.length > 0 ? Math.round((attDone / regular.length) * 100) : 100;
 
-    // Questionários
+    // Questionários -- só os já VENCIDOS (available_until já passou) entram
+    // na conta, igual Leitura. Um questionário ainda dentro do prazo não deve
+    // pesar contra o aluno só porque ainda não foi respondido.
     const now = new Date().toISOString();
     const { data: quizzes } = await supabase
       .from('quizzes')
-      .select('id, available_from, counts_for_completion')
-      .lte('available_from', now);
+      .select('id, available_until, counts_for_completion')
+      .lt('available_until', now)
+      .not('available_until', 'is', null);
     const countingQuizzes = (quizzes || []).filter((q: any) => q.counts_for_completion !== false);
     const totalQuiz = countingQuizzes.length;
     const { data: responses } = await supabase

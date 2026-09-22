@@ -433,9 +433,11 @@ export default function CertificatesManager() {
     const latestDate = [lastRegularDate, lastSpecialDate, lastQuizDate?.slice(0, 10)]
       .filter(Boolean).sort().pop() ?? null;
     setCourseEndDate(latestDate);
-    // Denominador: só quizzes já abertos E que contam pra conclusão (mesma lógica do dashboard e analytics)
+    // Denominador: só quizzes já VENCIDOS (available_until já passou) E que
+    // contam pra conclusão -- mesma lógica do painel e das análises. Sem
+    // available_until, o quiz nunca "vence" sozinho e não entra na conta.
     const openedQuizzes = (quizzes || []).filter(
-      (q: any) => (!q.available_from || q.available_from <= now) && q.counts_for_completion !== false
+      (q: any) => q.available_until && q.available_until < now && q.counts_for_completion !== false
     );
     const totalQuiz = openedQuizzes.length;
     const openedQuizIds = new Set(openedQuizzes.map((q: any) => q.id));
