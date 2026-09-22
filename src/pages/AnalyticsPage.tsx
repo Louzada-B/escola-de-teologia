@@ -183,18 +183,21 @@ export default function AnalyticsPage() {
   const pastEspeciais = useMemo(() => pastLessons.filter(l => l.event_type === 'aula_especial'), [pastLessons]);
 
   // ── Aba Presença ──
-  // Toggle aula regular / aula especial -- afeta o gráfico de barras e a
-  // distribuição da turma.
-  const [presencaTipo, setPresencaTipo] = useState<'aula' | 'especial'>('aula');
-  const presencaLessons = presencaTipo === 'aula' ? pastAulas : pastEspeciais;
+  // Cada quadro tem seu próprio toggle aula regular / aula especial,
+  // independente um do outro.
+  const [presencaTipoGrafico, setPresencaTipoGrafico] = useState<'aula' | 'especial'>('aula');
+  const [presencaTipoDistribuicao, setPresencaTipoDistribuicao] = useState<'aula' | 'especial'>('aula');
+  const presencaLessonsGrafico = presencaTipoGrafico === 'aula' ? pastAulas : pastEspeciais;
 
   const lessonAttendance = useMemo(() => {
-    return presencaLessons.map((l) => ({
-      name: l.title.length > 15 ? l.title.slice(0, 15) + '…' : l.title,
-      presentes: attendanceRecords.filter((a) => a.lesson_id === l.id).length,
-      id: l.id,
-    }));
-  }, [presencaLessons, attendanceRecords]);
+    return [...presencaLessonsGrafico]
+      .sort((a, b) => (a.scheduled_date || '').localeCompare(b.scheduled_date || ''))
+      .map((l) => ({
+        name: l.title.length > 15 ? l.title.slice(0, 15) + '…' : l.title,
+        presentes: attendanceRecords.filter((a) => a.lesson_id === l.id).length,
+        id: l.id,
+      }));
+  }, [presencaLessonsGrafico, attendanceRecords]);
 
   const minAttendance = useMemo(
     () => Math.min(...lessonAttendance.map((l) => l.presentes), Infinity),
@@ -233,8 +236,8 @@ export default function AnalyticsPage() {
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }, [studentAttendanceStats]);
 
-  // Distribuição da turma por faixa de presença -- segue o mesmo toggle
-  // aula regular / aula especial do gráfico de barras acima.
+  // Distribuição da turma por faixa de presença -- tem seu próprio toggle,
+  // independente do gráfico de barras acima.
   const attendanceDistribution = useMemo(() => {
     const buckets = [
       { label: '≥ 90%', min: 90, max: 101, color: 'hsl(142, 71%, 45%)' },
@@ -242,12 +245,12 @@ export default function AnalyticsPage() {
       { label: '50% – 74%', min: 50, max: 75, color: 'hsl(38, 92%, 50%)' },
       { label: '< 50%', min: -1, max: 50, color: 'hsl(0, 72%, 51%)' },
     ];
-    const pctKey = presencaTipo === 'aula' ? 'pctAula' : 'pctEsp';
+    const pctKey = presencaTipoDistribuicao === 'aula' ? 'pctAula' : 'pctEsp';
     return buckets.map((b) => ({
       ...b,
       count: studentAttendanceStats.filter((s) => s[pctKey] >= b.min && s[pctKey] < b.max).length,
     }));
-  }, [studentAttendanceStats, presencaTipo]);
+  }, [studentAttendanceStats, presencaTipoDistribuicao]);
 
   const zeroAttendanceStudents = useMemo(() => {
     const pastLessonIds = new Set(pastLessons.map(l => l.id));
@@ -447,8 +450,8 @@ export default function AnalyticsPage() {
               <CardTitle className="text-base">Presença por Aula</CardTitle>
               <ToggleGroup
                 type="single"
-                value={presencaTipo}
-                onValueChange={(v) => v && setPresencaTipo(v as 'aula' | 'especial')}
+                value={presencaTipoGrafico}
+                onValueChange={(v) => v && setPresencaTipoGrafico(v as 'aula' | 'especial')}
                 className="justify-start sm:justify-end"
               >
                 <ToggleGroupItem value="aula" className="text-xs px-3 h-8">Aula Regular</ToggleGroupItem>
@@ -498,7 +501,7 @@ export default function AnalyticsPage() {
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground py-10 text-center">
-                  Nenhuma {presencaTipo === 'aula' ? 'aula regular' : 'aula especial'} realizada ainda.
+                  Nenhuma {presencaTipoGrafico === 'aula' ? 'aula regular' : 'aula especial'} realizada ainda.
                 </p>
               )}
             </CardContent>
@@ -509,13 +512,13 @@ export default function AnalyticsPage() {
               <div>
                 <CardTitle className="text-base">Distribuição da Turma</CardTitle>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Por faixa de presença em {presencaTipo === 'aula' ? 'aula regular' : 'aula especial'}
+                  Por faixa de presença em {presencaTipoDistribuicao === 'aula' ? 'aula regular' : 'aula especial'}
                 </p>
               </div>
               <ToggleGroup
                 type="single"
-                value={presencaTipo}
-                onValueChange={(v) => v && setPresencaTipo(v as 'aula' | 'especial')}
+                value={presencaTipoDistribuicao}
+                onValueChange={(v) => v && setPresencaTipoDistribuicao(v as 'aula' | 'especial')}
                 className="justify-start sm:justify-end"
               >
                 <ToggleGroupItem value="aula" className="text-xs px-3 h-8">Aula Regular</ToggleGroupItem>
