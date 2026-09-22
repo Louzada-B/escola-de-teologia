@@ -306,10 +306,19 @@ export default function AnalyticsPage() {
   // vencimento), distribuição da turma, detalhamento dos em risco e quem
   // nunca respondeu nenhum questionário vencido.
   const quizChartData = useMemo(() => {
+    // Muitos títulos seguem o padrão "Questionário - <tema>" -- truncar direto
+    // em 15 caracteres cortava bem no "Questionário -", escondendo justamente
+    // a parte que identifica qual é. Tira esse prefixo repetido antes de
+    // truncar, e guarda o título completo pra exibir no tooltip.
+    const displayTitle = (title: string) => {
+      const stripped = title.replace(/^question[aá]rio\s*[-–:]\s*/i, '').trim() || title;
+      return stripped.length > 20 ? stripped.slice(0, 20) + '…' : stripped;
+    };
     return [...dueQuizzes]
       .sort((a: any, b: any) => (a.available_until || '').localeCompare(b.available_until || ''))
       .map((q: any) => ({
-        name: q.title.length > 15 ? q.title.slice(0, 15) + '…' : q.title,
+        name: displayTitle(q.title),
+        fullName: q.title,
         respondentes: dueQuizResponses.filter((r) => r.quiz_id === q.id).length,
         id: q.id,
       }));
@@ -770,6 +779,7 @@ export default function AnalyticsPage() {
                         <Tooltip
                           contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
                           formatter={(value: number) => [`${value} alunos`, 'Responderam']}
+                          labelFormatter={(_, payload) => (payload?.[0]?.payload as any)?.fullName ?? ''}
                         />
                         <Bar dataKey="respondentes" radius={[4, 4, 0, 0]}>
                           {quizChartData.map((entry, i) => (
