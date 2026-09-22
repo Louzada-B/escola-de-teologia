@@ -1,16 +1,18 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
+import * as XLSX from 'xlsx';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { isDateWithinCohortPeriod, lessonHasPassed } from '@/lib/cohortDateUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   ResponsiveContainer, Cell, Tooltip,
 } from 'recharts';
-import { Users, BookOpen, ClipboardList, AlertTriangle, FileCheck, BookOpenCheck } from 'lucide-react';
+import { Users, BookOpen, ClipboardList, AlertTriangle, FileCheck, BookOpenCheck, Download } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useCohort } from '@/contexts/CohortContext';
@@ -281,10 +283,21 @@ export default function AnalyticsPage() {
         ).length;
         const pctLeitura = pastReadingLessons.length ? Math.round((confirmedReadings / pastReadingLessons.length) * 100) : 100;
 
-        return { id: s.id, name: s.full_name || s.email, pctAula, pctEsp, pctQuiz, pctLeitura };
+        return { id: s.id, name: (s.full_name || s.email).toUpperCase(), pctAula, pctEsp, pctQuiz, pctLeitura };
       })
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }, [students, pastAulas, pastEspeciais, attendanceRecords, dueQuizzes, dueQuizResponses, pastReadingLessons, readingConfirmations]);
+
+  const exportStudentPercentagesXlsx = useCallback(() => {
+    const headers = ['Nome', '% Aulas', '% Aulas Especiais', '% Questionários', '% Leitura'];
+    const rows = studentPercentages.map((s) => [s.name, s.pctAula, s.pctEsp, s.pctQuiz, s.pctLeitura]);
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws['!cols'] = [{ wch: 35 }, { wch: 12 }, { wch: 18 }, { wch: 16 }, { wch: 12 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Indicadores');
+    const cohortLabel = selectedCohort?.name ? `_${selectedCohort.name.replace(/\s+/g, '_')}` : '';
+    XLSX.writeFile(wb, `indicadores_por_aluno${cohortLabel}.xlsx`);
+  }, [studentPercentages, selectedCohort]);
 
   const progressPct = totalLessons ? Math.round((totalPastLessons / totalLessons) * 100) : 0;
   const tccPct = totalStudents ? Math.round((tccSubmissions.length / totalStudents) * 100) : 0;
@@ -384,14 +397,20 @@ export default function AnalyticsPage() {
           </div>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-destructive" />
-                Indicadores por Aluno
-              </CardTitle>
-              <p className="text-xs text-muted-foreground mt-1">
-                Em vermelho, o que está abaixo de 75%
-              </p>
+            <CardHeader className="flex flex-row items-start justify-between gap-2">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-destructive" />
+                  Indicadores por Aluno
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Em vermelho, o que está abaixo de 75%
+                </p>
+              </div>
+              <Button variant="outline" size="sm" className="gap-2 shrink-0" onClick={exportStudentPercentagesXlsx}>
+                <Download className="w-4 h-4" />
+                Baixar Excel
+              </Button>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
