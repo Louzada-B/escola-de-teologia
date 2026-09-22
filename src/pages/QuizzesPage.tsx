@@ -96,18 +96,26 @@ export default function QuizzesPage() {
     load();
   }, [user, selectedCohort, isStudent, effectiveCutoffDate]);
 
+  // className extra sobrescreve a cor padrão do variant do Badge (ver
+  // src/components/ui/badge.tsx) -- usado pro verde de "Respondido", que não
+  // existe como variant pronto.
   const getQuizStatus = (quiz: any) => {
     if (submitted.has(quiz.id)) {
-      return { status: 'answered' as const, label: 'Respondido', variant: 'secondary' as const };
+      return {
+        status: 'answered' as const,
+        label: 'Respondido',
+        variant: 'secondary' as const,
+        className: 'bg-green-500/15 text-green-700 border-green-500/30 hover:bg-green-500/15',
+      };
     }
     const now = new Date();
     if (quiz.available_from && new Date(quiz.available_from) > now) {
-      return { status: 'pending' as const, label: 'Indisponível', variant: 'outline' as const };
+      return { status: 'pending' as const, label: 'Indisponível', variant: 'outline' as const, className: '' };
     }
     if (quiz.available_until && new Date(quiz.available_until) < now) {
-      return { status: 'closed' as const, label: 'Indisponível', variant: 'destructive' as const };
+      return { status: 'closed' as const, label: 'Indisponível', variant: 'destructive' as const, className: '' };
     }
-    return { status: 'open' as const, label: 'Disponível', variant: 'default' as const };
+    return { status: 'open' as const, label: 'Disponível', variant: 'default' as const, className: '' };
   };
 
   const handleSubmitted = (quizId: string, qs: any[], mergedAnswers: Record<string, any>) => {
@@ -129,21 +137,34 @@ export default function QuizzesPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {quizzes.map((quiz) => {
-            const { status, label, variant } = getQuizStatus(quiz);
+            const { status, label, variant, className } = getQuizStatus(quiz);
             const lessonTitle = quiz.lessons?.title;
             const questionCount = (questions[quiz.id] || []).length;
+            const naoObrigatorio = quiz.counts_for_completion === false;
 
             return (
               <Card key={quiz.id} className="card-academic flex flex-col">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
                     <CardTitle className="font-heading text-lg leading-tight">{quiz.title}</CardTitle>
-                    <Badge variant={variant} className="shrink-0">
-                      {status === 'answered' && <CheckCircle className="w-3 h-3 mr-1" />}
-                      {status === 'pending' && <Clock className="w-3 h-3 mr-1" />}
-                      {status === 'closed' && <Lock className="w-3 h-3 mr-1" />}
-                      {label}
-                    </Badge>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <Badge variant={variant} className={className}>
+                        {status === 'answered' && <CheckCircle className="w-3 h-3 mr-1" />}
+                        {status === 'pending' && <Clock className="w-3 h-3 mr-1" />}
+                        {status === 'closed' && <Lock className="w-3 h-3 mr-1" />}
+                        {label}
+                      </Badge>
+                      {status === 'closed' && (
+                        <Badge variant="destructive" className="bg-destructive/10 text-destructive border-destructive/30">
+                          Não respondido
+                        </Badge>
+                      )}
+                      {naoObrigatorio && (
+                        <Badge variant="outline" className="text-muted-foreground">
+                          Não obrigatório
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="flex flex-col flex-1 gap-3">
