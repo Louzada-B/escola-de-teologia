@@ -120,16 +120,20 @@ export default function AnalyticsPage() {
     return allReadingConfirmations.filter(r => studentIds.has(r.user_id));
   }, [allReadingConfirmations, selectedCohortId, studentIds]);
 
-  // Quizzes já abertos (available_from <= now ou sem data) e que contam pra conclusão — denominador correto
+  // Quizzes já vencidos (available_until já passou) e que contam pra conclusão
+  // -- denominador do % de questionários. Um questionário ainda dentro do
+  // prazo NÃO entra na conta, mesmo já aberto e sem resposta ainda (mesma
+  // regra da Leitura: só pesa depois que o prazo passou). Sem available_until
+  // definido, o questionário nunca "vence" sozinho, então nunca entra aqui.
   const now = new Date().toISOString();
-  const openedQuizzes = useMemo(() =>
-    quizzes.filter((q: any) => (!q.available_from || q.available_from <= now) && q.counts_for_completion !== false),
+  const dueQuizzes = useMemo(() =>
+    quizzes.filter((q: any) => q.available_until && q.available_until < now && q.counts_for_completion !== false),
     [quizzes]
   );
-  const openedQuizIds = useMemo(() => new Set(openedQuizzes.map((q: any) => q.id)), [openedQuizzes]);
-  const filteredQuizResponses = useMemo(() => {
-    return quizResponses.filter(r => openedQuizIds.has(r.quiz_id));
-  }, [quizResponses, openedQuizIds]);
+  const dueQuizIds = useMemo(() => new Set(dueQuizzes.map((q: any) => q.id)), [dueQuizzes]);
+  const dueQuizResponses = useMemo(() => {
+    return quizResponses.filter(r => dueQuizIds.has(r.quiz_id));
+  }, [quizResponses, dueQuizIds]);
 
   // Questionários encerrados vs cadastrados (visão geral)
   const closedQuizzesCount = useMemo(
@@ -268,10 +272,10 @@ export default function AnalyticsPage() {
         ).length;
         const pctAula = pastAulas.length ? Math.round((presAula / pastAulas.length) * 100) : 100;
         const pctEsp = pastEspeciais.length ? Math.round((presEsp / pastEspeciais.length) * 100) : 100;
-        const answeredQuiz = openedQuizzes.filter((q: any) =>
-          filteredQuizResponses.some((r) => r.quiz_id === q.id && r.user_id === s.id)
+        const answeredQuiz = dueQuizzes.filter((q: any) =>
+          dueQuizResponses.some((r) => r.quiz_id === q.id && r.user_id === s.id)
         ).length;
-        const pctQuiz = openedQuizzes.length ? Math.round((answeredQuiz / openedQuizzes.length) * 100) : 100;
+        const pctQuiz = dueQuizzes.length ? Math.round((answeredQuiz / dueQuizzes.length) * 100) : 100;
         const confirmedReadings = pastReadingLessons.filter((l: any) =>
           readingConfirmations.some((r) => r.lesson_id === l.id && r.user_id === s.id)
         ).length;
@@ -280,7 +284,7 @@ export default function AnalyticsPage() {
         return { id: s.id, name: s.full_name || s.email, pctAula, pctEsp, pctQuiz, pctLeitura };
       })
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-  }, [students, pastAulas, pastEspeciais, attendanceRecords, openedQuizzes, filteredQuizResponses, pastReadingLessons, readingConfirmations]);
+  }, [students, pastAulas, pastEspeciais, attendanceRecords, dueQuizzes, dueQuizResponses, pastReadingLessons, readingConfirmations]);
 
   const progressPct = totalLessons ? Math.round((totalPastLessons / totalLessons) * 100) : 0;
   const tccPct = totalStudents ? Math.round((tccSubmissions.length / totalStudents) * 100) : 0;
