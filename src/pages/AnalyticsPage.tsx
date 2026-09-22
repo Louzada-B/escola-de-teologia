@@ -10,17 +10,10 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   ResponsiveContainer, Cell, Tooltip,
 } from 'recharts';
-import { Users, BookOpen, UserCheck, ClipboardList, AlertTriangle, Star, FileCheck, LogIn, Clock, BookOpenCheck } from 'lucide-react';
+import { Users, BookOpen, ClipboardList, AlertTriangle, FileCheck, BookOpenCheck } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useCohort } from '@/contexts/CohortContext';
-
-const RISK_CRITERIA = [
-  { key: 'aula', icon: UserCheck, label: 'Aula' },
-  { key: 'especial', icon: Star, label: 'Especial' },
-  { key: 'quiz', icon: ClipboardList, label: 'Questionário' },
-  { key: 'leitura', icon: BookOpenCheck, label: 'Leitura' },
-] as const;
 
 export default function AnalyticsPage() {
   const { selectedCohortId, selectedCohortStudentIds, selectedCohort, effectiveCutoffDate, isLoading: cohortLoading } = useCohort();
@@ -96,17 +89,6 @@ export default function AnalyticsPage() {
     queryFn: async () => {
       const { data } = await supabase.from('reading_confirmations').select('user_id, lesson_id');
       return data || [];
-    },
-  });
-
-  // Status de confirmação (já acessou / nunca acessou) -- via service role,
-  // igual a tela de Alunos já usa pra "Reenviar Convites Pendentes"
-  const { data: accessStatuses = {} } = useQuery({
-    queryKey: ['analytics-access-status'],
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('students-status');
-      if (error) throw error;
-      return (data?.statuses || {}) as Record<string, { confirmed_at: string | null; last_sign_in_at: string | null }>;
     },
   });
 
@@ -273,8 +255,9 @@ export default function AnalyticsPage() {
     return students.filter((s) => !studentIdsWithAttendance.has(s.id));
   }, [students, attendanceRecords, pastLessons]);
 
-  // Risco combinado (presença aula + presença especial + questionário + leitura) — visão geral
-  const combinedRiskStudents = useMemo(() => {
+  // Percentuais por aluno (aula + aula especial + questionário + leitura) —
+  // visão geral, ordem alfabética, todos os alunos (não só quem está em risco).
+  const studentPercentages = useMemo(() => {
     return students
       .map((s) => {
         const presAula = pastAulas.filter((l) =>
@@ -294,31 +277,10 @@ export default function AnalyticsPage() {
         ).length;
         const pctLeitura = pastReadingLessons.length ? Math.round((confirmedReadings / pastReadingLessons.length) * 100) : 100;
 
-        const risco = {
-          aula: pctAula < 75,
-          especial: pctEsp < 20,
-          quiz: pctQuiz < 75,
-          leitura: pctLeitura < 75,
-        };
-        return { name: s.full_name || s.email, pctAula, pctEsp, pctQuiz, pctLeitura, risco };
+        return { id: s.id, name: s.full_name || s.email, pctAula, pctEsp, pctQuiz, pctLeitura };
       })
-      .filter((s) => s.risco.aula || s.risco.especial || s.risco.quiz || s.risco.leitura)
-      .sort((a, b) => a.pctAula - b.pctAula);
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }, [students, pastAulas, pastEspeciais, attendanceRecords, openedQuizzes, filteredQuizResponses, pastReadingLessons, readingConfirmations]);
-
-  // Confirmação de acesso (já logou ao menos uma vez) — exclui nomes de teste
-  const accessConfirmation = useMemo(() => {
-    const relevant = students.filter((s) => !(s.full_name || '').toLowerCase().includes('teste'));
-    const confirmed = relevant.filter((s) => accessStatuses[s.id]?.last_sign_in_at).length;
-    const pending = relevant.length - confirmed;
-    const total = relevant.length;
-    return {
-      confirmed,
-      pending,
-      confirmedPct: total ? Math.round((confirmed / total) * 100) : 0,
-      pendingPct: total ? Math.round((pending / total) * 100) : 0,
-    };
-  }, [students, accessStatuses]);
 
   const progressPct = totalLessons ? Math.round((totalPastLessons / totalLessons) * 100) : 0;
   const tccPct = totalStudents ? Math.round((tccSubmissions.length / totalStudents) * 100) : 0;
@@ -417,78 +379,43 @@ export default function AnalyticsPage() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-destructive" />
-                  Alunos em Risco
-                </CardTitle>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Aula: abaixo de 75% · Especial: abaixo de 20% · Questionário: abaixo de 75% · Leitura: abaixo de 75%
-                </p>
-              </CardHeader>
-              <CardContent>
-                {combinedRiskStudents.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Nenhum aluno em risco.</p>
-                ) : (
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
-                    {combinedRiskStudents.map((s, i) => (
-                      <div key={i} className="flex items-center justify-between gap-3 border-b border-border/50 pb-2">
-                        <span className="text-sm">{s.name}</span>
-                        <div className="flex gap-1.5 shrink-0">
-                          {RISK_CRITERIA.filter((c) => s.risco[c.key]).map((c) => (
-                            <Badge
-                              key={c.key}
-                              variant="outline"
-                              className="text-[10px] px-1.5 py-0.5 gap-1 border-destructive/50 text-destructive"
-                              title={c.label}
-                            >
-                              <c.icon className="w-3 h-3" /> {c.label}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-destructive" />
+                Indicadores por Aluno
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Em vermelho, o que está abaixo de 75%
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-2 text-muted-foreground font-medium">Nome</th>
+                      <th className="text-center py-2 text-muted-foreground font-medium">% Aulas</th>
+                      <th className="text-center py-2 text-muted-foreground font-medium">% Aulas Especiais</th>
+                      <th className="text-center py-2 text-muted-foreground font-medium">% Questionários</th>
+                      <th className="text-center py-2 text-muted-foreground font-medium">% Leitura</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {studentPercentages.map((s) => (
+                      <tr key={s.id} className="border-b border-border/50">
+                        <td className="py-2">{s.name}</td>
+                        <td className={`text-center py-2 ${s.pctAula < 75 ? 'text-destructive font-semibold' : ''}`}>{s.pctAula}%</td>
+                        <td className={`text-center py-2 ${s.pctEsp < 75 ? 'text-destructive font-semibold' : ''}`}>{s.pctEsp}%</td>
+                        <td className={`text-center py-2 ${s.pctQuiz < 75 ? 'text-destructive font-semibold' : ''}`}>{s.pctQuiz}%</td>
+                        <td className={`text-center py-2 ${s.pctLeitura < 75 ? 'text-destructive font-semibold' : ''}`}>{s.pctLeitura}%</td>
+                      </tr>
                     ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <LogIn className="w-4 h-4 text-muted-foreground" />
-                  Confirmação de Acesso
-                </CardTitle>
-                <p className="text-xs text-muted-foreground mt-1">Já entrou no portal ao menos uma vez, ou nunca acessou</p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-green-500/15 flex items-center justify-center">
-                      <UserCheck className="w-4 h-4 text-green-600" />
-                    </div>
-                    <span className="text-sm">Confirmado</span>
-                  </div>
-                  <span className="text-sm font-semibold">
-                    {accessConfirmation.confirmed} <span className="text-muted-foreground font-normal">({accessConfirmation.confirmedPct}%)</span>
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-amber-500/15 flex items-center justify-center">
-                      <Clock className="w-4 h-4 text-amber-600" />
-                    </div>
-                    <span className="text-sm">Pendente</span>
-                  </div>
-                  <span className="text-sm font-semibold">
-                    {accessConfirmation.pending} <span className="text-muted-foreground font-normal">({accessConfirmation.pendingPct}%)</span>
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* ═══════════════════ PRESENÇA ═══════════════════ */}
