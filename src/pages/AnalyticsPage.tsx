@@ -301,6 +301,143 @@ export default function AnalyticsPage() {
     XLSX.writeFile(wb, `indicadores_por_aluno${cohortLabel}.xlsx`);
   }, [studentPercentages, selectedCohort]);
 
+  // ── Aba Questionários ──
+  // Mesma estrutura da aba Presença: gráfico por questionário (ordenado por
+  // vencimento), distribuição da turma, detalhamento dos em risco e quem
+  // nunca respondeu nenhum questionário vencido.
+  const quizChartData = useMemo(() => {
+    return [...dueQuizzes]
+      .sort((a: any, b: any) => (a.available_until || '').localeCompare(b.available_until || ''))
+      .map((q: any) => ({
+        name: q.title.length > 15 ? q.title.slice(0, 15) + '…' : q.title,
+        respondentes: dueQuizResponses.filter((r) => r.quiz_id === q.id).length,
+        id: q.id,
+      }));
+  }, [dueQuizzes, dueQuizResponses]);
+
+  const minQuizResp = useMemo(
+    () => Math.min(...quizChartData.map((q) => q.respondentes), Infinity),
+    [quizChartData]
+  );
+  const maxQuizResp = useMemo(
+    () => Math.max(...quizChartData.map((q) => q.respondentes), -Infinity),
+    [quizChartData]
+  );
+
+  const studentQuizStats = useMemo(() => {
+    return students.map((s) => {
+      const respondidos = dueQuizzes.filter((q: any) =>
+        dueQuizResponses.some((r) => r.quiz_id === q.id && r.user_id === s.id)
+      ).length;
+      const pctQuiz = dueQuizzes.length ? Math.round((respondidos / dueQuizzes.length) * 100) : 100;
+      return {
+        id: s.id,
+        name: (s.full_name || s.email).toUpperCase(),
+        pctQuiz,
+        naoRespondidos: dueQuizzes.length - respondidos,
+        riscoQuiz: pctQuiz < 75,
+      };
+    });
+  }, [students, dueQuizzes, dueQuizResponses]);
+
+  const atRiskQuizStudents = useMemo(() => {
+    return studentQuizStats
+      .filter((s) => s.riscoQuiz)
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [studentQuizStats]);
+
+  const quizDistribution = useMemo(() => {
+    const buckets = [
+      { label: '≥ 90%', min: 90, max: 101, color: 'hsl(142, 71%, 45%)' },
+      { label: '75% – 89%', min: 75, max: 90, color: 'hsl(var(--primary))' },
+      { label: '50% – 74%', min: 50, max: 75, color: 'hsl(38, 92%, 50%)' },
+      { label: '< 50%', min: -1, max: 50, color: 'hsl(0, 72%, 51%)' },
+    ];
+    return buckets.map((b) => ({
+      ...b,
+      count: studentQuizStats.filter((s) => s.pctQuiz >= b.min && s.pctQuiz < b.max).length,
+    }));
+  }, [studentQuizStats]);
+
+  const zeroQuizStudents = useMemo(() => {
+    const dueQuizIdsArr = dueQuizzes.map((q: any) => q.id);
+    const studentIdsWithResponse = new Set(
+      dueQuizResponses.filter((r) => dueQuizIdsArr.includes(r.quiz_id)).map((r) => r.user_id)
+    );
+    return students
+      .filter((s) => dueQuizzes.length > 0 && !studentIdsWithResponse.has(s.id))
+      .map((s) => ({ id: s.id, name: (s.full_name || s.email).toUpperCase() }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [students, dueQuizzes, dueQuizResponses]);
+
+  // ── Aba Leituras ──
+  // Mesma estrutura: gráfico por leitura (ordenado por data), distribuição
+  // da turma, detalhamento dos em risco e quem nunca confirmou leitura.
+  const readingChartData = useMemo(() => {
+    return [...pastReadingLessons]
+      .sort((a: any, b: any) => (a.scheduled_date || '').localeCompare(b.scheduled_date || ''))
+      .map((l: any) => ({
+        name: l.title.length > 15 ? l.title.slice(0, 15) + '…' : l.title,
+        confirmados: readingConfirmations.filter((r) => r.lesson_id === l.id).length,
+        id: l.id,
+      }));
+  }, [pastReadingLessons, readingConfirmations]);
+
+  const minReadingConf = useMemo(
+    () => Math.min(...readingChartData.map((l) => l.confirmados), Infinity),
+    [readingChartData]
+  );
+  const maxReadingConf = useMemo(
+    () => Math.max(...readingChartData.map((l) => l.confirmados), -Infinity),
+    [readingChartData]
+  );
+
+  const studentReadingStats = useMemo(() => {
+    return students.map((s) => {
+      const confirmadas = pastReadingLessons.filter((l: any) =>
+        readingConfirmations.some((r) => r.lesson_id === l.id && r.user_id === s.id)
+      ).length;
+      const pctLeitura = pastReadingLessons.length ? Math.round((confirmadas / pastReadingLessons.length) * 100) : 100;
+      return {
+        id: s.id,
+        name: (s.full_name || s.email).toUpperCase(),
+        pctLeitura,
+        naoConfirmadas: pastReadingLessons.length - confirmadas,
+        riscoLeitura: pctLeitura < 75,
+      };
+    });
+  }, [students, pastReadingLessons, readingConfirmations]);
+
+  const atRiskReadingStudents = useMemo(() => {
+    return studentReadingStats
+      .filter((s) => s.riscoLeitura)
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [studentReadingStats]);
+
+  const readingDistribution = useMemo(() => {
+    const buckets = [
+      { label: '≥ 90%', min: 90, max: 101, color: 'hsl(142, 71%, 45%)' },
+      { label: '75% – 89%', min: 75, max: 90, color: 'hsl(var(--primary))' },
+      { label: '50% – 74%', min: 50, max: 75, color: 'hsl(38, 92%, 50%)' },
+      { label: '< 50%', min: -1, max: 50, color: 'hsl(0, 72%, 51%)' },
+    ];
+    return buckets.map((b) => ({
+      ...b,
+      count: studentReadingStats.filter((s) => s.pctLeitura >= b.min && s.pctLeitura < b.max).length,
+    }));
+  }, [studentReadingStats]);
+
+  const zeroReadingStudents = useMemo(() => {
+    const pastReadingIds = pastReadingLessons.map((l: any) => l.id);
+    const studentIdsWithConfirmation = new Set(
+      readingConfirmations.filter((r) => pastReadingIds.includes(r.lesson_id)).map((r) => r.user_id)
+    );
+    return students
+      .filter((s) => pastReadingLessons.length > 0 && !studentIdsWithConfirmation.has(s.id))
+      .map((s) => ({ id: s.id, name: (s.full_name || s.email).toUpperCase() }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [students, pastReadingLessons, readingConfirmations]);
+
   const progressPct = totalLessons ? Math.round((totalPastLessons / totalLessons) * 100) : 0;
   const tccPct = totalStudents ? Math.round((tccSubmissions.length / totalStudents) * 100) : 0;
   // Card "Leituras": quantas leituras cadastradas já venceram o prazo, não
@@ -327,6 +464,7 @@ export default function AnalyticsPage() {
           <TabsTrigger value="geral">Visão Geral</TabsTrigger>
           <TabsTrigger value="presenca">Presença</TabsTrigger>
           <TabsTrigger value="questionarios">Questionários</TabsTrigger>
+          <TabsTrigger value="leituras">Leituras</TabsTrigger>
           <TabsTrigger value="tcc">TCC & Certificados</TabsTrigger>
         </TabsList>
 
@@ -605,9 +743,261 @@ export default function AnalyticsPage() {
 
         {/* ═══════════════════ QUESTIONÁRIOS ═══════════════════ */}
         <TabsContent value="questionarios" className="space-y-6 mt-6">
-          <p className="text-sm text-muted-foreground">Em breve.</p>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Questionários por Prazo</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">Só questionários já vencidos que contam para os 75%</p>
+            </CardHeader>
+            <CardContent>
+              {quizChartData.length > 0 ? (
+                <>
+                  <div className="flex items-center gap-4 mb-2 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: 'hsl(142, 71%, 45%)' }} />
+                      Mais respondido
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: 'hsl(0, 72%, 51%)' }} />
+                      Menos respondido
+                    </span>
+                  </div>
+                  <div className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={quizChartData}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                        <XAxis dataKey="name" tick={{ fontSize: 10 }} className="fill-muted-foreground" angle={-30} textAnchor="end" height={60} />
+                        <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
+                          formatter={(value: number) => [`${value} alunos`, 'Responderam']}
+                        />
+                        <Bar dataKey="respondentes" radius={[4, 4, 0, 0]}>
+                          {quizChartData.map((entry, i) => (
+                            <Cell
+                              key={i}
+                              fill={
+                                entry.respondentes === minQuizResp && quizChartData.length > 1
+                                  ? 'hsl(0, 72%, 51%)'
+                                  : entry.respondentes === maxQuizResp && quizChartData.length > 1
+                                  ? 'hsl(142, 71%, 45%)'
+                                  : 'hsl(var(--primary))'
+                              }
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground py-10 text-center">Nenhum questionário vencido ainda.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Distribuição da Turma</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">Por faixa de % de questionários respondidos</p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {quizDistribution.map((b) => (
+                  <div key={b.label} className="rounded-lg border border-border p-3 text-center">
+                    <p className="text-2xl font-bold" style={{ color: b.color }}>{b.count}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{b.label}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-destructive" />
+                  Detalhamento — Alunos em Risco (Questionários)
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">Abaixo de 75%</p>
+              </CardHeader>
+              <CardContent>
+                {atRiskQuizStudents.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum aluno em risco.</p>
+                ) : (
+                  <div className="overflow-y-auto overflow-x-auto max-h-[420px]">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border sticky top-0 bg-card">
+                          <th className="text-left py-2 text-muted-foreground font-medium">Nome</th>
+                          <th className="text-center py-2 text-muted-foreground font-medium">% Questionários</th>
+                          <th className="text-center py-2 text-muted-foreground font-medium">Não Respondidos</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {atRiskQuizStudents.map((s) => (
+                          <tr key={s.id} className="border-b border-border/50">
+                            <td className="py-2">{s.name}</td>
+                            <td className="text-center py-2 text-destructive font-semibold">{s.pctQuiz}%</td>
+                            <td className="text-center py-2">{s.naoRespondidos}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Nunca Responderam Nenhum Questionário</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {zeroQuizStudents.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Todos os alunos responderam ao menos um questionário.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {zeroQuizStudents.map((s) => (
+                      <Badge key={s.id} variant="outline" className="text-sm">
+                        {s.name}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
+        {/* ═══════════════════ LEITURAS ═══════════════════ */}
+        <TabsContent value="leituras" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Leituras por Aula</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">Só leituras já vencidas que contam para os 75%</p>
+            </CardHeader>
+            <CardContent>
+              {readingChartData.length > 0 ? (
+                <>
+                  <div className="flex items-center gap-4 mb-2 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: 'hsl(142, 71%, 45%)' }} />
+                      Mais confirmada
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: 'hsl(0, 72%, 51%)' }} />
+                      Menos confirmada
+                    </span>
+                  </div>
+                  <div className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={readingChartData}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                        <XAxis dataKey="name" tick={{ fontSize: 10 }} className="fill-muted-foreground" angle={-30} textAnchor="end" height={60} />
+                        <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
+                          formatter={(value: number) => [`${value} alunos`, 'Confirmaram']}
+                        />
+                        <Bar dataKey="confirmados" radius={[4, 4, 0, 0]}>
+                          {readingChartData.map((entry, i) => (
+                            <Cell
+                              key={i}
+                              fill={
+                                entry.confirmados === minReadingConf && readingChartData.length > 1
+                                  ? 'hsl(0, 72%, 51%)'
+                                  : entry.confirmados === maxReadingConf && readingChartData.length > 1
+                                  ? 'hsl(142, 71%, 45%)'
+                                  : 'hsl(var(--primary))'
+                              }
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground py-10 text-center">Nenhuma leitura vencida ainda.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Distribuição da Turma</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">Por faixa de % de leituras confirmadas</p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {readingDistribution.map((b) => (
+                  <div key={b.label} className="rounded-lg border border-border p-3 text-center">
+                    <p className="text-2xl font-bold" style={{ color: b.color }}>{b.count}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{b.label}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-destructive" />
+                  Detalhamento — Alunos em Risco (Leituras)
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">Abaixo de 75%</p>
+              </CardHeader>
+              <CardContent>
+                {atRiskReadingStudents.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum aluno em risco.</p>
+                ) : (
+                  <div className="overflow-y-auto overflow-x-auto max-h-[420px]">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border sticky top-0 bg-card">
+                          <th className="text-left py-2 text-muted-foreground font-medium">Nome</th>
+                          <th className="text-center py-2 text-muted-foreground font-medium">% Leitura</th>
+                          <th className="text-center py-2 text-muted-foreground font-medium">Não Confirmadas</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {atRiskReadingStudents.map((s) => (
+                          <tr key={s.id} className="border-b border-border/50">
+                            <td className="py-2">{s.name}</td>
+                            <td className="text-center py-2 text-destructive font-semibold">{s.pctLeitura}%</td>
+                            <td className="text-center py-2">{s.naoConfirmadas}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Nunca Confirmaram Leitura</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {zeroReadingStudents.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Todos os alunos confirmaram leitura ao menos uma vez.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {zeroReadingStudents.map((s) => (
+                      <Badge key={s.id} variant="outline" className="text-sm">
+                        {s.name}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
         {/* ═══════════════════ TCC & CERTIFICADOS ═══════════════════ */}
         <TabsContent value="tcc" className="space-y-6 mt-6">
