@@ -42,7 +42,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const helpContent = getHelpContent(location.pathname);
   const isProfessor = profile?.role === "professor";
   const isAdmin = profile?.role === "admin";
-  const isDev = profile?.email === "brunoellouzada@gmail.com2"
+  //const isDev = profile?.email === "brunoellouzada@gmail.com2"
   const isStudent = profile?.role === "aluno";
 
   const { selectedCohort } = useCohort();
@@ -63,7 +63,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { to: "/dashboard/avaliacao", label: "Avaliação", icon: ClipboardCheck },
     { to: "/dashboard/perfil", label: "Meu Perfil", icon: User },
     ...(isProfessor || isAdmin ? [{ to: "/dashboard/professor", label: "Gestão", icon: Upload }] : []),
-    ...(isDev ? [{ to: "/dashboard/analises", label: "Análises", icon: BarChart2 }] : []),
+    ...(isAdmin ? [{ to: "/dashboard/analises", label: "Análises", icon: BarChart2 }] : []),
   ];
 
   return (
