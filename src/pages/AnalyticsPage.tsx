@@ -155,22 +155,27 @@ export default function AnalyticsPage() {
     [quizzes]
   );
 
-  // Leituras obrigatórias já vencidas (aula com required_reading cujo início já passou)
-  const pastReadingLessons = useMemo(() => {
-    const nowDate = new Date();
+  // Aulas com leitura obrigatória cadastrada, dentro do período da turma
+  // (denominador do card "Leituras" -- quantas leituras existem, não quantas
+  // confirmações de aluno existem).
+  const readingLessons = useMemo(() => {
     return lessons.filter((l: any) => {
       if (!l.required_reading || !l.scheduled_date) return false;
       if (cohortStart && l.scheduled_date < cohortStart) return false;
       if (cohortEnd && l.scheduled_date > cohortEnd) return false;
+      return true;
+    });
+  }, [lessons, cohortStart, cohortEnd]);
+
+  // Das leituras cadastradas, quais já venceram o prazo (aula com leitura
+  // cujo horário de início já passou).
+  const pastReadingLessons = useMemo(() => {
+    const nowDate = new Date();
+    return readingLessons.filter((l: any) => {
       const dt = new Date(`${l.scheduled_date}T${l.start_time || '23:59'}`);
       return dt <= nowDate;
     });
-  }, [lessons, cohortStart, cohortEnd]);
-  const pastReadingLessonIds = useMemo(() => new Set(pastReadingLessons.map((l: any) => l.id)), [pastReadingLessons]);
-  const confirmedReadingsCount = useMemo(
-    () => readingConfirmations.filter(r => pastReadingLessonIds.has(r.lesson_id)).length,
-    [readingConfirmations, pastReadingLessonIds]
-  );
+  }, [readingLessons]);
 
   // "Realizada" = dentro do período da turma E o horário da aula já passou
   // (isDateWithinCohortPeriod sozinho deixava passar aulas de HOJE que ainda
@@ -317,8 +322,9 @@ export default function AnalyticsPage() {
 
   const progressPct = totalLessons ? Math.round((totalPastLessons / totalLessons) * 100) : 0;
   const tccPct = totalStudents ? Math.round((tccSubmissions.length / totalStudents) * 100) : 0;
-  const totalPossibleReadings = totalStudents * pastReadingLessons.length;
-  const readingCompletionPct = totalPossibleReadings ? Math.round((confirmedReadingsCount / totalPossibleReadings) * 100) : 0;
+  // Card "Leituras": quantas leituras cadastradas já venceram o prazo, não
+  // confirmações de aluno (isso é outra coisa e já entra no risco combinado).
+  const readingVencidasPct = readingLessons.length ? Math.round((pastReadingLessons.length / readingLessons.length) * 100) : 0;
 
   const isDataLoading = cohortLoading || studentsLoading || lessonsLoading || attendanceLoading;
 
@@ -389,9 +395,9 @@ export default function AnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-bold text-foreground">
-                  {confirmedReadingsCount}<span className="text-lg text-muted-foreground"> / {totalPossibleReadings}</span>
+                  {pastReadingLessons.length}<span className="text-lg text-muted-foreground"> / {readingLessons.length}</span>
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">{readingCompletionPct}% confirmadas</p>
+                <p className="text-xs text-muted-foreground mt-1">{readingVencidasPct}% vencidas / cadastradas</p>
               </CardContent>
             </Card>
 
