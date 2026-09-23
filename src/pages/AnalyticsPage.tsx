@@ -16,6 +16,12 @@ import {
 import { Users, BookOpen, ClipboardList, AlertTriangle, FileCheck, BookOpenCheck, Download } from 'lucide-react';
 import { useCohort } from '@/contexts/CohortContext';
 
+// Largura mínima reservada por coluna nos gráficos de barra (Presença,
+// Questionários, Leituras). Com esse mínimo garantido, o gráfico cresce
+// para o lado (scroll horizontal dentro do card) em vez de espremer as
+// colunas conforme mais aulas/questionários/leituras forem cadastrados.
+const CHART_BAR_WIDTH = 90;
+
 export default function AnalyticsPage() {
   const { selectedCohortId, selectedCohortStudentIds, selectedCohort, effectiveCutoffDate, isLoading: cohortLoading } = useCohort();
   const cohortStart = selectedCohort?.start_date;
@@ -618,32 +624,34 @@ export default function AnalyticsPage() {
                       Menor presença
                     </span>
                   </div>
-                  <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={lessonAttendance}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                        <XAxis dataKey="name" tick={{ fontSize: 10 }} className="fill-muted-foreground" angle={-30} textAnchor="end" height={60} />
-                        <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" />
-                        <Tooltip
-                          contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
-                          formatter={(value: number) => [`${value} alunos`, 'Presentes']}
-                        />
-                        <Bar dataKey="presentes" radius={[4, 4, 0, 0]}>
-                          {lessonAttendance.map((entry, i) => (
-                            <Cell
-                              key={i}
-                              fill={
-                                entry.presentes === minAttendance && lessonAttendance.length > 1
-                                  ? 'hsl(0, 72%, 51%)'
-                                  : entry.presentes === maxAttendance && lessonAttendance.length > 1
-                                  ? 'hsl(142, 71%, 45%)'
-                                  : 'hsl(var(--primary))'
-                              }
-                            />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                  <div className="overflow-x-auto">
+                    <div style={{ width: '100%', minWidth: `${lessonAttendance.length * CHART_BAR_WIDTH}px`, height: '18rem' }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={lessonAttendance}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                          <XAxis dataKey="name" tick={{ fontSize: 10 }} className="fill-muted-foreground" angle={-30} textAnchor="end" height={60} interval={0} />
+                          <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" />
+                          <Tooltip
+                            contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
+                            formatter={(value: number) => [`${value} alunos`, 'Presentes']}
+                          />
+                          <Bar dataKey="presentes" radius={[4, 4, 0, 0]}>
+                            {lessonAttendance.map((entry, i) => (
+                              <Cell
+                                key={i}
+                                fill={
+                                  entry.presentes === minAttendance && lessonAttendance.length > 1
+                                    ? 'hsl(0, 72%, 51%)'
+                                    : entry.presentes === maxAttendance && lessonAttendance.length > 1
+                                    ? 'hsl(142, 71%, 45%)'
+                                    : 'hsl(var(--primary))'
+                                }
+                              />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
                 </>
               ) : (
@@ -770,33 +778,35 @@ export default function AnalyticsPage() {
                       Menos respondido
                     </span>
                   </div>
-                  <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={quizChartData}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                        <XAxis dataKey="name" tick={{ fontSize: 10 }} className="fill-muted-foreground" angle={-30} textAnchor="end" height={60} />
-                        <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" />
-                        <Tooltip
-                          contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
-                          formatter={(value: number) => [`${value} alunos`, 'Responderam']}
-                          labelFormatter={(_, payload) => (payload?.[0]?.payload as any)?.fullName ?? ''}
-                        />
-                        <Bar dataKey="respondentes" radius={[4, 4, 0, 0]}>
-                          {quizChartData.map((entry, i) => (
-                            <Cell
-                              key={i}
-                              fill={
-                                entry.respondentes === minQuizResp && quizChartData.length > 1
-                                  ? 'hsl(0, 72%, 51%)'
-                                  : entry.respondentes === maxQuizResp && quizChartData.length > 1
-                                  ? 'hsl(142, 71%, 45%)'
-                                  : 'hsl(var(--primary))'
-                              }
-                            />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                  <div className="overflow-x-auto">
+                    <div style={{ width: '100%', minWidth: `${quizChartData.length * CHART_BAR_WIDTH}px`, height: '18rem' }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={quizChartData}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                          <XAxis dataKey="name" tick={{ fontSize: 10 }} className="fill-muted-foreground" angle={-30} textAnchor="end" height={60} interval={0} />
+                          <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" />
+                          <Tooltip
+                            contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
+                            formatter={(value: number) => [`${value} alunos`, 'Responderam']}
+                            labelFormatter={(_, payload) => (payload?.[0]?.payload as any)?.fullName ?? ''}
+                          />
+                          <Bar dataKey="respondentes" radius={[4, 4, 0, 0]}>
+                            {quizChartData.map((entry, i) => (
+                              <Cell
+                                key={i}
+                                fill={
+                                  entry.respondentes === minQuizResp && quizChartData.length > 1
+                                    ? 'hsl(0, 72%, 51%)'
+                                    : entry.respondentes === maxQuizResp && quizChartData.length > 1
+                                    ? 'hsl(142, 71%, 45%)'
+                                    : 'hsl(var(--primary))'
+                                }
+                              />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
                 </>
               ) : (
@@ -900,32 +910,34 @@ export default function AnalyticsPage() {
                       Menos confirmada
                     </span>
                   </div>
-                  <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={readingChartData}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                        <XAxis dataKey="name" tick={{ fontSize: 10 }} className="fill-muted-foreground" angle={-30} textAnchor="end" height={60} />
-                        <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" />
-                        <Tooltip
-                          contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
-                          formatter={(value: number) => [`${value} alunos`, 'Confirmaram']}
-                        />
-                        <Bar dataKey="confirmados" radius={[4, 4, 0, 0]}>
-                          {readingChartData.map((entry, i) => (
-                            <Cell
-                              key={i}
-                              fill={
-                                entry.confirmados === minReadingConf && readingChartData.length > 1
-                                  ? 'hsl(0, 72%, 51%)'
-                                  : entry.confirmados === maxReadingConf && readingChartData.length > 1
-                                  ? 'hsl(142, 71%, 45%)'
-                                  : 'hsl(var(--primary))'
-                              }
-                            />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                  <div className="overflow-x-auto">
+                    <div style={{ width: '100%', minWidth: `${readingChartData.length * CHART_BAR_WIDTH}px`, height: '18rem' }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={readingChartData}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                          <XAxis dataKey="name" tick={{ fontSize: 10 }} className="fill-muted-foreground" angle={-30} textAnchor="end" height={60} interval={0} />
+                          <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" />
+                          <Tooltip
+                            contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
+                            formatter={(value: number) => [`${value} alunos`, 'Confirmaram']}
+                          />
+                          <Bar dataKey="confirmados" radius={[4, 4, 0, 0]}>
+                            {readingChartData.map((entry, i) => (
+                              <Cell
+                                key={i}
+                                fill={
+                                  entry.confirmados === minReadingConf && readingChartData.length > 1
+                                    ? 'hsl(0, 72%, 51%)'
+                                    : entry.confirmados === maxReadingConf && readingChartData.length > 1
+                                    ? 'hsl(142, 71%, 45%)'
+                                    : 'hsl(var(--primary))'
+                                }
+                              />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
                 </>
               ) : (
