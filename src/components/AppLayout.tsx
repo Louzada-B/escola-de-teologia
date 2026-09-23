@@ -106,8 +106,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             onClick={() => setMobileOpen(false)}
             aria-hidden="true"
           />
-          <div className="lg:hidden fixed right-4 top-16 z-40 flex flex-col items-end gap-1.5 max-h-[calc(100vh-80px)] overflow-y-auto pb-2">
-            {navItems.map((item, i) => {
+          <div className="lg:hidden fixed inset-x-3 top-16 z-40 grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-top-2 duration-150">
+            {navItems.map((item) => {
               const active = location.pathname === item.to;
               return (
                 <Link
@@ -115,26 +115,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   to={item.to}
                   onClick={() => setMobileOpen(false)}
                   className={cn(
-                    "flex items-center gap-2 pl-3 pr-4 py-2 rounded-full text-sm shadow-md border animate-in fade-in slide-in-from-right-2",
+                    "flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm shadow-md border min-w-0",
                     active
                       ? "bg-primary text-primary-foreground border-primary"
                       : "bg-card text-foreground border-border"
                   )}
-                  style={{ animationDelay: `${i * 20}ms`, animationDuration: "180ms" }}
                 >
                   <item.icon className="w-4 h-4 shrink-0" />
-                  <span className="whitespace-nowrap">{item.label}</span>
+                  <span className="truncate">{item.label}</span>
                 </Link>
               );
             })}
             <button
               type="button"
               onClick={() => { setMobileOpen(false); signOut(); }}
-              className="flex items-center gap-2 pl-3 pr-4 py-2 rounded-full text-sm shadow-md border bg-card text-destructive border-border animate-in fade-in slide-in-from-right-2"
-              style={{ animationDelay: `${navItems.length * 20}ms`, animationDuration: "180ms" }}
+              className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm shadow-md border bg-card text-destructive border-border min-w-0"
             >
               <LogOut className="w-4 h-4 shrink-0" />
-              <span className="whitespace-nowrap">Sair</span>
+              <span className="truncate">Sair</span>
             </button>
           </div>
         </>
