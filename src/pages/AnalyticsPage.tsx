@@ -469,7 +469,7 @@ export default function AnalyticsPage() {
       <h1 className="text-2xl font-heading font-bold text-foreground">Análises</h1>
 
       <Tabs defaultValue="geral">
-        <TabsList>
+        <TabsList className="h-auto flex-wrap justify-start gap-1">
           <TabsTrigger value="geral">Visão Geral</TabsTrigger>
           <TabsTrigger value="presenca">Presença</TabsTrigger>
           <TabsTrigger value="questionarios">Questionários</TabsTrigger>
