@@ -562,10 +562,10 @@ export default function AnalyticsPage() {
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              <div className="overflow-y-auto overflow-x-auto max-h-[800px]">
                 <table className="min-w-[640px] w-full text-sm border-separate border-spacing-0">
                   <thead>
-                    <tr className="border-b border-border">
+                    <tr className="border-b border-border sticky top-0 bg-card">
                       <th className="text-left py-2 pr-4 text-muted-foreground font-medium whitespace-nowrap">Nome</th>
                       <th className="text-center py-2 px-3 text-muted-foreground font-medium whitespace-nowrap">% Aulas</th>
                       <th className="text-center py-2 px-3 text-muted-foreground font-medium whitespace-nowrap">% Aulas Especiais</th>
