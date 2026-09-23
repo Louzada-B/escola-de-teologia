@@ -563,24 +563,24 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="min-w-[640px] w-full text-sm border-separate border-spacing-0">
                   <thead>
                     <tr className="border-b border-border">
-                      <th className="text-left py-2 text-muted-foreground font-medium">Nome</th>
-                      <th className="text-center py-2 text-muted-foreground font-medium">% Aulas</th>
-                      <th className="text-center py-2 text-muted-foreground font-medium">% Aulas Especiais</th>
-                      <th className="text-center py-2 text-muted-foreground font-medium">% Questionários</th>
-                      <th className="text-center py-2 text-muted-foreground font-medium">% Leitura</th>
+                      <th className="text-left py-2 pr-4 text-muted-foreground font-medium whitespace-nowrap">Nome</th>
+                      <th className="text-center py-2 px-3 text-muted-foreground font-medium whitespace-nowrap">% Aulas</th>
+                      <th className="text-center py-2 px-3 text-muted-foreground font-medium whitespace-nowrap">% Aulas Especiais</th>
+                      <th className="text-center py-2 px-3 text-muted-foreground font-medium whitespace-nowrap">% Questionários</th>
+                      <th className="text-center py-2 px-3 text-muted-foreground font-medium whitespace-nowrap">% Leitura</th>
                     </tr>
                   </thead>
                   <tbody>
                     {studentPercentages.map((s) => (
                       <tr key={s.id} className="border-b border-border/50">
-                        <td className="py-2">{s.name}</td>
-                        <td className={`text-center py-2 ${s.pctAula < 75 ? 'text-destructive font-semibold' : ''}`}>{s.pctAula}%</td>
-                        <td className={`text-center py-2 ${s.pctEsp < 75 ? 'text-destructive font-semibold' : ''}`}>{s.pctEsp}%</td>
-                        <td className={`text-center py-2 ${s.pctQuiz < 75 ? 'text-destructive font-semibold' : ''}`}>{s.pctQuiz}%</td>
-                        <td className={`text-center py-2 ${s.pctLeitura < 75 ? 'text-destructive font-semibold' : ''}`}>{s.pctLeitura}%</td>
+                        <td className="py-2 pr-4 whitespace-nowrap">{s.name}</td>
+                        <td className={`text-center py-2 px-3 ${s.pctAula < 75 ? 'text-destructive font-semibold' : ''}`}>{s.pctAula}%</td>
+                        <td className={`text-center py-2 px-3 ${s.pctEsp < 75 ? 'text-destructive font-semibold' : ''}`}>{s.pctEsp}%</td>
+                        <td className={`text-center py-2 px-3 ${s.pctQuiz < 75 ? 'text-destructive font-semibold' : ''}`}>{s.pctQuiz}%</td>
+                        <td className={`text-center py-2 px-3 ${s.pctLeitura < 75 ? 'text-destructive font-semibold' : ''}`}>{s.pctLeitura}%</td>
                       </tr>
                     ))}
                   </tbody>
