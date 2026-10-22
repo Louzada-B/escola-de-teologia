@@ -121,6 +121,10 @@ export default function DashboardHome() {
   const [mainReadingPerc, setMainReadingPerc] = useState(0);
   const [pendingLesson, setPendingLesson] = useState<any>(null);
   const [pendingQuizCount, setPendingQuizCount] = useState(0);
+  // Questionários cujo prazo terminou sem resposta (últimos 14 dias). Antes
+  // eles simplesmente sumiam das pendências quando o prazo vencia, e o aluno
+  // via "zero pendências" sem saber que tinha perdido um.
+  const [missedQuizzes, setMissedQuizzes] = useState<{ id: string; title: string; until: string }[]>([]);
   const [pendingReading, setPendingReading] = useState<{ title: string; requiredReading: string } | null>(null);
   const [tccStatus, setTccStatus] = useState<"none"|"pending"|"approved"|"rejected"|"hidden">("hidden");
   const [isWithinTime, setIsWithinTime] = useState(true);
@@ -141,7 +145,7 @@ export default function DashboardHome() {
         supabase.from("modules").select("id"),
         supabase.from("announcements").select("id, scheduled_at, cohort_id"),
         supabase.from("calendar_events").select("id, event_date"),
-        supabase.from("quizzes").select("id, available_from, available_until, counts_for_completion, lessons(scheduled_date)"),
+        supabase.from("quizzes").select("id, title, available_from, available_until, counts_for_completion, lessons(scheduled_date)"),
       ]);
 
       const allEvents = eRes.data || [];
@@ -294,6 +298,17 @@ export default function DashboardHome() {
         return true;
       });
       setPendingQuizCount(openUnanswered.length);
+      const missedSince = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+      setMissedQuizzes(
+        dueQuizzes
+          .filter((q: any) => !answeredIds.has(q.id) && q.available_until >= missedSince)
+          .sort((a: any, b: any) => (a.available_until < b.available_until ? 1 : -1))
+          .map((q: any) => ({
+            id: q.id,
+            title: String(q.title || "Questionário").replace(/^Questionário\s*[-–—:]\s*/i, ""),
+            until: q.available_until,
+          })),
+      );
       const ansPerc = dueQuizzes.length > 0 ? Math.round((answered / dueQuizzes.length) * 100) : 100;
       const availPerc = dueQuizzes.length > 0 ? 100 - ansPerc : 0;
       setMainQuizPerc(ansPerc);
@@ -439,6 +454,39 @@ export default function DashboardHome() {
             </div>
             <Button className="w-full sm:w-auto font-body px-6" onClick={() => navigate("/dashboard/questionarios")}>
               Responder Agora <ArrowRight className="ml-2 w-4 h-4" />
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* AVISO DE QUESTIONÁRIO COM PRAZO ENCERRADO SEM RESPOSTA */}
+      {missedQuizzes.length > 0 && profile?.role === "aluno" && (
+        <Card className="mb-8 border-destructive/30 bg-destructive/5 overflow-hidden">
+          <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-5">
+            <div className="flex items-center gap-4 text-center sm:text-left">
+              <div className="bg-destructive/10 p-3 rounded-full hidden sm:block">
+                <ClipboardList className="w-6 h-6 text-destructive" />
+              </div>
+              <div>
+                <h3 className="font-heading font-bold text-lg text-foreground">
+                  {missedQuizzes.length === 1
+                    ? "Um questionário fechou sem resposta sua"
+                    : `${missedQuizzes.length} questionários fecharam sem resposta sua`}
+                </h3>
+                <p className="text-sm text-muted-foreground font-body">
+                  {missedQuizzes.map((q, i) => (
+                    <span key={q.id}>
+                      {i > 0 && (i === missedQuizzes.length - 1 ? " e " : ", ")}
+                      <span className="text-foreground font-medium">{q.title}</span>
+                      {" "}(prazo: {new Date(q.until).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })})
+                    </span>
+                  ))}
+                  . Se você acha que respondeu, fale com a coordenação.
+                </p>
+              </div>
+            </div>
+            <Button variant="outline" className="w-full sm:w-auto font-body px-6" onClick={() => navigate("/dashboard/questionarios")}>
+              Ver questionários <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
           </CardContent>
         </Card>

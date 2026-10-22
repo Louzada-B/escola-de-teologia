@@ -2,6 +2,7 @@ import { useMemo, useCallback, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAll } from '@/lib/fetchAll';
 import { isDateWithinCohortPeriod, lessonHasPassed } from '@/lib/cohortDateUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -51,7 +52,7 @@ export default function AnalyticsPage() {
   const { data: allAttendanceRecords = [], isLoading: attendanceLoading } = useQuery({
     queryKey: ['analytics-attendance'],
     queryFn: async () => {
-      const { data } = await supabase.from('attendance_records').select('*');
+      const { data } = await fetchAll(() => supabase.from('attendance_records').select('*').order('id'));
       return data || [];
     },
   });
@@ -67,7 +68,7 @@ export default function AnalyticsPage() {
   const { data: allQuizResponses = [] } = useQuery({
     queryKey: ['analytics-quiz-responses'],
     queryFn: async () => {
-      const { data } = await supabase.from('quiz_responses').select('*');
+      const { data } = await fetchAll(() => supabase.from('quiz_responses').select('*').order('id'));
       return data || [];
     },
   });
@@ -94,7 +95,7 @@ export default function AnalyticsPage() {
   const { data: allReadingConfirmations = [] } = useQuery({
     queryKey: ['analytics-reading-confirmations'],
     queryFn: async () => {
-      const { data } = await supabase.from('reading_confirmations').select('user_id, lesson_id');
+      const { data } = await fetchAll(() => supabase.from('reading_confirmations').select('user_id, lesson_id').order('id'));
       return data || [];
     },
   });
