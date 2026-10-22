@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useCohort } from '@/contexts/CohortContext';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAll } from '@/lib/fetchAll';
 import { getLocalToday } from '@/lib/cohortDateUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -54,7 +55,7 @@ export default function AttendanceSettingsManager({ userId }: Props) {
     const [settingsRes, lessonsRes, recordsRes, profilesRes] = await Promise.all([
       supabase.from('attendance_settings').select('*').limit(1).maybeSingle(),
       supabase.from('lessons').select('id, title, scheduled_date, event_type, mandatory_attendance').lte('scheduled_date', effectiveCutoffDate).order('scheduled_date', { ascending: false }),
-      supabase.from('attendance_records').select('id, user_id, lesson_id'),
+      fetchAll(() => supabase.from('attendance_records').select('id, user_id, lesson_id').order('id')),
       supabase.from('profiles').select('id, full_name, email').eq('role', 'aluno'),
     ]);
 

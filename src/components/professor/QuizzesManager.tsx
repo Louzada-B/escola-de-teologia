@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAll } from '@/lib/fetchAll';
 import { useCohort } from "@/contexts/CohortContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -78,7 +79,7 @@ export default function QuizzesManager({ userId }: { userId: string }) {
     const [quizzesRes, lessonsRes, responsesRes, profilesRes] = await Promise.all([
       supabase.from("quizzes").select("*, quiz_questions(id), lessons(title, scheduled_date)").order("created_at"),
       supabase.from("lessons").select("id, title, scheduled_date, module_id").order("scheduled_date"),
-      supabase.from("quiz_responses").select("quiz_id, user_id, score"),
+      fetchAll(() => supabase.from("quiz_responses").select("quiz_id, user_id, score").order("id")),
       supabase.from("profiles").select("id, full_name, email").eq("role", "aluno"),
     ]);
     let quizData = quizzesRes.data || [];

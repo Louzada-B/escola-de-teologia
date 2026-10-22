@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAll } from '@/lib/fetchAll';
 import { useCohort } from "@/contexts/CohortContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -373,10 +374,11 @@ export default function CertificatesManager() {
     const special  = (lessons || []).filter((l: any) => l.event_type === "aula_especial");
     const allIds   = (lessons || []).map((l: any) => l.id);
 
-    const { data: attendance } = await supabase
+    const { data: attendance } = await fetchAll(() => supabase
       .from("attendance_records").select("user_id, lesson_id")
       .in("user_id", ids)
-      .in("lesson_id", allIds.length ? allIds : ["none"]);
+      .in("lesson_id", allIds.length ? allIds : ["none"])
+      .order("id"));
 
     const now = new Date().toISOString();
 
@@ -409,11 +411,12 @@ export default function CertificatesManager() {
     });
     const totalReadings = pastReadingLessons.length;
     const readingLessonIds = pastReadingLessons.map((l: any) => l.id);
-    const { data: readingConfs } = await supabase
+    const { data: readingConfs } = await fetchAll(() => supabase
       .from("reading_confirmations")
       .select("user_id, lesson_id")
       .in("user_id", ids)
-      .in("lesson_id", readingLessonIds.length ? readingLessonIds : ["none"]);
+      .in("lesson_id", readingLessonIds.length ? readingLessonIds : ["none"])
+      .order("id"));
 
     // Último available_until entre os questionários da turma
     const cohortQuizIds = new Set((quizzes || []).map((q: any) => q.id));
@@ -441,8 +444,8 @@ export default function CertificatesManager() {
     );
     const totalQuiz = openedQuizzes.length;
     const openedQuizIds = new Set(openedQuizzes.map((q: any) => q.id));
-    const { data: responses } = await supabase
-      .from("quiz_responses").select("user_id, quiz_id").in("user_id", ids);
+    const { data: responses } = await fetchAll(() => supabase
+      .from("quiz_responses").select("user_id, quiz_id").in("user_id", ids).order("id"));
 
     // TCC aprovados por aluno
     const { data: tccSubs } = await supabase
